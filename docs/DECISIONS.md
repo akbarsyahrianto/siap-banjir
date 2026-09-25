@@ -188,6 +188,76 @@ URL notifikasi: `/risiko?wilayah={id}#penanganan`. Path dan query tetap persis s
 
 Beranda dan `/cuaca` juga diperbarui otomatis tiap 30 menit (`router.refresh()`).
 
+## D-026 · Script simulasi risiko
+
+`npm run simulasi -- aktifkan <wilayah> [TINGGI|SEDANG]` memasang `AmbangRisiko` khusus wilayah (`id = simulasi-<wilayah>`, `hujan_24jam ≥ 0 mm` → level pilihan) dan membuat cache cuaca wilayah itu kedaluwarsa. Karena ambang dibaca dari DB, tidak ada kode yang diubah atau diberi mode khusus.
+
+`pulihkan` menghapus ambang simulasi, riwayat otomatis sejak simulasi dimulai (waktu mulai disimpan di `keterangan`), dan data cuaca sejak itu (cascade ke `LevelRisiko` & `Notifikasi`). Pengaman:
+- menolak `DATABASE_URL` non-lokal kecuali `--izinkan-remote`;
+- memperingatkan jumlah pelanggan aktif, karena mereka menerima push sungguhan.
+
+Script ini juga dipakai global setup/teardown e2e.
+
+## D-027 · PWA (Fase 5)
+
+- **Manifest:** `public/manifest.json` (sesuai struktur folder di prompt), `display: standalone`.
+- **Ikon:** 192/512 (`any`), maskable 512 (logo di zona aman 60%), apple-touch-icon 180, badge monokrom 72 untuk notifikasi Android. Ikon dibuat dari logo SVG dengan `scripts/buat-ikon.mjs` memakai `sharp` bawaan Next.js; PNG hasilnya ikut di-commit.
+- **Service worker** (`public/sw.js`):
+  - Precache `/offline`, manifest, ikon, dan semua aset `/_next/static` yang dirujuk HTML `/offline`, supaya halaman offline bisa hydrate tanpa jaringan.
+  - Navigasi: *network-first*; salinan terakhir 30 halaman disimpan dan dipakai saat offline, selain itu tampil `/offline`.
+  - `/_next/static` & `/icons`: *cache-first* (nama file berhash).
+  - API tidak di-cache SW, karena data risiko harus segar. Halaman yang tampil saat offline tetap menampilkan label waktu pembaruan terakhir.
+  - Aset yang dimuat sebelum SW aktif (kunjungan pertama) dikirim halaman ke SW lewat `postMessage` untuk di-cache.
+  - Mode dev (`sw.js?dev=1`) tidak memakai cache agar hot reload tidak terganggu.
+- **Registrasi:** SW didaftarkan di semua halaman (`DaftarServiceWorker`), tidak hanya saat push aktif, agar PWA tetap bisa di-install dan dipakai offline di browser yang tidak mendukung push.
+- **Tanpa tombol "Pasang aplikasi" kustom:** browser menampilkan prompt install bawaannya sendiri.
+
+## D-028 · CSP dasar dengan `'unsafe-inline'` untuk script
+
+Prompt meminta "CSP dasar". CSP berbasis nonce di Next.js mengharuskan semua halaman dirender dinamis dengan middleware, dan tidak cocok dengan halaman `/offline` yang disajikan dari cache SW (nonce lama tidak lagi valid). Jadi dipakai:
+
+```
+default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self';
+manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+`'unsafe-eval'` dan `ws:` hanya di mode dev. Risiko XSS tetap rendah karena React meng-escape semua output, tidak ada `dangerouslySetInnerHTML`, dan tidak ada skrip pihak ketiga (font di-host sendiri oleh `next/font`).
+
+Header lain: `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (geolokasi hanya `self`), `COOP: same-origin`, `X-Powered-By` dimatikan. HSTS diserahkan ke hosting (Vercel mengaktifkannya untuk domain HTTPS).
+
+## D-029 · E2E Playwright & bug yang ditemukannya
+
+- Dua project: Pixel 7 (mobile-first) dan Desktop Chrome. `workers: 1` karena berbagi satu server, satu database, dan rate limit per IP.
+- **Stub di browser:** Chromium headless tidak bisa berlangganan ke push service dan selalu melaporkan `Notification.permission = "denied"`. Karena itu `Notification.permission`/`requestPermission` dan `PushManager.subscribe/getSubscription` di-stub dengan subscription sintetis. Semua request ke server (subscribe, pengaturan, DB) tetap asli.
+- Alur Bahaya diuji dengan simulasi (D-026) pada `kota-pekalongan` di global setup; teardown memulihkan simulasi dan menghapus perangkat uji.
+- `reducedMotion: "reduce"`: aplikasi menghormati `prefers-reduced-motion` (tanpa smooth scroll).
+- **Bug nyata yang ditemukan dan diperbaiki:**
+  1. **Dialog izin tidak pernah muncul** jika wilayah dipilih sebelum status push selesai dimuat. Sekarang permintaan ditunda sampai status siap.
+  2. **Halaman offline crash:** chunk `app/(public)/offline/page-*.js` tidak ter-precache karena regex SW berhenti di tanda kurung route group.
+  3. **Overflow horizontal di mobile:** tombol "Aktifkan notifikasi push untuk wilayah ini" (`whitespace-nowrap`) mendorong tombol ✕ keluar banner. Ada test baru yang memeriksa tidak ada scroll horizontal di halaman utama.
+  4. **Tertutup header saat digulir:** elemen yang digulir otomatis bisa tertutup header sticky/bottom nav. Diperbaiki dengan `scroll-padding` global.
+
+## D-030 · Deploy: `directUrl` & `vercel-build`
+
+- Schema Prisma memakai `directUrl = env("DIRECT_URL")`. Neon/Supabase melayani runtime lewat pooler (PgBouncer, butuh `pgbouncer=true`), sedangkan migrasi butuh koneksi langsung. Lokal: kedua URL sama.
+- `npm run vercel-build` = `prisma generate && prisma migrate deploy && next build`. Atur sebagai Build Command di Vercel. Seed produksi dijalankan manual sekali (README).
+
+## D-031 · Rate limit API baca cuaca/risiko
+
+`/api/cuaca` dan `/api/risiko` bisa memicu request ke Open-Meteo saat cache kedaluwarsa, jadi dibatasi 60 permintaan/menit per IP (mekanisme sama dengan D-019). API baca lain hanya membaca DB dan tidak dibatasi.
+
+## D-032 · Temuan `npm audit` yang tidak diperbaiki
+
+`npm audit --omit=dev` (per 25 September 2026) melaporkan:
+
+| Paket | Tingkat | Jalur | Penilaian |
+|---|---|---|---|
+| `postcss` (di dalam `next`) | high | Build-time: memproses CSS milik proyek | Input bukan dari pengguna, tidak bisa dieksploitasi saat runtime. Perbaikan butuh **Next 16**, sedangkan prompt meminta Next 15 |
+| `deepmerge-ts` via `@prisma/config` / `prisma` | high | CLI Prisma (penggabungan konfigurasi) | Tidak di jalur request. "Perbaikan" npm justru downgrade ke Prisma 6.12 |
+
+Keduanya dipantau; perbarui saat Next 15.x / Prisma 6.x merilis patch, atau saat proyek pindah ke Next 16.
+
 ## D-021 · Integration test memakai database pengembangan
 
 `npm run test:integration` menjalankan `prosesPeringatan()` terhadap PostgreSQL dari `.env`, dengan push service di-mock. Test membuat datanya sendiri di wilayah `kota-pekalongan` dan menghapusnya lagi. Namun test juga **menonaktifkan langganan lain di wilayah itu**, jadi jangan dijalankan terhadap database produksi.

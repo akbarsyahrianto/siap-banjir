@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description: `${APP_NAME}: ${APP_TAGLINE}. Level risiko banjir dan peringatan dini berbasis data cuaca Open-Meteo.`,
   applicationName: APP_NAME,
+  manifest: "/manifest.json",
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

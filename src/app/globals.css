@@ -145,6 +145,9 @@
   /* Huruf dasar sedikit lebih besar (≈17px) agar mudah dibaca di HP. */
   html {
     font-size: 106.25%;
+    /* Scroll otomatis (anchor, fokus, scrollIntoView) tidak tertutup header sticky / bottom nav. */
+    scroll-padding-top: 5rem;
+    scroll-padding-bottom: 5rem;
   }
   body {
     @apply bg-background text-foreground;

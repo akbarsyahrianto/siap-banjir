@@ -59,8 +59,11 @@ export function tandaiSudahDitanya() {
   }
 }
 
+// Mode dev: SW tidak memakai cache agar hot reload tidak terganggu (lihat public/sw.js).
+const URL_SW = process.env.NODE_ENV === "development" ? "/sw.js?dev=1" : "/sw.js";
+
 export async function daftarkanServiceWorker() {
-  await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  await navigator.serviceWorker.register(URL_SW, { scope: "/" });
   return navigator.serviceWorker.ready;
 }
 

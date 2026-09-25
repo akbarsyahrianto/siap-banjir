@@ -61,7 +61,7 @@ export function BannerStatus({
     <div role="alert" className={cn("rounded-xl border-2 p-4", gaya.lembut)}>
       <div className="flex items-start gap-3">
         <Ikon className={cn("mt-0.5 size-8 shrink-0", gaya.teks)} aria-hidden="true" />
-        <div className="flex-1 space-y-2">
+        <div className="min-w-0 flex-1 space-y-2">
           <p className="text-lg font-bold">
             {state.nama === "bahaya" ? "Bahaya potensi banjir terdeteksi" : "Ikuti langkah penanganan di bawah"}
           </p>
@@ -83,12 +83,17 @@ export function BannerStatus({
           ) : null}
 
           {kanal === "dalam-aplikasi" ? (
-            <Button size="sm" variant="outline" onClick={onAktifkanNotifikasi} className="bg-background">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onAktifkanNotifikasi}
+              className="h-auto min-h-8 whitespace-normal bg-background py-1.5 text-left"
+            >
               Aktifkan notifikasi push untuk wilayah ini
             </Button>
           ) : null}
         </div>
-        <Button variant="ghost" size="icon" onClick={onTutup} aria-label="Tutup peringatan">
+        <Button variant="ghost" size="icon" className="-mr-2 -mt-2 shrink-0" onClick={onTutup} aria-label="Tutup peringatan">
           <X aria-hidden="true" />
         </Button>
       </div>

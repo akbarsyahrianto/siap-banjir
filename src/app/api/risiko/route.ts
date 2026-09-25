@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { parseQuery, tidakDitemukan } from "@/server/http";
+import { cekRateLimit, parseQuery, tidakDitemukan } from "@/server/http";
+import { limitBacaCuaca } from "@/server/rate-limits";
 import { keRisikoKlien, lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { queryWilayahSchema } from "@/server/validators/risiko";
 
 /** GET /api/risiko?wilayah={id}: level risiko terkini (dipakai refresh berkala state machine). */
 export async function GET(req: NextRequest) {
+  const dibatasi = cekRateLimit(req, limitBacaCuaca);
+  if (dibatasi) return dibatasi;
   const q = parseQuery(req.nextUrl, queryWilayahSchema);
   if (!q.ok) return q.res;
 

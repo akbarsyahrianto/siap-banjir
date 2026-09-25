@@ -75,7 +75,8 @@ export function PanelRisiko({
   // Entry Detail Penanganan: arahkan pengguna ke checklist.
   useEffect(() => {
     if (!diPenanganan) return;
-    refPenanganan.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const halus = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    refPenanganan.current?.scrollIntoView({ behavior: halus ? "smooth" : "auto", block: "start" });
     refPenanganan.current?.focus({ preventScroll: true });
   }, [diPenanganan]);
 

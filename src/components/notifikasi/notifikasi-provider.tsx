@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { sudahDitanya, tandaiSudahDitanya } from "@/lib/push-client";
@@ -35,9 +35,14 @@ export function NotifikasiProvider({ children }: { children: React.ReactNode }) 
 
   const bukaDialogIzin = useCallback((wilayah: WilayahDialog) => setDialog(wilayah), []);
 
+  // Wilayah dipilih sebelum status push selesai dimuat → proses setelah status diketahui.
+  const [tertunda, setTertunda] = useState<WilayahDialog | null>(null);
+
   const setelahPilihWilayah = useCallback(
     (wilayah: WilayahDialog) => {
-      if (status === "aktif") {
+      if (status === "memuat") {
+        setTertunda(wilayah);
+      } else if (status === "aktif") {
         perbarui({ idWilayah: wilayah.idWilayah })
           .then(() => toast.success(`Peringatan kini untuk ${wilayah.namaWilayah}.`))
           .catch((err: unknown) => toast.error(pesanGalat(err)));
@@ -47,6 +52,12 @@ export function NotifikasiProvider({ children }: { children: React.ReactNode }) 
     },
     [status, perbarui],
   );
+
+  useEffect(() => {
+    if (!tertunda || status === "memuat") return;
+    setTertunda(null);
+    setelahPilihWilayah(tertunda);
+  }, [tertunda, status, setelahPilihWilayah]);
 
   // [izin notifikasi] → daftarkanPerangkat() → aktifkan(); [else] → lanjut tanpa notifikasi.
   const izinkan = useCallback(async () => {

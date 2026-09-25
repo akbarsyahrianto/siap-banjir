@@ -1,4 +1,5 @@
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { DaftarServiceWorker } from "@/components/layout/daftar-service-worker";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { NotifikasiProvider } from "@/components/notifikasi/notifikasi-provider";
@@ -25,6 +26,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         </div>
         <BottomNav />
         <SinkronWilayah />
+        <DaftarServiceWorker />
       </div>
       <Toaster />
     </NotifikasiProvider>

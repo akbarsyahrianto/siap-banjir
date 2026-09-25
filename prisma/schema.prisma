@@ -6,8 +6,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime (di Neon/Supabase: URL pooled / pgbouncer).
+  url       = env("DATABASE_URL")
+  // Migrasi (koneksi langsung). Lokal: sama dengan DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 // Enum level risiko. Diberi nama TingkatRisiko karena nama "LevelRisiko"

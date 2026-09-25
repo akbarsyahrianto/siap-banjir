@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { parseQuery, tidakDitemukan } from "@/server/http";
+import { cekRateLimit, parseQuery, tidakDitemukan } from "@/server/http";
+import { limitBacaCuaca } from "@/server/rate-limits";
 import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { ringkasanHarian, seriHujan48Jam, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
 import { queryWilayahSchema } from "@/server/validators/risiko";
 
 /** GET /api/cuaca?wilayah={id}: cuaca terkini + prakiraan (Lihat Data Cuaca «include» Ambil Data Cuaca). */
 export async function GET(req: NextRequest) {
+  const dibatasi = cekRateLimit(req, limitBacaCuaca);
+  if (dibatasi) return dibatasi;
   const q = parseQuery(req.nextUrl, queryWilayahSchema);
   if (!q.ok) return q.res;
 
