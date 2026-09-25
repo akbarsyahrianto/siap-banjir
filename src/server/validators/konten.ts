@@ -1,0 +1,77 @@
+import { z } from "zod";
+
+export const tingkatRisikoSchema = z.enum(["RENDAH", "SEDANG", "TINGGI"]);
+
+export const parameterRisikoSchema = z.enum([
+  "hujan_1jam",
+  "hujan_24jam",
+  "hujan_3hari",
+  "prakiraan_hujan_24jam",
+  "peluang_hujan_max",
+]);
+
+export const kategoriInformasiSchema = z.enum(["UMUM", "RIWAYAT_KEJADIAN"]);
+
+const idWilayahSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9-]+$/, "idWilayah harus berupa slug huruf kecil");
+
+export const kontakDaruratSchema = z.object({
+  nama: z.string().min(1).max(120),
+  // null = nomor belum diverifikasi; UI mengarahkan ke 112 / situs resmi.
+  telepon: z.string().min(1).max(30).nullable(),
+});
+
+export const wilayahInputSchema = z.object({
+  idWilayah: idWilayahSchema,
+  namaWilayah: z.string().min(1).max(120),
+  // Batas kasar wilayah Indonesia.
+  koordinatLatitude: z.number().min(-11.5).max(6.5),
+  koordinatLongitude: z.number().min(94).max(141.5),
+  deskripsi: z.string().max(1000).nullish(),
+  kontakDarurat: z.array(kontakDaruratSchema).default([]),
+});
+
+export const ambangRisikoBaseSchema = z.object({
+  idWilayah: idWilayahSchema.nullish(),
+  parameter: parameterRisikoSchema,
+  nilaiMinimum: z.number().min(0),
+  nilaiMaksimum: z.number().min(0).nullish(),
+  levelRisiko: tingkatRisikoSchema,
+  keterangan: z.string().max(500).nullish(),
+});
+
+export const ambangRisikoInputSchema = ambangRisikoBaseSchema.refine((a) => a.nilaiMaksimum == null || a.nilaiMaksimum > a.nilaiMinimum, {
+    message: "nilaiMaksimum harus lebih besar dari nilaiMinimum",
+    path: ["nilaiMaksimum"],
+  });
+
+export const informasiInputSchema = z.object({
+  idWilayah: idWilayahSchema.nullish(),
+  judul: z.string().min(1).max(200),
+  isi: z.string().min(1),
+  kategori: kategoriInformasiSchema,
+  tanggal: z.coerce.date().optional(),
+});
+
+export const persiapanDiniInputSchema = z.object({
+  idWilayah: idWilayahSchema.nullish(),
+  levelRisiko: tingkatRisikoSchema,
+  isiPersiapan: z.string().min(1).max(500),
+  urutan: z.number().int().min(0),
+});
+
+export const rekomendasiInputSchema = z.object({
+  idWilayah: idWilayahSchema.nullish(),
+  levelRisiko: tingkatRisikoSchema,
+  isiRekomendasi: z.string().min(1).max(500),
+  urutan: z.number().int().min(0),
+});
+
+export type WilayahInput = z.input<typeof wilayahInputSchema>;
+export type AmbangRisikoInput = z.input<typeof ambangRisikoInputSchema>;
+export type InformasiInput = z.input<typeof informasiInputSchema>;
+export type PersiapanDiniInput = z.input<typeof persiapanDiniInputSchema>;
+export type RekomendasiInput = z.input<typeof rekomendasiInputSchema>;

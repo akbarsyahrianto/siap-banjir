@@ -1,0 +1,226 @@
+// Schema Siap Banjir — turunan dari Class Diagram.
+// Nama tabel & kolom snake_case di database, field camelCase di Prisma.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum level risiko. Diberi nama TingkatRisiko karena nama "LevelRisiko"
+// sudah dipakai oleh model (lihat docs/DECISIONS.md).
+enum TingkatRisiko {
+  RENDAH
+  SEDANG
+  TINGGI
+}
+
+enum StatusKirim {
+  PENDING
+  TERKIRIM
+  GAGAL
+}
+
+enum KategoriInformasi {
+  UMUM
+  RIWAYAT_KEJADIAN
+}
+
+// Parameter turunan dari data Open-Meteo yang dibandingkan dengan AmbangRisiko.
+enum ParameterRisiko {
+  hujan_1jam
+  hujan_24jam
+  hujan_3hari
+  prakiraan_hujan_24jam
+  peluang_hujan_max
+}
+
+model Pengguna {
+  idPengguna        String   @id @default(cuid()) @map("id_pengguna")
+  wilayahPreferensi String?  @map("wilayah_preferensi")
+  tanggalDibuat     DateTime @default(now()) @map("tanggal_dibuat")
+
+  wilayah   Wilayah?    @relation(fields: [wilayahPreferensi], references: [idWilayah], onDelete: SetNull)
+  perangkat Perangkat[]
+
+  @@map("pengguna")
+}
+
+model Perangkat {
+  idPerangkat    String   @id @default(cuid()) @map("id_perangkat")
+  idPengguna     String   @map("id_pengguna")
+  jenisPerangkat String   @map("jenis_perangkat")
+  browser        String
+  deviceToken    String   @unique @map("device_token")
+  tanggalDaftar  DateTime @default(now()) @map("tanggal_daftar")
+
+  pengguna  Pengguna             @relation(fields: [idPengguna], references: [idPengguna], onDelete: Cascade)
+  langganan LanggananNotifikasi?
+
+  @@index([idPengguna])
+  @@map("perangkat")
+}
+
+model LanggananNotifikasi {
+  idLangganan      String        @id @default(cuid()) @map("id_langganan")
+  idPerangkat      String        @unique @map("id_perangkat")
+  idWilayah        String        @map("id_wilayah")
+  status           Boolean       @default(true)
+  // JSON Web Push: { endpoint, keys: { p256dh, auth } }
+  pushSubscription Json          @map("push_subscription")
+  // Salinan pushSubscription.endpoint agar bisa diberi constraint unik.
+  pushEndpoint     String        @unique @map("push_endpoint")
+  levelMinimum     TingkatRisiko @default(SEDANG) @map("level_minimum")
+  tanggalDaftar    DateTime      @default(now()) @map("tanggal_daftar")
+
+  perangkat  Perangkat    @relation(fields: [idPerangkat], references: [idPerangkat], onDelete: Cascade)
+  wilayah    Wilayah      @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+  notifikasi Notifikasi[]
+
+  @@index([idWilayah, status])
+  @@map("langganan_notifikasi")
+}
+
+model Notifikasi {
+  idNotifikasi  String      @id @default(cuid()) @map("id_notifikasi")
+  idLangganan   String      @map("id_langganan")
+  idLevelRisiko String      @map("id_level_risiko")
+  judul         String
+  pesan         String
+  waktuKirim    DateTime    @default(now()) @map("waktu_kirim")
+  statusKirim   StatusKirim @default(PENDING) @map("status_kirim")
+
+  langganan   LanggananNotifikasi @relation(fields: [idLangganan], references: [idLangganan], onDelete: Cascade)
+  levelRisiko LevelRisiko         @relation(fields: [idLevelRisiko], references: [idRisiko], onDelete: Cascade)
+
+  @@index([idLangganan, waktuKirim])
+  @@index([idLevelRisiko])
+  @@map("notifikasi")
+}
+
+model Wilayah {
+  // Slug yang mudah dibaca, dipakai juga di URL (/risiko?wilayah={id}).
+  idWilayah          String  @id @map("id_wilayah")
+  namaWilayah        String  @map("nama_wilayah")
+  koordinatLatitude  Float   @map("koordinat_latitude")
+  koordinatLongitude Float   @map("koordinat_longitude")
+  deskripsi          String?
+  // Daftar kontak darurat: [{ nama, telepon }]. Lihat docs/DECISIONS.md.
+  kontakDarurat      Json    @default("[]") @map("kontak_darurat")
+
+  dataCuaca     DataCuaca[]
+  levelRisiko   LevelRisiko[]
+  informasi     Informasi[]
+  ambangRisiko  AmbangRisiko[]
+  persiapanDini PersiapanDini[]
+  rekomendasi   Rekomendasi[]
+  pengguna      Pengguna[]
+  langganan     LanggananNotifikasi[]
+
+  @@map("wilayah")
+}
+
+model DataCuaca {
+  idCuaca         String   @id @default(cuid()) @map("id_cuaca")
+  idWilayah       String   @map("id_wilayah")
+  curahHujan      Float    @map("curah_hujan")
+  suhu            Float
+  kelembapan      Float
+  // Kode cuaca WMO dari Open-Meteo (weather_code).
+  kondisiCuaca    Int      @map("kondisi_cuaca")
+  kecepatanAngin  Float    @map("kecepatan_angin")
+  waktuPengamatan DateTime @map("waktu_pengamatan")
+  // Waktu data diambil dari API; dipakai untuk cek umur cache 30 menit.
+  waktuAmbil      DateTime @default(now()) @map("waktu_ambil")
+  rawJson         Json     @map("raw_json")
+
+  wilayah     Wilayah       @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+  levelRisiko LevelRisiko[]
+
+  @@index([idWilayah, waktuPengamatan])
+  @@index([idWilayah, waktuAmbil])
+  @@map("data_cuaca")
+}
+
+model LevelRisiko {
+  idRisiko        String        @id @default(cuid()) @map("id_risiko")
+  idWilayah       String        @map("id_wilayah")
+  idCuaca         String        @map("id_cuaca")
+  level           TingkatRisiko
+  // 0–100, untuk gauge.
+  skorRisiko      Int           @map("skor_risiko")
+  deskripsi       String
+  // [{ parameter, nilai, level }] parameter yang memicu level akhir.
+  parameterPemicu Json          @default("[]") @map("parameter_pemicu")
+  waktu           DateTime      @default(now())
+
+  wilayah    Wilayah      @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+  dataCuaca  DataCuaca    @relation(fields: [idCuaca], references: [idCuaca], onDelete: Cascade)
+  notifikasi Notifikasi[]
+
+  @@index([idWilayah, waktu])
+  @@map("level_risiko")
+}
+
+model AmbangRisiko {
+  idAmbang      String          @id @default(cuid()) @map("id_ambang")
+  // null = berlaku global.
+  idWilayah     String?         @map("id_wilayah")
+  parameter     ParameterRisiko
+  nilaiMinimum  Float           @map("nilai_minimum")
+  // null = tanpa batas atas.
+  nilaiMaksimum Float?          @map("nilai_maksimum")
+  levelRisiko   TingkatRisiko   @map("level_risiko")
+  keterangan    String?
+
+  wilayah Wilayah? @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+
+  @@index([idWilayah, parameter])
+  @@map("ambang_risiko")
+}
+
+model Informasi {
+  idInformasi String            @id @default(cuid()) @map("id_informasi")
+  idWilayah   String?           @map("id_wilayah")
+  judul       String
+  isi         String
+  kategori    KategoriInformasi
+  tanggal     DateTime          @default(now())
+
+  wilayah Wilayah? @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+
+  @@index([kategori, tanggal])
+  @@index([idWilayah])
+  @@map("informasi")
+}
+
+model PersiapanDini {
+  idPersiapan  String        @id @default(cuid()) @map("id_persiapan")
+  idWilayah    String?       @map("id_wilayah")
+  levelRisiko  TingkatRisiko @map("level_risiko")
+  isiPersiapan String        @map("isi_persiapan")
+  urutan       Int
+  tanggal      DateTime      @default(now())
+
+  wilayah Wilayah? @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+
+  @@index([levelRisiko, idWilayah])
+  @@map("persiapan_dini")
+}
+
+model Rekomendasi {
+  idRekomendasi  String        @id @default(cuid()) @map("id_rekomendasi")
+  idWilayah      String?       @map("id_wilayah")
+  levelRisiko    TingkatRisiko @map("level_risiko")
+  isiRekomendasi String        @map("isi_rekomendasi")
+  urutan         Int
+  tanggal        DateTime      @default(now())
+
+  wilayah Wilayah? @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+
+  @@index([levelRisiko, idWilayah])
+  @@map("rekomendasi")
+}
