@@ -34,7 +34,8 @@ export function buatNotifikasi(
   return {
     judul: tinggi ? `⚠️ Risiko banjir TINGGI di ${namaWilayah}` : `Waspada: risiko banjir SEDANG di ${namaWilayah}`,
     pesan: `${risiko.deskripsi} ${tinggi ? "Siap mengungsi dan ikuti arahan petugas." : "Periksa persiapan dini Anda."}`,
-    url: `/risiko?wilayah=${encodeURIComponent(risiko.idWilayah)}`,
+    // #penanganan → state machine langsung ke Detail Penanganan.
+    url: `/risiko?wilayah=${encodeURIComponent(risiko.idWilayah)}#penanganan`,
     tag: `risiko-${risiko.idWilayah}`,
     level: risiko.level,
   };

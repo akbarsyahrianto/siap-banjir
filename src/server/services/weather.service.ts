@@ -2,6 +2,7 @@
  * Use case "Ambil Data Cuaca": ambil dari Open-Meteo atau cache DB yang masih segar.
  */
 import type { DataCuaca, Wilayah } from "@prisma/client";
+import type { SumberData } from "@/lib/tipe-risiko";
 import { db } from "@/server/db";
 import {
   ambilDataCuaca,
@@ -12,15 +13,11 @@ import {
 
 export const UMUR_CACHE_MS = 30 * 60 * 1000;
 
-export type SumberData = "api" | "cache" | "cadangan";
+export type { SumberData };
 
 export type HasilDataCuaca = {
   dataCuaca: DataCuaca;
   raw: OpenMeteoResponse;
-  /**
-   * api = baru diambil; cache = data DB < 30 menit;
-   * cadangan = API gagal, memakai data terakhir yang tersimpan.
-   */
   sumber: SumberData;
 };
 

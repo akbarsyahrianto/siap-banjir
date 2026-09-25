@@ -146,6 +146,48 @@ IP dibaca dari `x-forwarded-for`, yang hanya bisa dipercaya di belakang proxy te
 - **Dialog izin kustom** muncul otomatis sekali setelah memilih wilayah (jika izin browser belum pernah diminta). Setelah itu pengguna bisa mengaktifkan dari tombol di Beranda atau Pengaturan.
 - **Ikon notifikasi** sementara memakai `/icon.svg`. Ikon PNG dibuat di Fase 5 bersama manifest PWA.
 
+## D-022 · Cron: satu endpoint, tiga cara memanggil (Fase 4)
+
+`GET|POST /api/cron/update-weather` memproses semua wilayah (4 paralel). Untuk tiap wilayah: data cuaca → hitung risiko → jika risiko **baru** dan Sedang/Tinggi, kirim notifikasi + simpan riwayat.
+
+- **Cache tetap dihormati.** Jika pengguna membuka web 10 menit sebelumnya, cron memakai data itu dan tidak menindaklanjuti ulang, karena tindak lanjut sudah dijalankan saat risiko pertama dihitung. `?paksa=1` memaksa ambil ulang dari Open-Meteo.
+- **Otorisasi:** `Authorization: Bearer ${CRON_SECRET}`, dibandingkan constant-time (hash SHA-256). Secret kosong atau kurang dari 16 karakter selalu ditolak.
+- **Cara memanggil:**
+  - `vercel.json`: Vercel Cron setiap 30 menit. Paket Hobby Vercel hanya mengizinkan cron harian; untuk 30 menit perlu Pro atau GitHub Actions.
+  - `.github/workflows/update-weather.yml`: GitHub Actions, dengan secret `APP_URL` & `CRON_SECRET`.
+  - `npm run cron:lokal`: penjadwal lokal memakai `setInterval`, tanpa dependensi `node-cron` karena kebutuhannya hanya satu interval tetap.
+- **Race condition diterima:** jika cron dan kunjungan halaman bersamaan menemukan cache kedaluwarsa, bisa tercipta dua `DataCuaca`. Anti-spam menghitung notifikasi PENDING sehingga duplikat notifikasi sangat kecil kemungkinannya.
+
+## D-023 · Riwayat otomatis risiko tinggi (langkah 9)
+
+Setiap `LevelRisiko` baru bernilai TINGGI disimpan sebagai `Informasi` kategori `RIWAYAT_KEJADIAN`, **maksimal satu per wilayah per hari kalender WIB**. Deteksi berikutnya di hari yang sama tidak menambah entri. Entri otomatis dikenali dari awalan judul "Risiko banjir TINGGI terdeteksi di …", jadi schema tidak perlu diubah. Isinya menyebut parameter pemicu dan menegaskan bahwa ini **deteksi otomatis, bukan laporan kejadian banjir terverifikasi**, supaya tidak tercampur dengan riwayat kejadian nyata dari seed.
+
+## D-024 · State machine sebagai reducer (tanpa XState)
+
+State machine UI ada di `src/lib/mesin-risiko.ts` sebagai reducer murni. Unit test mencakup semua transisi, termasuk join jalur paralel. Efeknya dijalankan hook `useRiskState`. Pemetaan ke UML:
+
+| UML | Implementasi |
+|---|---|
+| Idle / Pemantauan Lokasi | `pemantauan`; entry ambil data (SSR awal, lalu `/api/risiko` + `/api/cuaca`); refresh tiap 30 menit dan saat tab aktif lagi setelah ≥ 30 menit |
+| EvaluasiRisiko | *Choice state* di reducer (`evaluasiRisiko`), diputuskan saat data diterima |
+| Bahaya, jalur 1 (TriggerPush → KirimNotifikasiPush → NotifikasiTerkirim) | Push dikirim **server** (cron / saat risiko dihitung) karena API publik tidak boleh punya endpoint tulis tambahan. Di klien, jalur ini menentukan kanal: `push` jika perangkat berlangganan untuk wilayah ini, selain itu `dalam-aplikasi` (toast + banner + tombol aktifkan notifikasi) |
+| Bahaya, jalur 2 (PermintaanGrafik → MenyiapkanGrafik → SelesaiRender) | Grafik curah hujan 48 jam memanggil `onSelesaiRender` setelah tergambar di layar |
+| Join → Detail Penanganan | Otomatis setelah kedua jalur selesai, lalu halaman bergulir ke bagian Penanganan |
+| Checklist Siaga / Detail Mitigasi | Tab di Detail Penanganan; checklist tersimpan di localStorage (D-016) |
+| Final | `selesai` dengan alasan `normal` (refresh menemukan risiko < ambang) atau `ditutup` (pengguna menutup). "Tutup website" = komponen unmount |
+
+Perilaku tambahan:
+- Peringatan yang **ditutup** tidak muncul lagi untuk level yang sama, tetapi muncul lagi jika level naik.
+- Level naik Sedang → Tinggi saat masih bahaya memulai episode Bahaya baru.
+- Setelah Final, refresh berikutnya memulai siklus pemantauan baru.
+- Ambang bahaya di klien = Sedang, sama dengan level yang memicu notifikasi.
+
+## D-025 · Deep link notifikasi memakai fragmen `#penanganan`
+
+URL notifikasi: `/risiko?wilayah={id}#penanganan`. Path dan query tetap persis seperti di prompt; fragmen dibaca di browser dan memicu event `BUKA_PENANGANAN`, sehingga state machine langsung masuk Detail Penanganan (jalur 1 dianggap selesai karena notifikasi sudah diterima). Jika saat dibuka risiko sudah di bawah ambang, halaman tetap di Pemantauan.
+
+Beranda dan `/cuaca` juga diperbarui otomatis tiap 30 menit (`router.refresh()`).
+
 ## D-021 · Integration test memakai database pengembangan
 
 `npm run test:integration` menjalankan `prosesPeringatan()` terhadap PostgreSQL dari `.env`, dengan push service di-mock. Test membuat datanya sendiri di wilayah `kota-pekalongan` dan menghapusnya lagi. Namun test juga **menonaktifkan langganan lain di wilayah itu**, jadi jangan dijalankan terhadap database produksi.

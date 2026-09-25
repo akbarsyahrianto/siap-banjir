@@ -31,6 +31,21 @@ npm run dev          # http://localhost:3000
 
 Notifikasi push hanya bekerja di `localhost` atau HTTPS. Buka **Pengaturan → Kirim notifikasi uji** untuk mengecek.
 
+## Cron (update cuaca otomatis)
+
+`/api/cron/update-weather` memperbarui cuaca semua wilayah, menghitung risiko, mengirim notifikasi, dan menyimpan riwayat risiko tinggi. Endpoint ini wajib header `Authorization: Bearer <CRON_SECRET>`.
+
+```powershell
+# Lokal: jalankan di terminal kedua selagi npm run dev / npm start berjalan
+npm run cron:lokal
+
+# Panggil manual sekali (paksa=1 mengabaikan cache 30 menit)
+$s = (Select-String -Path .env -Pattern '^CRON_SECRET="(.*)"').Matches.Groups[1].Value
+Invoke-RestMethod "http://localhost:3000/api/cron/update-weather?paksa=1" -Headers @{ Authorization = "Bearer $s" }
+```
+
+Di produksi, gunakan `vercel.json` (Vercel Cron) atau `.github/workflows/update-weather.yml` (GitHub Actions). Detailnya di DECISIONS D-022.
+
 ## Script
 
 | Perintah | Fungsi |
@@ -40,6 +55,7 @@ Notifikasi push hanya bekerja di `localhost` atau HTTPS. Buka **Pengaturan → K
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
 | `npm test` | Unit test (Vitest) |
 | `npm run test:integration` | Integration test ke database `.env` (jangan ke produksi) |
+| `npm run cron:lokal` | Panggil endpoint cron sekarang & tiap 30 menit |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:seed` | Isi ulang data seed (idempoten) |
 | `npm run db:reset` | Hapus database, migrasi ulang, dan seed |

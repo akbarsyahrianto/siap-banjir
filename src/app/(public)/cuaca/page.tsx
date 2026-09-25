@@ -6,6 +6,7 @@ import { KartuCuaca } from "@/components/cuaca/kartu-cuaca";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
+import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { formatAngka, formatTanggalLokal } from "@/lib/format";
@@ -35,6 +36,7 @@ export default async function CuacaPage({ searchParams }: Props) {
       {terpilih ? (
         <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
           <Prakiraan idWilayah={terpilih} />
+          <AutoRefresh />
         </Suspense>
       ) : (
         <BelumPilihWilayah />

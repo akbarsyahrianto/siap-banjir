@@ -1,12 +1,29 @@
 "use client";
 
+import { useEffect } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
 
 const formatSumbuX = (waktu: string) => (waktu.endsWith("T00:00") ? waktu.slice(8, 10) + "/" + waktu.slice(5, 7) : waktu.slice(11, 16));
 
 /** Curah hujan per jam: 24 jam lalu (pengamatan) + 24 jam ke depan (prakiraan). */
-export function GrafikHujan48Jam({ data }: { data: TitikGrafikJam[] }) {
+export function GrafikHujan48Jam({
+  data,
+  onSelesaiRender,
+}: {
+  data: TitikGrafikJam[];
+  /** Dipanggil setelah grafik tergambar di layar (state machine: SelesaiRender). */
+  onSelesaiRender?: () => void;
+}) {
+  // Dua frame: ResponsiveContainer mengukur di frame pertama, SVG tergambar di frame kedua.
+  useEffect(() => {
+    if (!onSelesaiRender) return;
+    let id = requestAnimationFrame(() => {
+      id = requestAnimationFrame(onSelesaiRender);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [onSelesaiRender, data]);
+
   const sekarang = [...data].reverse().find((d) => d.lalu)?.waktu;
   const total = (lalu: boolean) =>
     data.filter((d) => d.lalu === lalu).reduce((s, d) => s + (d.hujan ?? 0), 0).toLocaleString("id-ID", { maximumFractionDigits: 1 });

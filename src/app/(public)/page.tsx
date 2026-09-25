@@ -6,6 +6,7 @@ import { KartuRingkasanRisiko } from "@/components/risiko/kartu-ringkasan-risiko
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
+import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { APP_TAGLINE } from "@/lib/constants";
 import { daftarWilayah } from "@/server/services/content.service";
@@ -37,6 +38,7 @@ export default async function BerandaPage({ searchParams }: Props) {
       {terpilih ? (
         <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
           <RingkasanWilayah idWilayah={terpilih} />
+          <AutoRefresh />
         </Suspense>
       ) : (
         <BelumPilihWilayah />

@@ -45,12 +45,12 @@ describe("memenuhiLevelMinimum", () => {
 });
 
 describe("buatNotifikasi", () => {
-  it("berisi deep link ke /risiko?wilayah={id}", () => {
+  it("berisi deep link ke /risiko?wilayah={id} bagian Detail Penanganan", () => {
     const p = buatNotifikasi(
       { idWilayah: "kota-semarang", level: "TINGGI", deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm." },
       "Kota Semarang",
     );
-    expect(p.url).toBe("/risiko?wilayah=kota-semarang");
+    expect(p.url).toBe("/risiko?wilayah=kota-semarang#penanganan");
     expect(p.judul).toContain("TINGGI");
     expect(p.judul).toContain("Kota Semarang");
     expect(p.tag).toBe("risiko-kota-semarang");

@@ -107,7 +107,7 @@ describe("prosesPeringatan (DB asli, push di-mock)", () => {
       ["TINGGI", "TERKIRIM"],
     ]);
     // Payload berisi deep link ke detail risiko wilayah.
-    expect(kirimPushMock.mock.calls[0]?.[1]).toMatchObject({ url: `/risiko?wilayah=${WILAYAH}` });
+    expect(kirimPushMock.mock.calls[0]?.[1]).toMatchObject({ url: `/risiko?wilayah=${WILAYAH}#penanganan` });
   });
 
   it("levelMinimum TINGGI tidak menerima Sedang; status nonaktif tidak menerima apa pun", async () => {
