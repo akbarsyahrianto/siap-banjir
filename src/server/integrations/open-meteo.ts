@@ -23,7 +23,6 @@ export const openMeteoResponseSchema = z.object({
     temperature_2m: z.number(),
     relative_humidity_2m: z.number(),
     precipitation: z.number(),
-    rain: z.number(),
     weather_code: z.number().int(),
     wind_speed_10m: z.number(),
   }),
@@ -54,7 +53,9 @@ export function buatUrlOpenMeteo(latitude: number, longitude: number, baseUrl = 
   url.search = new URLSearchParams({
     latitude: String(latitude),
     longitude: String(longitude),
-    current: "temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m",
+    // 10 variabel total (current 5 + hourly 3 + daily 2) = 1,0 API call. `rain` tidak diminta
+    // karena sudah tercakup `precipitation` (DECISIONS D-036).
+    current: "temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
     hourly: "precipitation,precipitation_probability,temperature_2m",
     daily: "precipitation_sum,precipitation_probability_max",
     past_days: "2",

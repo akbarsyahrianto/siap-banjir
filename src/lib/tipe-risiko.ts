@@ -4,14 +4,20 @@ import type { HasilParameter } from "@/server/validators/risiko";
 
 /**
  * api = baru diambil; cache = data DB < 30 menit;
- * cadangan = API gagal, memakai data terakhir yang tersimpan.
+ * cadangan = API gagal, memakai data terakhir yang tersimpan;
+ * hemat-kuota = batas harian Open-Meteo hampir tercapai, memakai data terakhir yang tersimpan.
  */
-export type SumberData = "api" | "cache" | "cadangan";
+export type SumberData = "api" | "cache" | "cadangan" | "hemat-kuota";
 
 export type RisikoKlien = {
   idRisiko: string;
   idWilayah: string;
+  /** "Kelurahan Sukarasa, Kota Tangerang" */
   namaWilayah: string;
+  /** "Kec. Tangerang, Kota Tangerang, Banten" */
+  namaInduk: string;
+  /** true = koordinat pusat kecamatan dipakai (centroid desa tidak tersedia). */
+  koordinatPerkiraan: boolean;
   level: TingkatRisiko;
   skorRisiko: number;
   deskripsi: string;

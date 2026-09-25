@@ -24,7 +24,6 @@ function buatRespons(opsi: {
       temperature_2m: 30,
       relative_humidity_2m: 70,
       precipitation: opsi.currentPrecip ?? 0,
-      rain: opsi.currentPrecip ?? 0,
       weather_code: 61,
       wind_speed_10m: 10,
     },

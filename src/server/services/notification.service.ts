@@ -12,6 +12,7 @@ import {
   hapusLangganan,
   lihatLanggananByEndpoint,
 } from "@/server/services/subscription.service";
+import { lihatWilayahLengkap, namaTampilan } from "@/server/services/wilayah.service";
 
 export const JEDA_ANTI_SPAM_MS = 6 * 60 * 60 * 1000;
 
@@ -107,18 +108,17 @@ export async function prosesPeringatan(risiko: LevelRisiko, sekarang = new Date(
   const ringkasan: RingkasanPeringatan = { terkirim: 0, gagal: 0, dihapus: 0, dilewati: 0 };
   if (risiko.level === "RENDAH") return ringkasan;
 
-  const [wilayah, langganan] = await Promise.all([
-    db.wilayah.findUnique({ where: { idWilayah: risiko.idWilayah }, select: { namaWilayah: true } }),
-    cariLanggananAktif(risiko.idWilayah, risiko.level),
-  ]);
-  if (!wilayah || langganan.length === 0) return ringkasan;
+  const langganan = await cariLanggananAktif(risiko.idWilayah, risiko.level);
+  if (langganan.length === 0) return ringkasan;
+  const wilayah = await lihatWilayahLengkap(risiko.idWilayah);
+  if (!wilayah) return ringkasan;
 
   const riwayat = await riwayatTerkirim(
     langganan.map((l) => l.idLangganan),
     risiko.idWilayah,
     sekarang,
   );
-  const payload = buatNotifikasi(risiko, wilayah.namaWilayah);
+  const payload = buatNotifikasi(risiko, namaTampilan(wilayah.leluhur));
 
   const target = langganan.filter((l) => perluKirim(risiko.level, riwayat.get(l.idLangganan) ?? []));
   ringkasan.dilewati = langganan.length - target.length;

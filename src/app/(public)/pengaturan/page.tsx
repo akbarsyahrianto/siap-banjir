@@ -4,8 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { PengaturanNotifikasi } from "@/components/notifikasi/pengaturan-notifikasi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
-import { daftarWilayah } from "@/server/services/content.service";
-import { idWilayahTerpilih } from "@/server/wilayah-terpilih";
+import { muatPemilih } from "@/server/wilayah-terpilih";
 
 export const metadata: Metadata = { title: "Pengaturan" };
 
@@ -13,8 +12,8 @@ type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
 
 export default async function PengaturanPage({ searchParams }: Props) {
   const { wilayah } = await searchParams;
-  const [daftar, idWilayah] = await Promise.all([daftarWilayah(), idWilayahTerpilih(wilayah)]);
-  const terpilih = daftar.find((w) => w.idWilayah === idWilayah) ?? null;
+  const { pemilih, desa, namaTerpilih } = await muatPemilih(wilayah);
+  const terpilih = desa && namaTerpilih ? { idWilayah: desa.wilayah.idWilayah, namaWilayah: namaTerpilih } : null;
 
   return (
     <div className="space-y-6">
@@ -28,7 +27,7 @@ export default async function PengaturanPage({ searchParams }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <PilihWilayah daftar={daftar} terpilih={terpilih?.idWilayah ?? null} />
+          <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
         </CardContent>
       </Card>
 
@@ -40,9 +39,7 @@ export default async function PengaturanPage({ searchParams }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <PengaturanNotifikasi
-            wilayah={terpilih ? { idWilayah: terpilih.idWilayah, namaWilayah: terpilih.namaWilayah } : null}
-          />
+          <PengaturanNotifikasi wilayah={terpilih} />
         </CardContent>
       </Card>
 

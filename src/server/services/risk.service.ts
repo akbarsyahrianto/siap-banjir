@@ -6,6 +6,7 @@ import type { AmbangRisiko, DataCuaca, ParameterRisiko, TingkatRisiko } from "@p
 import { db } from "@/server/db";
 import type { OpenMeteoResponse } from "@/server/integrations/open-meteo";
 import { hitungParameterCuaca, type NilaiParameter } from "@/server/services/parameter-cuaca";
+import { leluhurKode } from "@/lib/kode-wilayah";
 import { LABEL_LEVEL, PARAMETER_RISIKO, URUTAN_LEVEL, formatNilaiParameter } from "@/lib/risiko";
 import type { HasilParameter } from "@/server/validators/risiko";
 
@@ -48,19 +49,23 @@ function hitungSkor(nilai: number, ambang: AmbangAcuan) {
   return Math.round(dasar + posisi * lebar);
 }
 
+/** 0 = global, 1 = provinsi, 2 = kab/kota, 3 = kecamatan, 4 = desa/kelurahan. */
+const kedalaman = (idWilayah: string | null) => (idWilayah == null ? 0 : idWilayah.split(".").length);
+
 /**
- * Pilih ambang yang berlaku per parameter: jika wilayah punya ambang khusus untuk
- * parameter itu, ambang global untuk parameter tersebut diabaikan.
- * `ambangList` berisi ambang global + ambang khusus SATU wilayah.
+ * Pilih ambang yang berlaku per parameter secara hierarkis: untuk setiap parameter dipakai
+ * ambang dari tingkat paling spesifik yang punya ambang (desa > kecamatan > kab/kota >
+ * provinsi > global). `ambangList` berisi ambang global + ambang milik wilayah dan leluhurnya.
  */
 export function pilihAmbangEfektif(ambangList: AmbangAcuan[]): Map<ParameterRisiko, AmbangAcuan[]> {
-  const perParameter = new Map<ParameterRisiko, { khusus: AmbangAcuan[]; global: AmbangAcuan[] }>();
-  for (const a of ambangList) {
-    const grup = perParameter.get(a.parameter) ?? { khusus: [], global: [] };
-    (a.idWilayah == null ? grup.global : grup.khusus).push(a);
-    perParameter.set(a.parameter, grup);
-  }
-  return new Map([...perParameter].map(([p, { khusus, global }]) => [p, khusus.length ? khusus : global]));
+  const perParameter = new Map<ParameterRisiko, AmbangAcuan[]>();
+  for (const a of ambangList) perParameter.set(a.parameter, [...(perParameter.get(a.parameter) ?? []), a]);
+  return new Map(
+    [...perParameter].map(([p, daftar]) => {
+      const terdalam = Math.max(...daftar.map((a) => kedalaman(a.idWilayah)));
+      return [p, daftar.filter((a) => kedalaman(a.idWilayah) === terdalam)];
+    }),
+  );
 }
 
 /** cekAmbang(dataCuaca, ambangList): hasil perbandingan per parameter. */
@@ -123,17 +128,23 @@ export function buatDeskripsiRisiko(hasil: HasilRisiko) {
 
 // ---------- Operasi yang mengakses DB ----------
 
+/** Ambang global + ambang milik wilayah dan semua leluhurnya (untuk pewarisan hierarkis). */
 export async function ambilAmbangWilayah(idWilayah: string) {
-  return db.ambangRisiko.findMany({ where: { OR: [{ idWilayah }, { idWilayah: null }] } });
+  return db.ambangRisiko.findMany({
+    where: { OR: [{ idWilayah: { in: leluhurKode(idWilayah) } }, { idWilayah: null }] },
+  });
 }
 
-/** Langkah 5 sequence diagram: hitung risiko dari DataCuaca lalu simpan LevelRisiko. */
-export async function evaluasiDanSimpanRisiko(dataCuaca: DataCuaca, raw: OpenMeteoResponse) {
-  const ambangList = await ambilAmbangWilayah(dataCuaca.idWilayah);
+/**
+ * Langkah 5 sequence diagram: hitung risiko wilayah dari DataCuaca (milik sel grid wilayah itu)
+ * lalu simpan LevelRisiko.
+ */
+export async function evaluasiDanSimpanRisiko(idWilayah: string, dataCuaca: DataCuaca, raw: OpenMeteoResponse) {
+  const ambangList = await ambilAmbangWilayah(idWilayah);
   const hasil = hitungLevelRisiko(hitungParameterCuaca(raw), ambangList);
   return db.levelRisiko.create({
     data: {
-      idWilayah: dataCuaca.idWilayah,
+      idWilayah,
       idCuaca: dataCuaca.idCuaca,
       level: hasil.level,
       skorRisiko: hasil.skorRisiko,

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Activity, CloudRain, LoaderCircle, Phone, RefreshCw, ShieldAlert } from "lucide-react";
 import { AtribusiOpenMeteo } from "@/components/cuaca/atribusi-open-meteo";
+import { CatatanLokasi } from "@/components/cuaca/catatan-lokasi";
 import { GrafikHujan48Jam } from "@/components/cuaca/grafik-hujan-48jam";
 import { StatusData } from "@/components/cuaca/status-data";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
@@ -108,11 +109,17 @@ export function PanelRisiko({
       <Card className={cn("border-2", gaya.lembut)}>
         <CardContent className="grid items-center gap-6 md:grid-cols-2">
           <div className="space-y-3">
-            <p className="text-muted-foreground">{data.namaWilayah}</p>
+            <div>
+              <p className="font-medium">{data.namaWilayah}</p>
+              <p className="text-sm text-muted-foreground">{data.namaInduk}</p>
+            </div>
             <BadgeRisiko level={data.level} />
             <p className="text-lg font-semibold">{data.deskripsi}</p>
             <p>{gaya.pesan}</p>
-            <StatusData sumber={data.sumberData} waktuAmbil={new Date(data.waktuAmbilData)} />
+            <div className="space-y-1">
+              <StatusData sumber={data.sumberData} waktuAmbil={new Date(data.waktuAmbilData)} />
+              <CatatanLokasi koordinatPerkiraan={data.koordinatPerkiraan} />
+            </div>
           </div>
           <GaugeRisiko skor={data.skorRisiko} level={data.level} />
         </CardContent>

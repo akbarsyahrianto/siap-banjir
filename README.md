@@ -1,6 +1,6 @@
 # Siap Banjir
 
-Aplikasi web untuk memantau risiko banjir dan memberi peringatan dini berdasarkan data cuaca [Open-Meteo](https://open-meteo.com/). Pengguna memilih wilayah, melihat cuaca dan prakiraan, mengetahui **level risiko banjir (Rendah / Sedang / Tinggi)**, menerima **notifikasi push**, lalu mengikuti **persiapan dini** dan **rekomendasi tindakan** sesuai level. Tidak perlu login.
+Aplikasi web untuk memantau risiko banjir dan memberi peringatan dini berdasarkan data cuaca [Open-Meteo](https://open-meteo.com/). Pengguna memilih desa/kelurahan di mana pun di Indonesia (83.762 desa/kelurahan, data Kemendagri 2025), melihat cuaca dan prakiraan, mengetahui **level risiko banjir (Rendah / Sedang / Tinggi)**, menerima **notifikasi push**, lalu mengikuti **persiapan dini** dan **rekomendasi tindakan** sesuai level. Tidak perlu login.
 
 > Level risiko pada Siap Banjir adalah estimasi berdasarkan data cuaca Open-Meteo dan ambang batas risiko yang telah ditentukan. Informasi ini bukan peringatan resmi. Selalu ikuti arahan BMKG, BPBD, dan pemerintah setempat.
 
@@ -10,6 +10,8 @@ Keputusan desain dan penyimpangan dari rancangan dicatat di [docs/DECISIONS.md](
 
 - [Fitur](#fitur)
 - [Arsitektur](#arsitektur)
+- [Data wilayah Indonesia](#data-wilayah-indonesia)
+- [Kuota Open-Meteo](#kuota-open-meteo)
 - [Setup lokal (Windows)](#setup-lokal-windows)
 - [Variabel lingkungan](#variabel-lingkungan)
 - [Cron: update cuaca otomatis](#cron-update-cuaca-otomatis)
@@ -19,22 +21,26 @@ Keputusan desain dan penyimpangan dari rancangan dicatat di [docs/DECISIONS.md](
 - [Deploy ke Vercel + Neon / Supabase](#deploy-ke-vercel--neon--supabase)
 - [Keamanan](#keamanan)
 - [Script npm](#script-npm)
+- [Atribusi & lisensi data](#atribusi--lisensi-data)
 
 ## Fitur
 
 | Halaman | Isi |
 |---|---|
-| `/` Beranda | Pilih wilayah (daftar atau GPS), kartu cuaca terkini, badge level risiko, grafik curah hujan 48 jam, tombol "Aktifkan Peringatan" |
+| `/` Beranda | Pilih desa/kelurahan (pencarian, pilihan bertingkat Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan, atau "Gunakan lokasi saya"), kartu cuaca terkini, badge level risiko, grafik curah hujan 48 jam, tombol "Aktifkan Peringatan" |
 | `/risiko` | Gauge skor, parameter pemicu, Detail Penanganan (Checklist Siaga + Detail Mitigasi), kontak darurat. Dikendalikan state machine; refresh tiap 30 menit |
 | `/cuaca` | Prakiraan 3 hari per jam dan harian |
-| `/informasi` | Artikel umum banjir & riwayat kejadian banjir per wilayah |
+| `/informasi` | Artikel umum banjir & riwayat risiko tinggi per kab/kota |
 | `/pengaturan` | Wilayah, aktif/nonaktif notifikasi, level minimum, kirim notifikasi uji |
 | `/offline` | Halaman cadangan PWA saat tidak ada koneksi |
 
-- **Rule engine risiko:** ambang batas dibaca dari tabel `AmbangRisiko` (tidak di-hard-code), ambang khusus wilayah menimpa global, level akhir = level tertinggi dari semua parameter.
-- **Notifikasi push** (Web Push + VAPID): anti-spam 6 jam (kecuali level naik), subscription 404/410 dihapus otomatis. Klik notifikasi membuka `/risiko?wilayah={id}#penanganan`.
+- **Unit pemantauan = desa/kelurahan.** Kode wilayah memakai kode Kemendagri bertitik, misal `36.71.01.1001` (Kelurahan Sukarasa, Kota Tangerang), dan tampil di URL `/risiko?wilayah=36.71.01.1001`.
+- **Rule engine risiko:** ambang batas dibaca dari tabel `AmbangRisiko` (tidak di-hard-code). Ambang **diwariskan bertingkat**: desa > kecamatan > kab/kota > provinsi > global. Tingkat paling spesifik yang punya ambang untuk suatu parameter yang dipakai; wilayah tanpa ambang khusus memakai ambang global. Level akhir = level tertinggi dari semua parameter. Persiapan dini, rekomendasi, dan informasi diwariskan dengan cara yang sama.
+- **Notifikasi push** (Web Push + VAPID): langganan per desa/kelurahan, anti-spam 6 jam (kecuali level naik), subscription 404/410 dihapus otomatis. Klik notifikasi membuka `/risiko?wilayah={kode}#penanganan`.
+- **Riwayat:** deteksi risiko TINGGI disimpan sebagai satu entri per kab/kota per hari (WIB), berisi daftar desa/kelurahan yang terdeteksi hari itu.
+- **Kontak darurat:** nomor nasional (112, 117, 119, 113) + nama BPBD kab/kota setempat (BPBD Provinsi untuk DKI Jakarta).
 - **PWA:** bisa di-install di HP, halaman yang pernah dibuka tetap tampil saat offline.
-- **Cron:** update cuaca semua wilayah → hitung risiko → kirim notifikasi → simpan riwayat risiko tinggi.
+- **Cron:** hanya untuk desa/kelurahan yang punya pelanggan notifikasi: update cuaca → hitung risiko → kirim notifikasi → simpan riwayat.
 
 ## Arsitektur
 
@@ -47,18 +53,63 @@ src/
   components/            ui/ (shadcn), cuaca/, risiko/, notifikasi/, wilayah/, layout/
   server/
     integrations/        open-meteo.ts (ambilDataCuaca), web-push.ts
-    services/            weather, risk, notification, subscription, content,
-                         pemantauan (orkestrasi sequence diagram), riwayat
+    services/            weather, risk, notification, subscription, content, wilayah,
+                         kuota, pemantauan (orkestrasi sequence diagram), riwayat
     validators/          skema Zod
-  lib/                   mesin-risiko.ts (state machine), weather-code, format, geo, ...
+  lib/                   mesin-risiko.ts (state machine), kode-wilayah, grid, weather-code, format, geo, ...
   hooks/                 useWilayah, usePushSubscription, useRiskState
 public/                  sw.js, manifest.json, icons/
-prisma/                  schema.prisma, migrations/, seed.ts, seed-data.ts
+prisma/                  schema.prisma, migrations/, seed.ts, seed-data.ts, data-wilayah.ts
+  data/                  wilayah.tsv.gz, laporan-impor-wilayah.md, sumber-wilayah.json,
+                         LISENSI-DATA-WILAYAH.md
 tests/                   unit/, integration/, e2e/
-scripts/                 cron-lokal.ts, simulasi-risiko.ts, buat-ikon.mjs
+scripts/                 impor-wilayah.ts, cron-lokal.ts, simulasi-risiko.ts, buat-ikon.mjs
 ```
 
+API wilayah (semua GET):
+
+| Endpoint | Isi |
+|---|---|
+| `/api/wilayah` | Daftar provinsi; `?induk={kode}` untuk anak suatu wilayah (kab/kota, kecamatan, desa/kelurahan) |
+| `/api/wilayah/cari?q=` | Cari desa/kelurahan (min. 3 huruf; semua kata harus cocok dengan nama desa, kecamatan, kab/kota, atau provinsi) |
+| `/api/wilayah/terdekat?lat=&lng=` | Desa/kelurahan terdekat dari titik GPS. Koordinat pengguna tidak disimpan |
+| `/api/wilayah/{kode}` | Detail wilayah beserta leluhurnya |
+
 Pemetaan UML: operasi class diagram (`hitungLevelRisiko()`, `cekAmbang()`, `ambilDataCuaca()`, `cariLanggananAktif()`, `kirimNotifikasi()`, …) adalah fungsi service di `src/server/services/`. Operasi tambah/ubah/hapus konten tidak diekspos sebagai halaman/API, hanya dipakai `prisma/seed.ts`. Aktor hanya **Pengguna** dan **Open-Meteo**; tidak ada admin atau login.
+
+## Data wilayah Indonesia
+
+| Tingkat | Jumlah |
+|---|---|
+| Provinsi | 38 |
+| Kabupaten/Kota | 514 |
+| Kecamatan | 7.285 |
+| Desa/Kelurahan | 83.762 |
+
+**Sumber**
+
+- **Kode & nama:** [cahyadsn/wilayah](https://github.com/cahyadsn/wilayah) (`db/wilayah.sql`), mengikuti Kepmendagri No. 300.2.2-2430 Tahun 2025. Nama wilayah selalu diambil dari sini.
+- **Koordinat:** titik tengah (centroid) poligon batas wilayah dari [cahyadsn/wilayah_boundaries](https://github.com/cahyadsn/wilayah_boundaries). Poligonnya sudah disederhanakan, jadi centroid adalah perkiraan titik tengah wilayah, bukan lokasi kantor desa. Hanya titik tengah yang disimpan; poligon tidak ikut.
+
+**Proses impor** (`npm run data:wilayah`, hanya perlu dijalankan saat memperbarui data):
+
+1. Mengunduh kedua sumber dari **commit yang dipin** di `scripts/impor-wilayah.ts`, sehingga hasilnya dapat diulang. Cache unduhan ada di `.cache/wilayah/`.
+2. **Mencocokkan kode dengan nama.** Setiap kode Kemendagri dicari di data batas wilayah, lalu namanya dibandingkan setelah dinormalisasi. Hasilnya: `sama`, `ejaan` (beda spasi atau ejaan lama seperti oe→u dan dj→j, atau kemiripan ≥ 80%), atau `berbeda`. Koordinat hanya dipakai jika namanya `sama` atau `ejaan` dan titiknya berada di Indonesia.
+3. Desa/kelurahan tanpa data batas memakai **titik tengah kecamatannya** dan ditandai `koordinatPerkiraan`. Di aplikasi muncul catatan bahwa titik pusatnya perkiraan.
+4. Menulis `prisma/data/wilayah.tsv.gz` (di-commit; dibaca `npm run db:seed`), `laporan-impor-wilayah.md` (daftar semua nama yang berbeda ejaan, data yang hilang, dan wilayah yang jauh dari induknya), dan `sumber-wilayah.json`.
+
+Hasil impor saat ini: 0 nama berbeda, 19 beda ejaan (dilaporkan, nama Kemendagri yang dipakai), dan 359 desa/kelurahan memakai koordinat kecamatan. Ada 25 wilayah yang lebih jauh dari induknya daripada batas wajar; setelah diperiksa manual, semuanya kepulauan atau kecamatan yang sangat luas, jadi koordinatnya tetap dipakai.
+
+Wilayah yang hilang dari data baru tidak dihapus, hanya ditandai `aktif = false`, agar riwayat dan langganan lama tetap utuh.
+
+## Kuota Open-Meteo
+
+API gratis Open-Meteo dibatasi 10.000 call/hari (non-komersial). Satu permintaan Siap Banjir (10 variabel, satu lokasi) = 1 call. Agar tetap dalam kuota untuk seluruh Indonesia:
+
+- **Grid 0,1° (±11 km).** Koordinat desa dibulatkan ke titik grid terdekat, dan semua desa di sel yang sama berbagi satu permintaan dan satu cache. Resolusi model cuaca Open-Meteo untuk Indonesia 9–25 km, jadi tidak ada detail yang hilang. Seluruh 83.762 desa/kelurahan terbagi ke ±13.000 sel.
+- **Ambil saat dibuka.** Cuaca diminta ketika halaman desa/kelurahan dibuka, lalu di-cache 30 menit per sel.
+- **Cron hanya untuk pelanggan.** Cron hanya memperbarui sel yang berisi desa/kelurahan dengan langganan notifikasi aktif, maksimal 125 sel per putaran (data tertua lebih dulu).
+- **Pengaman anggaran.** Pemakaian dihitung dari jumlah `DataCuaca` 24 jam terakhir. Di atas 9.000, kunjungan halaman hanya memakai data tersimpan (label "Batas harian permintaan data cuaca hampir tercapai"); cron masih boleh sampai 9.800 karena notifikasi lebih penting. Data cuaca lebih tua dari 3 hari dihapus otomatis.
 
 ## Setup lokal (Windows)
 
@@ -75,7 +126,7 @@ $env:PGPASSWORD = 'postgres'
 Copy-Item .env.example .env
 npm install
 npm run db:migrate   # terapkan migrasi
-npm run db:seed      # 14 wilayah, ambang risiko, informasi, persiapan, rekomendasi
+npm run db:seed      # 91.599 wilayah dari prisma/data/wilayah.tsv.gz (±15 detik), ambang risiko, konten
 
 # 3. Kunci Web Push (VAPID): salin publicKey → NEXT_PUBLIC_VAPID_PUBLIC_KEY, privateKey → VAPID_PRIVATE_KEY
 npx web-push generate-vapid-keys --json
@@ -107,7 +158,7 @@ Notifikasi push dan PWA hanya bekerja di `localhost` atau HTTPS. Di iPhone/iPad,
 
 ## Cron: update cuaca otomatis
 
-`GET|POST /api/cron/update-weather` wajib header `Authorization: Bearer <CRON_SECRET>`. Untuk setiap wilayah (4 paralel): ambil data cuaca (memakai cache < 30 menit) → hitung risiko → jika risiko baru Sedang/Tinggi, kirim notifikasi dan simpan riwayat. Tambahkan `?paksa=1` untuk mengabaikan cache. Respons berisi ringkasan per wilayah.
+`GET|POST /api/cron/update-weather` wajib header `Authorization: Bearer <CRON_SECRET>`. Cron mengumpulkan desa/kelurahan yang punya langganan aktif dan mengelompokkannya per sel grid. Untuk setiap sel (4 paralel), cron mengambil data cuaca (memakai cache < 30 menit), menghitung risiko setiap desa di sel itu, lalu, jika risiko baru Sedang/Tinggi, mengirim notifikasi dan menyimpan riwayat. Sel di atas batas 125 per putaran ditunda ke putaran berikutnya. Tambahkan `?paksa=1` untuk mengabaikan cache. Respons berisi ringkasan (`sel`, `diperbarui`, `ditunda`, `pemakaianKuota24Jam`, …) dan hasil per sel.
 
 | Cara | Konfigurasi |
 |---|---|
@@ -124,13 +175,15 @@ Invoke-RestMethod "http://localhost:3000/api/cron/update-weather?paksa=1" -Heade
 
 ## Simulasi risiko tinggi
 
-Untuk melihat alur Bahaya → Detail Penanganan tanpa menunggu hujan lebat. Simulasi memasang ambang khusus sementara di database (kode tidak diubah) dan membuat cache cuaca wilayah itu kedaluwarsa.
+Untuk melihat alur Bahaya → Detail Penanganan tanpa menunggu hujan lebat. Simulasi memasang ambang khusus sementara di database (kode tidak diubah) dan membuat cache cuaca sel grid wilayah itu kedaluwarsa. Kode boleh tingkat apa pun; ambangnya diwariskan ke semua desa/kelurahan di bawahnya.
 
 ```powershell
-npm run simulasi -- status                           # daftar wilayah & simulasi aktif
-npm run simulasi -- aktifkan kota-medan TINGGI       # atau SEDANG
-# buka http://localhost:3000/risiko?wilayah=kota-medan, atau jalankan cron
-npm run simulasi -- pulihkan kota-medan              # hapus ambang, riwayat & data simulasi
+npm run simulasi -- cari sukarasa tangerang          # cari kode wilayah
+npm run simulasi -- aktifkan 36.71.01.1001 TINGGI    # satu kelurahan (atau SEDANG)
+npm run simulasi -- aktifkan 36.71 TINGGI            # semua desa/kelurahan di Kota Tangerang
+# buka http://localhost:3000/risiko?wilayah=36.71.01.1001, atau jalankan cron
+npm run simulasi -- status                           # simulasi aktif
+npm run simulasi -- pulihkan 36.71.01.1001           # hapus ambang, riwayat & data simulasi (--semua untuk semua)
 ```
 
 > Perangkat yang berlangganan notifikasi untuk wilayah itu akan menerima **push sungguhan**. Script menolak berjalan jika `DATABASE_URL` bukan database lokal (kecuali `--izinkan-remote`).
@@ -139,21 +192,21 @@ npm run simulasi -- pulihkan kota-medan              # hapus ambang, riwayat & d
 
 | Perintah | Isi | Kebutuhan |
 |---|---|---|
-| `npm test` | Unit test (Vitest): rule engine risiko, turunan parameter Open-Meteo, state machine, anti-spam, validasi endpoint push, cron, data seed | — |
-| `npm run test:integration` | `prosesPeringatan()` & riwayat terhadap database asli (push di-mock) | PostgreSQL dari `.env`. **Jangan ke database produksi** |
-| `npm run test:e2e` | Playwright (Pixel 7 + Desktop Chrome): pilih wilayah → lihat risiko → aktifkan notifikasi → atur notifikasi; GPS; state machine (wilayah disimulasikan TINGGI); deep link; PWA offline; security headers | `npm run build` lebih dulu, database ter-seed, internet (Open-Meteo) |
+| `npm test` | Unit test (Vitest): rule engine risiko & pewarisan ambang, turunan parameter Open-Meteo, state machine, anti-spam, validasi endpoint push, cron & riwayat, kode wilayah, grid, pencocokan nama impor, data wilayah & seed | — |
+| `npm run test:integration` | `prosesPeringatan()`, riwayat per kab/kota, pencarian & desa terdekat terhadap database asli (push di-mock) | PostgreSQL dari `.env` yang sudah di-seed. **Jangan ke database produksi** |
+| `npm run test:e2e` | Playwright (Pixel 7 + Desktop Chrome): cari desa → lihat risiko → aktifkan notifikasi → atur notifikasi; pilihan bertingkat; GPS; state machine (desa disimulasikan TINGGI); deep link; PWA offline; security headers | `npm run build` lebih dulu, database ter-seed, internet (Open-Meteo) |
 
-Pertama kali: `npx playwright install chromium`. E2E menjalankan server produksi di port 3100 dan mensimulasikan risiko TINGGI di `kota-pekalongan` selama test (dipulihkan otomatis). Chromium headless tidak bisa berlangganan push sungguhan, jadi `PushManager`/`Notification` di-stub; request ke server tetap asli.
+Pertama kali: `npx playwright install chromium`. E2E menjalankan server produksi di port 3100 dan mensimulasikan risiko TINGGI di Kelurahan Bandengan, Kota Pekalongan (`33.75.03.1009`) selama test (dipulihkan otomatis). Chromium headless tidak bisa berlangganan push sungguhan, jadi `PushManager`/`Notification` di-stub; request ke server tetap asli.
 
 ## Mengubah ambang & konten
 
-Tidak ada halaman admin (sesuai rancangan). Ambang risiko, wilayah, informasi, persiapan dini, dan rekomendasi diatur di `prisma/seed-data.ts`, lalu:
+Tidak ada halaman admin (sesuai rancangan). Ambang risiko, deskripsi wilayah, informasi, persiapan dini, dan rekomendasi diatur di `prisma/seed-data.ts`, lalu:
 
 ```powershell
-npm run db:seed   # idempoten: wilayah di-upsert, tabel konten diisi ulang
+npm run db:seed   # idempoten: wilayah di-upsert, tabel konten diisi ulang (riwayat otomatis tidak dihapus)
 ```
 
-Ambang khusus wilayah: tambahkan entri `ambangSeed` dengan `idWilayah`. Untuk parameter itu, ambang global tidak dipakai di wilayah tersebut. Ikon PWA dibuat dari logo dengan `node scripts/buat-ikon.mjs`.
+Ambang khusus wilayah: tambahkan entri `ambangSeed` dengan `idWilayah` berupa kode Kemendagri tingkat apa pun (tambahkan kodenya ke konstanta `KODE`). Untuk parameter itu, ambang tersebut berlaku bagi semua desa/kelurahan di bawahnya, kecuali ada ambang di tingkat yang lebih spesifik. Test `seed-data` memastikan setiap kode yang dirujuk ada di data Kemendagri dan nama profilnya cocok. Ikon PWA dibuat dari logo dengan `node scripts/buat-ikon.mjs`.
 
 ## Deploy ke Vercel + Neon / Supabase
 
@@ -206,5 +259,70 @@ Catatan: rate limit memakai memori proses, sehingga di Vercel batasnya berlaku p
 | `npm run db:seed` | Isi ulang data seed (idempoten) |
 | `npm run db:reset` | Hapus database, migrasi ulang, dan seed |
 | `npm run db:studio` | Prisma Studio |
+| `npm run data:wilayah` | Impor ulang data wilayah dari sumber (lihat [Data wilayah](#data-wilayah-indonesia)) |
 
-Data cuaca: [Open-Meteo.com](https://open-meteo.com/) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+## Atribusi & lisensi data
+
+- **Data cuaca:** [Open-Meteo.com](https://open-meteo.com/), lisensi [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Kode & nama wilayah:** [cahyadsn/wilayah](https://github.com/cahyadsn/wilayah) (commit [`55a496d`](https://github.com/cahyadsn/wilayah/tree/55a496d3662bf173a65d6860f75ed6be625f2430)), berdasarkan Kepmendagri No. 300.2.2-2430 Tahun 2025. Lisensi **MIT**, Copyright (c) 2017-2025 Cahya DSN.
+- **Koordinat wilayah:** [cahyadsn/wilayah_boundaries](https://github.com/cahyadsn/wilayah_boundaries) (commit [`3c5a796`](https://github.com/cahyadsn/wilayah_boundaries/tree/3c5a7960f4d227a38489094d84252bdbb3f978a5)). Lisensi **MIT**, Copyright (c) 2024 Cahya DSN.
+
+Teks lengkap kedua lisensi MIT tersebut disertakan di [prisma/data/LISENSI-DATA-WILAYAH.md](prisma/data/LISENSI-DATA-WILAYAH.md), sesuai syarat lisensi bahwa pemberitahuan hak cipta dan izin wajib disertakan pada salinan data.
+
+<details>
+<summary>MIT License, cahyadsn/wilayah</summary>
+
+```
+MIT License
+
+Copyright (c) 2017-2025 Cahya DSN
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+</details>
+
+<details>
+<summary>MIT License, cahyadsn/wilayah_boundaries</summary>
+
+```
+MIT License
+
+Copyright (c) 2024 Cahya DSN
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+</details>

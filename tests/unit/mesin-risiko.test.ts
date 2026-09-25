@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { konteksAwal, transisi, type EventRisiko, type KonteksRisiko } from "@/lib/mesin-risiko";
 import type { RisikoKlien } from "@/lib/tipe-risiko";
 
-const risiko = (level: TingkatRisiko, idWilayah = "kota-semarang"): RisikoKlien => ({
+const risiko = (level: TingkatRisiko, idWilayah = "33.74.02.1002"): RisikoKlien => ({
   idRisiko: `r-${level}-${idWilayah}`,
   idWilayah,
-  namaWilayah: "Kota Semarang",
+  namaWilayah: "Kelurahan Bulu Lor, Kota Semarang",
+  namaInduk: "Kec. Semarang Utara, Kota Semarang, Jawa Tengah",
+  koordinatPerkiraan: false,
   level,
   skorRisiko: level === "TINGGI" ? 80 : level === "SEDANG" ? 50 : 10,
   deskripsi: `Risiko ${level}`,
@@ -117,8 +119,8 @@ describe("state machine risiko", () => {
 
   it("ganti wilayah memulai evaluasi dari awal dan melupakan peringatan yang ditutup", () => {
     let k = jalankan(konteksAwal(risiko("SEDANG")), { type: "TUTUP" });
-    k = transisi(k, { type: "DATA_DITERIMA", data: risiko("SEDANG", "kota-medan") });
-    expect(k.state).toMatchObject({ nama: "bahaya", data: { idWilayah: "kota-medan" } });
+    k = transisi(k, { type: "DATA_DITERIMA", data: risiko("SEDANG", "12.71.01.1001") });
+    expect(k.state).toMatchObject({ nama: "bahaya", data: { idWilayah: "12.71.01.1001" } });
     expect(k.ditutup).toBeNull();
   });
 

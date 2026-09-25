@@ -1,98 +1,324 @@
 "use client";
 
-import { useId, useState } from "react";
-import { LoaderCircle, LocateFixed } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { LoaderCircle, LocateFixed, MapPin, Search } from "lucide-react";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
 import { Button } from "@/components/ui/button";
 import { useWilayah } from "@/hooks/useWilayah";
-import { cariWilayahTerdekat } from "@/lib/geo";
+import { jenisWilayah } from "@/lib/kode-wilayah";
+import { cn } from "@/lib/utils";
+import type { DataPemilih, HasilPencarian, RingkasWilayah } from "@/server/services/wilayah.service";
 
-export type OpsiWilayah = {
-  idWilayah: string;
-  namaWilayah: string;
-  koordinatLatitude: number;
-  koordinatLongitude: number;
-};
+type Tingkat = "provinsi" | "kabkota" | "kecamatan" | "desa";
+const TINGKAT: { id: Tingkat; label: string; kosong: string }[] = [
+  { id: "provinsi", label: "Provinsi", kosong: "Pilih provinsi…" },
+  { id: "kabkota", label: "Kabupaten/Kota", kosong: "Pilih kabupaten/kota…" },
+  { id: "kecamatan", label: "Kecamatan", kosong: "Pilih kecamatan…" },
+  { id: "desa", label: "Desa/Kelurahan", kosong: "Pilih desa/kelurahan…" },
+];
 
-type StatusGps = { tipe: "idle" } | { tipe: "mencari" } | { tipe: "info" | "galat"; pesan: string };
+type StatusPesan = { tipe: "info" | "galat"; teks: string } | null;
 
-export function PilihWilayah({ daftar, terpilih }: { daftar: OpsiWilayah[]; terpilih: string | null }) {
+async function ambilData<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  const json: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    const pesan = json && typeof json === "object" && "error" in json && typeof json.error === "string" ? json.error : null;
+    throw new Error(pesan ?? `HTTP ${res.status}`);
+  }
+  return (json as { data: T }).data;
+}
+
+const kelasSelect =
+  "h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50";
+
+/** Kotak pencarian desa/kelurahan (pola combobox ARIA). */
+function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) {
+  const id = useId();
+  const [q, setQ] = useState("");
+  const [hasil, setHasil] = useState<HasilPencarian[]>([]);
+  const [aktif, setAktif] = useState(-1);
+  const [terbuka, setTerbuka] = useState(false);
+  const [memuat, setMemuat] = useState(false);
+  const [galat, setGalat] = useState<string | null>(null);
+
+  useEffect(() => {
+    const kueri = q.trim();
+    if (kueri.length < 3) {
+      setHasil([]);
+      setGalat(null);
+      return;
+    }
+    const kontrol = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setMemuat(true);
+      try {
+        const res = await fetch(`/api/wilayah/cari?q=${encodeURIComponent(kueri)}`, { signal: kontrol.signal });
+        if (!res.ok) throw new Error(res.status === 429 ? "Terlalu banyak pencarian. Tunggu sebentar." : "Pencarian gagal.");
+        setHasil(((await res.json()) as { data: HasilPencarian[] }).data);
+        setGalat(null);
+        setAktif(-1);
+        setTerbuka(true);
+      } catch (err) {
+        if (!kontrol.signal.aborted) setGalat(err instanceof Error ? err.message : "Pencarian gagal.");
+      } finally {
+        if (!kontrol.signal.aborted) setMemuat(false);
+      }
+    }, 300);
+    return () => {
+      kontrol.abort();
+      window.clearTimeout(timer);
+    };
+  }, [q]);
+
+  const pilih = (h: HasilPencarian) => {
+    setTerbuka(false);
+    setQ("");
+    setHasil([]);
+    onPilih(h);
+  };
+
+  const tampil = terbuka && q.trim().length >= 3;
+
+  return (
+    <div className="relative">
+      <label htmlFor={`${id}-input`} className="mb-1 block font-medium">
+        Cari desa/kelurahan
+      </label>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <input
+          id={`${id}-input`}
+          type="search"
+          role="combobox"
+          aria-expanded={tampil}
+          aria-controls={`${id}-daftar`}
+          aria-autocomplete="list"
+          aria-activedescendant={aktif >= 0 ? `${id}-opsi-${aktif}` : undefined}
+          aria-describedby={`${id}-bantuan`}
+          autoComplete="off"
+          placeholder="Contoh: Sukarasa Tangerang"
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setTerbuka(true);
+          }}
+          onFocus={() => setTerbuka(true)}
+          onBlur={() => window.setTimeout(() => setTerbuka(false), 150)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setTerbuka(true);
+              setAktif((a) => Math.min(a + 1, hasil.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setAktif((a) => Math.max(a - 1, 0));
+            } else if (e.key === "Enter" && aktif >= 0 && hasil[aktif]) {
+              e.preventDefault();
+              pilih(hasil[aktif]);
+            } else if (e.key === "Escape") {
+              setTerbuka(false);
+            }
+          }}
+          className={cn(kelasSelect, "pl-9")}
+        />
+        {memuat ? (
+          <LoaderCircle className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden="true" />
+        ) : null}
+      </div>
+      <p id={`${id}-bantuan`} className="mt-1 text-sm text-muted-foreground">
+        Ketik minimal 3 huruf: nama desa/kelurahan, bisa ditambah nama kecamatan atau kota.
+      </p>
+      {tampil ? (
+        <ul
+          id={`${id}-daftar`}
+          role="listbox"
+          aria-label="Hasil pencarian"
+          className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-md border bg-popover p-1 shadow-lg"
+        >
+          {galat ? (
+            <li className="px-3 py-2 text-sm text-destructive">{galat}</li>
+          ) : hasil.length === 0 && !memuat ? (
+            <li className="px-3 py-2 text-sm text-muted-foreground">Tidak ditemukan.</li>
+          ) : (
+            hasil.map((h, i) => (
+              <li
+                key={h.idWilayah}
+                id={`${id}-opsi-${i}`}
+                role="option"
+                aria-selected={i === aktif}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pilih(h)}
+                className={cn("cursor-pointer rounded px-3 py-2", i === aktif ? "bg-accent" : "hover:bg-accent/60")}
+              >
+                <span className="block font-medium">
+                  {h.jenis} {h.namaWilayah}
+                </span>
+                <span className="block text-sm text-muted-foreground">{h.namaLengkap.split(", ").slice(1).join(", ")}</span>
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * aturLokasi(wilayah): pilih desa/kelurahan lewat pencarian, pilihan bertingkat
+ * (Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan), atau lokasi GPS.
+ */
+export function PilihWilayah({ data, namaTerpilih }: { data: DataPemilih; namaTerpilih: string | null }) {
   const { pilihWilayah: simpanPilihan } = useWilayah();
   const { setelahPilihWilayah } = useNotifikasi();
-  const [gps, setGps] = useState<StatusGps>({ tipe: "idle" });
-  const idSelect = useId();
+  const id = useId();
+  const [pilihan, setPilihan] = useState(data.pilihan);
+  const [daftar, setDaftar] = useState(data.daftar);
+  // Wilayah terpilih berubah dari server (pencarian/GPS/tautan) → samakan pilihan bertingkat.
+  // Tidak memakai `key` agar pesan (misal hasil GPS) tetap tampil setelah render ulang.
+  const kunciData = Object.values(data.pilihan).join("|");
+  const [kunciSebelum, setKunciSebelum] = useState(kunciData);
+  if (kunciData !== kunciSebelum) {
+    setKunciSebelum(kunciData);
+    setPilihan(data.pilihan);
+    setDaftar(data.daftar);
+  }
+  const [memuat, setMemuat] = useState<Tingkat | null>(null);
+  const [pesan, setPesan] = useState<StatusPesan>(null);
+  const [gps, setGps] = useState(false);
+  const permintaan = useRef(0);
 
-  // aturLokasi(wilayah) → popup izin notifikasi / sinkron wilayah langganan.
-  function pilihWilayah(idWilayah: string) {
+  // aturLokasi(wilayah) → simpan preferensi → popup izin notifikasi / sinkron langganan.
+  function pilihDesa(idWilayah: string, namaWilayah: string) {
     simpanPilihan(idWilayah);
-    const wilayah = daftar.find((w) => w.idWilayah === idWilayah);
-    if (wilayah) setelahPilihWilayah({ idWilayah, namaWilayah: wilayah.namaWilayah });
+    setelahPilihWilayah({ idWilayah, namaWilayah });
+  }
+
+  async function ubah(tingkat: Tingkat, kode: string) {
+    const i = TINGKAT.findIndex((t) => t.id === tingkat);
+    const berikut = TINGKAT[i + 1]?.id;
+    const baru = { ...pilihan, [tingkat]: kode || null };
+    for (const t of TINGKAT.slice(i + 1)) baru[t.id] = null;
+    setPilihan(baru);
+    setPesan(null);
+
+    if (tingkat === "desa") {
+      const desa = daftar.desa.find((d) => d.idWilayah === kode);
+      const kab = daftar.kabkota.find((k) => k.idWilayah === baru.kabkota);
+      if (desa) pilihDesa(desa.idWilayah, `${jenisWilayah(desa.idWilayah)} ${desa.namaWilayah}${kab ? `, ${kab.namaWilayah}` : ""}`);
+      return;
+    }
+    if (!berikut) return;
+
+    const kosongkan = Object.fromEntries(TINGKAT.slice(i + 1).map((t) => [t.id, [] as RingkasWilayah[]]));
+    setDaftar((d) => ({ ...d, ...kosongkan }));
+    if (!kode) return;
+
+    const nomor = ++permintaan.current;
+    setMemuat(berikut);
+    try {
+      const anak = await ambilData<RingkasWilayah[]>(`/api/wilayah?induk=${encodeURIComponent(kode)}`);
+      if (nomor === permintaan.current) setDaftar((d) => ({ ...d, [berikut]: anak }));
+    } catch {
+      if (nomor === permintaan.current) setPesan({ tipe: "galat", teks: "Gagal memuat daftar wilayah. Coba lagi." });
+    } finally {
+      if (nomor === permintaan.current) setMemuat(null);
+    }
   }
 
   function pakaiLokasi() {
     if (!("geolocation" in navigator)) {
-      setGps({ tipe: "galat", pesan: "Browser ini tidak mendukung lokasi GPS. Pilih wilayah dari daftar." });
+      setPesan({ tipe: "galat", teks: "Browser ini tidak mendukung lokasi GPS. Pilih wilayah dari daftar." });
       return;
     }
-    setGps({ tipe: "mencari" });
+    setGps(true);
+    setPesan(null);
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        const hasil = cariWilayahTerdekat(coords.latitude, coords.longitude, daftar);
-        if (!hasil) {
-          setGps({ tipe: "galat", pesan: "Belum ada wilayah yang bisa dipilih." });
-          return;
+      async ({ coords }) => {
+        try {
+          const hasil = await ambilData<{ idWilayah: string; namaWilayah: string; jarakKm: number }>(
+            `/api/wilayah/terdekat?lat=${coords.latitude}&lng=${coords.longitude}`,
+          );
+          setPesan({
+            tipe: "info",
+            teks: `Desa/kelurahan terdekat: ${hasil.namaWilayah} (±${hasil.jarakKm.toLocaleString("id-ID")} km dari titik pusatnya). Bukan wilayah Anda? Pilih dari daftar.`,
+          });
+          pilihDesa(hasil.idWilayah, hasil.namaWilayah);
+        } catch (err) {
+          setPesan({ tipe: "galat", teks: err instanceof Error ? err.message : "Lokasi tidak dapat diproses." });
+        } finally {
+          setGps(false);
         }
-        setGps({
-          tipe: "info",
-          pesan: `Wilayah terdekat: ${hasil.wilayah.namaWilayah} (±${Math.round(hasil.jarakKm)} km).`,
-        });
-        pilihWilayah(hasil.wilayah.idWilayah);
       },
       (err) => {
-        setGps({
+        setGps(false);
+        setPesan({
           tipe: "galat",
-          pesan:
+          teks:
             err.code === err.PERMISSION_DENIED
               ? "Izin lokasi ditolak. Pilih wilayah dari daftar."
               : "Lokasi tidak dapat ditemukan. Pilih wilayah dari daftar.",
         });
       },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 10 * 60 * 1000 },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 10 * 60 * 1000 },
     );
   }
 
   return (
-    <div className="space-y-2">
-      <label htmlFor={idSelect} className="block font-medium">
-        Wilayah yang dipantau
-      </label>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <select
-          id={idSelect}
-          value={terpilih ?? ""}
-          onChange={(e) => e.target.value && pilihWilayah(e.target.value)}
-          className="h-11 flex-1 rounded-md border border-input bg-background px-3 text-base shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-        >
-          <option value="" disabled>
-            Pilih wilayah…
-          </option>
-          {daftar.map((w) => (
-            <option key={w.idWilayah} value={w.idWilayah}>
-              {w.namaWilayah}
-            </option>
-          ))}
-        </select>
-        <Button type="button" variant="outline" className="h-11" onClick={pakaiLokasi} disabled={gps.tipe === "mencari"}>
-          {gps.tipe === "mencari" ? (
-            <LoaderCircle className="animate-spin" aria-hidden="true" />
-          ) : (
-            <LocateFixed aria-hidden="true" />
-          )}
-          Gunakan lokasi saya
-        </Button>
-      </div>
-      <p aria-live="polite" className={gps.tipe === "galat" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
-        {gps.tipe === "info" || gps.tipe === "galat" ? gps.pesan : null}
+    <div className="space-y-4">
+      {namaTerpilih ? (
+        <p className="flex items-start gap-2 rounded-lg bg-primary/5 p-3">
+          <MapPin className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+          <span>
+            <span className="block text-sm text-muted-foreground">Wilayah yang dipantau</span>
+            <span className="font-semibold">{namaTerpilih}</span>
+          </span>
+        </p>
+      ) : null}
+
+      <CariWilayah onPilih={(h) => pilihDesa(h.idWilayah, `${h.jenis} ${h.namaWilayah}, ${h.namaLengkap.split(", ").at(-2) ?? ""}`)} />
+
+      <Button type="button" variant="outline" className="h-11 w-full" onClick={pakaiLokasi} disabled={gps}>
+        {gps ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <LocateFixed aria-hidden="true" />}
+        Gunakan lokasi saya
+      </Button>
+
+      <fieldset className="space-y-3">
+        <legend className="mb-1 font-medium">Atau pilih bertingkat</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {TINGKAT.map(({ id: t, label, kosong }, i) => {
+            const opsi = daftar[t];
+            const indukKosong = i > 0 && !pilihan[TINGKAT[i - 1]!.id];
+            return (
+              <div key={t}>
+                <label htmlFor={`${id}-${t}`} className="mb-1 flex items-center gap-2 text-sm font-medium">
+                  {label}
+                  {memuat === t ? <LoaderCircle className="size-3.5 animate-spin" aria-label="Memuat" /> : null}
+                </label>
+                <select
+                  id={`${id}-${t}`}
+                  value={pilihan[t] ?? ""}
+                  onChange={(e) => void ubah(t, e.target.value)}
+                  disabled={indukKosong || memuat === t}
+                  className={kelasSelect}
+                >
+                  <option value="" disabled={t === "desa"}>
+                    {kosong}
+                  </option>
+                  {opsi.map((w) => (
+                    <option key={w.idWilayah} value={w.idWilayah}>
+                      {t === "desa" ? `${jenisWilayah(w.idWilayah)} ${w.namaWilayah}` : w.namaWilayah}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <p aria-live="polite" className={pesan?.tipe === "galat" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
+        {pesan?.teks}
       </p>
     </div>
   );

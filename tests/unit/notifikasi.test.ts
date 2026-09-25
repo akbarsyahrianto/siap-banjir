@@ -47,13 +47,13 @@ describe("memenuhiLevelMinimum", () => {
 describe("buatNotifikasi", () => {
   it("berisi deep link ke /risiko?wilayah={id} bagian Detail Penanganan", () => {
     const p = buatNotifikasi(
-      { idWilayah: "kota-semarang", level: "TINGGI", deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm." },
-      "Kota Semarang",
+      { idWilayah: "33.74.02.1002", level: "TINGGI", deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm." },
+      "Kelurahan Bulu Lor, Kota Semarang",
     );
-    expect(p.url).toBe("/risiko?wilayah=kota-semarang#penanganan");
+    expect(p.url).toBe("/risiko?wilayah=33.74.02.1002#penanganan");
     expect(p.judul).toContain("TINGGI");
-    expect(p.judul).toContain("Kota Semarang");
-    expect(p.tag).toBe("risiko-kota-semarang");
+    expect(p.judul).toContain("Kelurahan Bulu Lor, Kota Semarang");
+    expect(p.tag).toBe("risiko-33.74.02.1002");
   });
 });
 
@@ -85,10 +85,12 @@ describe("validasi endpoint push (anti-SSRF)", () => {
         endpoint: "https://fcm.googleapis.com/fcm/send/abc123",
         keys: { p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u", auth: "tBHItJI5svbpez7KI4CCXg" },
       },
-      idWilayah: "kota-semarang",
+      idWilayah: "33.74.02.1002",
     };
     expect(subscribeBodySchema.parse(body).levelMinimum).toBe("SEDANG");
     expect(subscribeBodySchema.safeParse({ ...body, levelMinimum: "RENDAH" }).success).toBe(false);
+    // Slug lama / kode tidak valid ditolak.
+    expect(subscribeBodySchema.safeParse({ ...body, idWilayah: "kota-semarang" }).success).toBe(false);
   });
 });
 

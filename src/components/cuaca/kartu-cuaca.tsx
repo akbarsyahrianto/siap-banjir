@@ -5,16 +5,19 @@ import { formatAngka } from "@/lib/format";
 import { infoKondisiCuaca } from "@/lib/weather-code";
 import type { SumberData } from "@/server/services/weather.service";
 import { AtribusiOpenMeteo } from "./atribusi-open-meteo";
+import { CatatanLokasi } from "./catatan-lokasi";
 import { StatusData } from "./status-data";
 
 export function KartuCuaca({
   dataCuaca,
   sumber,
   namaWilayah,
+  koordinatPerkiraan = false,
 }: {
   dataCuaca: DataCuaca;
   sumber: SumberData;
   namaWilayah: string;
+  koordinatPerkiraan?: boolean;
 }) {
   const kondisi = infoKondisiCuaca(dataCuaca.kondisiCuaca);
   const Ikon = kondisi.ikon;
@@ -53,6 +56,7 @@ export function KartuCuaca({
         </dl>
         <div className="space-y-1">
           <StatusData sumber={sumber} waktuAmbil={dataCuaca.waktuAmbil} />
+          <CatatanLokasi koordinatPerkiraan={koordinatPerkiraan} />
           <AtribusiOpenMeteo />
         </div>
       </CardContent>

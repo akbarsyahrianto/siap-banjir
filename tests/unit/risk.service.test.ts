@@ -4,6 +4,7 @@ import {
   buatDeskripsiRisiko,
   cekAmbang,
   hitungLevelRisiko,
+  pilihAmbangEfektif,
   type AmbangAcuan,
 } from "@/server/services/risk.service";
 
@@ -15,6 +16,17 @@ const ambangGlobal: AmbangAcuan[] = ambangSeed.map((a) => ({
   nilaiMaksimum: a.nilaiMaksimum ?? null,
   levelRisiko: a.levelRisiko,
 }));
+
+const PROV = "33"; // Jawa Tengah
+const KAB = "33.74"; // Kota Semarang
+const DESA = "33.74.02.1002"; // Kelurahan Bulu Lor
+
+/** Tiga rentang hujan_24jam: RENDAH < sedang ≤ SEDANG < tinggi ≤ TINGGI. */
+const ambang24Jam = (idWilayah: string, sedang: number, tinggi: number): AmbangAcuan[] => [
+  { idWilayah, parameter: "hujan_24jam", nilaiMinimum: 0, nilaiMaksimum: sedang, levelRisiko: "RENDAH" },
+  { idWilayah, parameter: "hujan_24jam", nilaiMinimum: sedang, nilaiMaksimum: tinggi, levelRisiko: "SEDANG" },
+  { idWilayah, parameter: "hujan_24jam", nilaiMinimum: tinggi, nilaiMaksimum: null, levelRisiko: "TINGGI" },
+];
 
 describe("hitungLevelRisiko", () => {
   it("semua parameter rendah → RENDAH, skor ≤ 33", () => {
@@ -59,12 +71,8 @@ describe("hitungLevelRisiko", () => {
   });
 
   it("ambang khusus wilayah menimpa ambang global untuk parameter yang sama", () => {
-    // Wilayah sangat rawan: hujan 24 jam ≥ 30 mm sudah TINGGI.
-    const khusus: AmbangAcuan[] = [
-      { idWilayah: "kota-semarang", parameter: "hujan_24jam", nilaiMinimum: 0, nilaiMaksimum: 15, levelRisiko: "RENDAH" },
-      { idWilayah: "kota-semarang", parameter: "hujan_24jam", nilaiMinimum: 15, nilaiMaksimum: 30, levelRisiko: "SEDANG" },
-      { idWilayah: "kota-semarang", parameter: "hujan_24jam", nilaiMinimum: 30, nilaiMaksimum: null, levelRisiko: "TINGGI" },
-    ];
+    // Kota Semarang sangat rawan: hujan 24 jam ≥ 30 mm sudah TINGGI.
+    const khusus = ambang24Jam(KAB, 15, 30);
     const nilai = { hujan_24jam: 35, hujan_1jam: 1 };
 
     expect(hitungLevelRisiko(nilai, ambangGlobal).level).toBe("SEDANG");
@@ -94,5 +102,27 @@ describe("hitungLevelRisiko", () => {
 
   it("skor tidak melebihi 100 untuk nilai ekstrem", () => {
     expect(hitungLevelRisiko({ hujan_24jam: 377 }, ambangGlobal).skorRisiko).toBe(100);
+  });
+});
+
+describe("pewarisan ambang bertingkat (desa > kecamatan > kab/kota > provinsi > global)", () => {
+  const nilai = { hujan_24jam: 35 };
+
+  it("ambang kab/kota berlaku untuk desa di bawahnya", () => {
+    expect(hitungLevelRisiko(nilai, [...ambangGlobal, ...ambang24Jam(KAB, 15, 30)]).level).toBe("TINGGI");
+  });
+
+  it("ambang tingkat lebih spesifik menimpa leluhurnya, tanpa dicampur", () => {
+    // Provinsi longgar (TINGGI ≥ 100), kab/kota ketat (TINGGI ≥ 30), desa sedikit lebih longgar (TINGGI ≥ 40).
+    const semua = [...ambangGlobal, ...ambang24Jam(PROV, 60, 100), ...ambang24Jam(KAB, 15, 30), ...ambang24Jam(DESA, 20, 40)];
+    const efektif = pilihAmbangEfektif(semua).get("hujan_24jam") ?? [];
+    expect(new Set(efektif.map((a) => a.idWilayah))).toEqual(new Set([DESA]));
+    expect(hitungLevelRisiko(nilai, semua).level).toBe("SEDANG");
+  });
+
+  it("parameter tanpa ambang khusus di tingkat mana pun memakai ambang global", () => {
+    const efektif = pilihAmbangEfektif([...ambangGlobal, ...ambang24Jam(KAB, 15, 30)]);
+    expect(efektif.get("hujan_1jam")?.every((a) => a.idWilayah === null)).toBe(true);
+    expect(efektif.get("hujan_24jam")?.every((a) => a.idWilayah === KAB)).toBe(true);
   });
 });

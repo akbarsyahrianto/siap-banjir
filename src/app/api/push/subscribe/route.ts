@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cekRateLimit, parseBody, tidakDitemukan } from "@/server/http";
 import { limitLangganan } from "@/server/rate-limits";
-import { lihatWilayah } from "@/server/services/content.service";
+import { lihatDesa } from "@/server/services/wilayah.service";
 import { aktifkan, daftarkanPerangkat } from "@/server/services/subscription.service";
 import { subscribeBodySchema } from "@/server/validators/push";
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!body.ok) return body.res;
   const { deviceToken, jenisPerangkat, browser, subscription, idWilayah, levelMinimum } = body.data;
 
-  if (!(await lihatWilayah(idWilayah))) return tidakDitemukan("Wilayah tidak ditemukan");
+  if (!(await lihatDesa(idWilayah))) return tidakDitemukan("Desa/kelurahan tidak ditemukan");
 
   const idPerangkat = await daftarkanPerangkat({ deviceToken, jenisPerangkat, browser, idWilayah });
   const langganan = await aktifkan(idPerangkat, { idWilayah, subscription, levelMinimum });

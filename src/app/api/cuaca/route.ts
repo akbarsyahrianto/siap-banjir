@@ -3,6 +3,7 @@ import { cekRateLimit, parseQuery, tidakDitemukan } from "@/server/http";
 import { limitBacaCuaca } from "@/server/rate-limits";
 import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { ringkasanHarian, seriHujan48Jam, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
+import { namaTampilan } from "@/server/services/wilayah.service";
 import { queryWilayahSchema } from "@/server/validators/risiko";
 
 /** GET /api/cuaca?wilayah={id}: cuaca terkini + prakiraan (Lihat Data Cuaca «include» Ambil Data Cuaca). */
@@ -22,6 +23,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     data: {
       idWilayah: kondisi.wilayah.idWilayah,
+      namaWilayah: namaTampilan(kondisi.leluhur),
+      // Data cuaca berlaku untuk sel grid 0,1° (±11 km) tempat desa/kelurahan ini berada.
+      grid: { kunci: dataCuaca.kunciGrid, latitude: dataCuaca.gridLatitude, longitude: dataCuaca.gridLongitude },
+      koordinatPerkiraan: kondisi.wilayah.koordinatPerkiraan,
       sumber,
       waktuAmbil: dataCuaca.waktuAmbil,
       waktuPengamatan: dataCuaca.waktuPengamatan,

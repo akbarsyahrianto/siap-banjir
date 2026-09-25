@@ -18,7 +18,7 @@ const { db } = await import("@/server/db");
 const { prosesPeringatan } = await import("@/server/services/notification.service");
 const { aktifkan, daftarkanPerangkat } = await import("@/server/services/subscription.service");
 
-const WILAYAH = "kota-pekalongan";
+const WILAYAH = "33.75.03.1009"; // Kelurahan Bandengan, Kota Pekalongan
 const penggunaDibuat: string[] = [];
 const cuacaDibuat: string[] = [];
 
@@ -47,15 +47,18 @@ async function buatLangganan(opsi: { levelMinimum?: TingkatRisiko; status?: bool
 async function buatRisiko(level: TingkatRisiko) {
   const cuaca = await db.dataCuaca.create({
     data: {
-      idWilayah: WILAYAH,
+      // Sel grid di laut (tanpa desa) agar tidak tercampur cache cuaca nyata.
+      kunciGrid: "0.0,0.0",
+      gridLatitude: 0,
+      gridLongitude: 0,
       curahHujan: 0,
       suhu: 28,
       kelembapan: 80,
       kondisiCuaca: 63,
       kecepatanAngin: 5,
       waktuPengamatan: new Date(),
-      // Tandai sebagai data uji; tidak dipakai UI karena waktuAmbil di masa lalu.
-      waktuAmbil: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      // Tandai sebagai data uji; di luar jendela hitung kuota 24 jam.
+      waktuAmbil: new Date(Date.now() - 25 * 60 * 60 * 1000),
       rawJson: { uji: true },
     },
   });

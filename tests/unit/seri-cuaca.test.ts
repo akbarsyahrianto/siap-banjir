@@ -16,7 +16,6 @@ const raw = openMeteoResponseSchema.parse({
     temperature_2m: 30,
     relative_humidity_2m: 70,
     precipitation: 0,
-    rain: 0,
     weather_code: 3,
     wind_speed_10m: 10,
   },

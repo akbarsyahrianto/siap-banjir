@@ -2,15 +2,26 @@
 // Nama tabel & kolom snake_case di database, field camelCase di Prisma.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider   = "postgresql"
   // Runtime (di Neon/Supabase: URL pooled / pgbouncer).
-  url       = env("DATABASE_URL")
+  url        = env("DATABASE_URL")
   // Migrasi (koneksi langsung). Lokal: sama dengan DATABASE_URL.
-  directUrl = env("DIRECT_URL")
+  directUrl  = env("DIRECT_URL")
+  // pg_trgm: index pencarian nama wilayah (ILIKE '%...%').
+  extensions = [pg_trgm]
+}
+
+// Tingkat wilayah administrasi Kemendagri.
+enum TingkatWilayah {
+  PROVINSI
+  KABKOTA
+  KECAMATAN
+  DESA
 }
 
 // Enum level risiko. Diberi nama TingkatRisiko karena nama "LevelRisiko"
@@ -105,16 +116,26 @@ model Notifikasi {
 }
 
 model Wilayah {
-  // Slug yang mudah dibaca, dipakai juga di URL (/risiko?wilayah={id}).
-  idWilayah          String  @id @map("id_wilayah")
-  namaWilayah        String  @map("nama_wilayah")
-  koordinatLatitude  Float   @map("koordinat_latitude")
-  koordinatLongitude Float   @map("koordinat_longitude")
+  // Kode Kemendagri bertitik: 36 · 36.71 · 36.71.01 · 36.71.01.1001 (dipakai di URL ?wilayah=).
+  idWilayah          String         @id @map("id_wilayah")
+  namaWilayah        String         @map("nama_wilayah")
+  level              TingkatWilayah
+  idInduk            String?        @map("id_induk")
+  // "Sukarasa, Tangerang, Kota Tangerang, Banten" untuk pencarian (index trigram).
+  namaLengkap        String         @map("nama_lengkap")
+  // Centroid polygon (cahyadsn/wilayah_boundaries).
+  koordinatLatitude  Float          @map("koordinat_latitude")
+  koordinatLongitude Float          @map("koordinat_longitude")
+  // true = koordinat induk dipakai karena data centroid tidak ada/tidak cocok.
+  koordinatPerkiraan Boolean        @default(false) @map("koordinat_perkiraan")
+  // Sel grid cuaca 0,1° ("-6.2,106.6"); diisi untuk desa/kelurahan.
+  kunciGrid          String?        @map("kunci_grid")
+  // false = kode tidak ada lagi di data Kemendagri terbaru (disembunyikan dari pemilih).
+  aktif              Boolean        @default(true)
   deskripsi          String?
-  // Daftar kontak darurat: [{ nama, telepon }]. Lihat docs/DECISIONS.md.
-  kontakDarurat      Json    @default("[]") @map("kontak_darurat")
 
-  dataCuaca     DataCuaca[]
+  induk         Wilayah?              @relation("HierarkiWilayah", fields: [idInduk], references: [idWilayah], onDelete: Restrict)
+  anak          Wilayah[]             @relation("HierarkiWilayah")
   levelRisiko   LevelRisiko[]
   informasi     Informasi[]
   ambangRisiko  AmbangRisiko[]
@@ -123,12 +144,21 @@ model Wilayah {
   pengguna      Pengguna[]
   langganan     LanggananNotifikasi[]
 
+  @@index([idInduk, aktif])
+  @@index([level, koordinatLatitude, koordinatLongitude])
+  @@index([kunciGrid])
+  @@index([namaLengkap(ops: raw("gin_trgm_ops"))], type: Gin, map: "wilayah_nama_lengkap_trgm_idx")
   @@map("wilayah")
 }
 
+/// Cache cuaca per sel grid 0,1° (bukan per wilayah): semua desa di sel yang sama
+/// memakai satu request Open-Meteo. Lihat docs/DECISIONS.md D-034.
 model DataCuaca {
   idCuaca         String   @id @default(cuid()) @map("id_cuaca")
-  idWilayah       String   @map("id_wilayah")
+  kunciGrid       String   @map("kunci_grid")
+  // Titik pusat sel grid yang diminta ke Open-Meteo.
+  gridLatitude    Float    @map("grid_latitude")
+  gridLongitude   Float    @map("grid_longitude")
   curahHujan      Float    @map("curah_hujan")
   suhu            Float
   kelembapan      Float
@@ -140,11 +170,11 @@ model DataCuaca {
   waktuAmbil      DateTime @default(now()) @map("waktu_ambil")
   rawJson         Json     @map("raw_json")
 
-  wilayah     Wilayah       @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
   levelRisiko LevelRisiko[]
 
-  @@index([idWilayah, waktuPengamatan])
-  @@index([idWilayah, waktuAmbil])
+  @@index([kunciGrid, waktuAmbil])
+  // Hitung pemakaian kuota 24 jam & pembersihan data lama.
+  @@index([waktuAmbil])
   @@map("data_cuaca")
 }
 
@@ -166,6 +196,7 @@ model LevelRisiko {
   notifikasi Notifikasi[]
 
   @@index([idWilayah, waktu])
+  @@index([idCuaca, idWilayah])
   @@map("level_risiko")
 }
 

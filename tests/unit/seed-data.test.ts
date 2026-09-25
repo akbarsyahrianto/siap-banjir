@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { bacaDataWilayah } from "../../prisma/data-wilayah";
 import {
   ambangSeed,
   informasiSeed,
   persiapanSeed,
+  profilWilayahSeed,
   rekomendasiSeed,
-  wilayahSeed,
 } from "../../prisma/seed-data";
+import { indukKode, kodeValid, levelKode } from "@/lib/kode-wilayah";
 import {
   ambangRisikoInputSchema,
   informasiInputSchema,
@@ -16,21 +18,45 @@ import {
 
 const LEVEL = ["RENDAH", "SEDANG", "TINGGI"] as const;
 
-describe("seed wilayah", () => {
-  it("minimal 10 wilayah, semuanya valid", () => {
-    expect(wilayahSeed.length).toBeGreaterThanOrEqual(10);
-    for (const w of wilayahSeed) expect(() => wilayahInputSchema.parse(w)).not.toThrow();
+const wilayah = bacaDataWilayah();
+const namaPerKode = new Map(wilayah.map((w) => [w.idWilayah, w.namaWilayah]));
+
+describe("data wilayah Kemendagri (prisma/data/wilayah.tsv.gz)", () => {
+  it("jumlah per tingkat sesuai Kepmendagri 300.2.2-2430/2025", () => {
+    const jumlah = { PROVINSI: 0, KABKOTA: 0, KECAMATAN: 0, DESA: 0 };
+    for (const w of wilayah) jumlah[levelKode(w.idWilayah)]++;
+    expect(jumlah).toEqual({ PROVINSI: 38, KABKOTA: 514, KECAMATAN: 7285, DESA: 83762 });
   });
 
-  it("idWilayah unik", () => {
-    const ids = wilayahSeed.map((w) => w.idWilayah);
+  // Kumpulkan pelanggaran lalu cek sekali (91 ribu baris; expect per baris terlalu lambat).
+  it("kode unik, format valid, dan setiap wilayah punya induk", () => {
+    expect(namaPerKode.size).toBe(wilayah.length);
+    const salah = wilayah.filter((w) => {
+      const induk = indukKode(w.idWilayah);
+      return !kodeValid(w.idWilayah) || (induk !== null && !namaPerKode.has(induk));
+    });
+    expect(salah).toEqual([]);
+  });
+
+  it("semua baris valid dan koordinat berada di wilayah Indonesia", () => {
+    const salah = wilayah.filter(
+      (w) =>
+        !wilayahInputSchema.safeParse(w).success ||
+        !(w.koordinatLatitude > -11.5 && w.koordinatLatitude < 6.5) ||
+        !(w.koordinatLongitude > 94.5 && w.koordinatLongitude < 141.5),
+    );
+    expect(salah).toEqual([]);
+  });
+});
+
+describe("seed profil wilayah", () => {
+  it("kode ada di data Kemendagri dan namanya cocok", () => {
+    for (const p of profilWilayahSeed) expect(namaPerKode.get(p.idWilayah)).toBe(p.namaWilayah);
+  });
+
+  it("kode unik", () => {
+    const ids = profilWilayahSeed.map((p) => p.idWilayah);
     expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  it("setiap wilayah punya nomor 112", () => {
-    for (const w of wilayahSeed) {
-      expect(w.kontakDarurat?.some((k) => k.telepon === "112")).toBe(true);
-    }
   });
 });
 
@@ -56,8 +82,6 @@ describe("seed ambang risiko", () => {
 });
 
 describe("seed konten", () => {
-  const idWilayah = new Set(wilayahSeed.map((w) => w.idWilayah));
-
   it("persiapan & rekomendasi global tersedia untuk setiap level", () => {
     for (const level of LEVEL) {
       expect(persiapanSeed.some((p) => p.levelRisiko === level && p.idWilayah == null)).toBe(true);
@@ -65,18 +89,18 @@ describe("seed konten", () => {
     }
   });
 
-  it("semua konten valid dan hanya merujuk wilayah yang ada", () => {
+  it("semua konten valid dan hanya merujuk kode wilayah yang ada", () => {
     for (const p of persiapanSeed) {
       expect(() => persiapanDiniInputSchema.parse(p)).not.toThrow();
-      if (p.idWilayah) expect(idWilayah.has(p.idWilayah)).toBe(true);
+      if (p.idWilayah) expect(namaPerKode.has(p.idWilayah)).toBe(true);
     }
     for (const r of rekomendasiSeed) {
       expect(() => rekomendasiInputSchema.parse(r)).not.toThrow();
-      if (r.idWilayah) expect(idWilayah.has(r.idWilayah)).toBe(true);
+      if (r.idWilayah) expect(namaPerKode.has(r.idWilayah)).toBe(true);
     }
     for (const i of informasiSeed) {
       expect(() => informasiInputSchema.parse(i)).not.toThrow();
-      if (i.idWilayah) expect(idWilayah.has(i.idWilayah)).toBe(true);
+      if (i.idWilayah) expect(namaPerKode.has(i.idWilayah)).toBe(true);
     }
   });
 

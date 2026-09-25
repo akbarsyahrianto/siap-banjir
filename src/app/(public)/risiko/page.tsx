@@ -7,10 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
-import { bacaKontakDarurat, daftarWilayah } from "@/server/services/content.service";
 import { keRisikoKlien, lihatKondisiWilayah, lihatPenanganan } from "@/server/services/pemantauan.service";
 import { seriHujan48Jam } from "@/server/services/seri-cuaca";
-import { idWilayahTerpilih } from "@/server/wilayah-terpilih";
+import { kontakDaruratWilayah } from "@/server/services/wilayah.service";
+import { muatPemilih } from "@/server/wilayah-terpilih";
 
 export const metadata: Metadata = { title: "Detail Risiko" };
 
@@ -18,8 +18,8 @@ type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
 
 export default async function RisikoPage({ searchParams }: Props) {
   const { wilayah } = await searchParams;
-  const [daftar, idWilayah] = await Promise.all([daftarWilayah(), idWilayahTerpilih(wilayah)]);
-  const terpilih = daftar.some((w) => w.idWilayah === idWilayah) ? idWilayah : null;
+  const { pemilih, desa, namaTerpilih } = await muatPemilih(wilayah);
+  const terpilih = desa?.wilayah.idWilayah ?? null;
 
   return (
     <div className="space-y-6">
@@ -27,7 +27,7 @@ export default async function RisikoPage({ searchParams }: Props) {
       <Disclaimer />
       <Card>
         <CardContent>
-          <PilihWilayah daftar={daftar} terpilih={terpilih} />
+          <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
         </CardContent>
       </Card>
       {terpilih ? (
@@ -48,7 +48,7 @@ async function DetailRisiko({ idWilayah }: { idWilayah: string }) {
   const risiko = keRisikoKlien(kondisi);
   if (!risiko || !kondisi.cuaca) return <DataCuacaTidakTersedia />;
 
-  // Level Risiko → Lihat Persiapan Dini → Lihat Rekomendasi.
+  // Level Risiko → Lihat Persiapan Dini → Lihat Rekomendasi (konten diwariskan dari leluhur).
   const penanganan = await lihatPenanganan(idWilayah, risiko.level);
 
   return (
@@ -57,7 +57,7 @@ async function DetailRisiko({ idWilayah }: { idWilayah: string }) {
       risiko={risiko}
       grafik={seriHujan48Jam(kondisi.cuaca.raw)}
       penanganan={penanganan}
-      kontak={bacaKontakDarurat(kondisi.wilayah.kontakDarurat)}
+      kontak={kontakDaruratWilayah(kondisi.leluhur)}
     />
   );
 }

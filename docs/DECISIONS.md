@@ -43,9 +43,13 @@ Constraint unik tidak bisa dipasang pada properti di dalam kolom JSON lewat Pris
 
 ## D-005 · `idWilayah` berupa slug
 
+> **Diganti D-033:** `idWilayah` kini kode Kemendagri bertitik (misal `33.74.02.1002`).
+
 `Wilayah.idWilayah` adalah slug (misal `kota-semarang`), bukan cuid atau angka. ID jadi stabil antar-seed dan terbaca di URL `/risiko?wilayah=kota-semarang`. Entitas lain memakai `cuid()`.
 
 ## D-006 · Atribut tambahan di luar class diagram
+
+> **Sebagian diganti D-034 & D-037:** kolom `Wilayah.kontakDarurat` dihapus (kontak dibuat dari hierarki wilayah), dan `DataCuaca` kini milik sel grid, bukan wilayah.
 
 Ditambahkan seperlunya untuk memenuhi kebutuhan di prompt:
 
@@ -69,6 +73,8 @@ Riwayat kejadian (Informasi `RIWAYAT_KEJADIAN`) hanya memuat peristiwa banjir be
 
 Operasi class diagram `tambahWilayah()`, `ubahAmbang()`, `hapusRekomendasi()`, dan seterusnya ada di `src/server/services/content.service.ts`, divalidasi dengan Zod, dan hanya dipanggil oleh `prisma/seed.ts`. Seed bersifat idempoten: wilayah di-upsert, sedangkan tabel konten dikosongkan lalu diisi ulang.
 
+Sejak D-033, `tambahWilayah()` menerima banyak wilayah sekaligus (upsert massal SQL per 1.000 baris), `hapusWilayah()` menandai `aktif = false` alih-alih menghapus, dan seed tidak menghapus riwayat otomatis (D-038).
+
 ## D-010 · Git dipasang via winget
 
 Git belum terpasang saat Fase 1 dikerjakan. Git 2.55 dipasang dengan `winget install --id Git.Git -e`, lalu repo diinisialisasi dengan branch `main`. Identitas commit diatur di level repo (bukan global). `core.autocrlf=true` supaya file teks tetap LF di repo.
@@ -81,6 +87,8 @@ Prompt meminta preferensi wilayah disimpan di localStorage + server. Server comp
 2. Cookie.
 
 `SinkronWilayah` menyalin localStorage ke cookie jika cookie hilang. Penyimpanan ke server (`Pengguna.wilayahPreferensi`) dibuat di Fase 3 bersama pendaftaran perangkat.
+
+Sejak D-033, nilai yang diterima hanya kode Kemendagri yang formatnya valid. Halaman menampilkan cuaca/risiko hanya untuk kode desa/kelurahan aktif; kode tingkat lebih tinggi (misal dari tautan) hanya mengisi pemilih bertingkat. Cookie berisi slug lama dari sebelum D-033 diabaikan, sehingga pengguna diminta memilih ulang.
 
 ## D-012 · `hujan_1jam` = maks(current.precipitation, hourly jam terakhir)
 
@@ -160,6 +168,8 @@ IP dibaca dari `x-forwarded-for`, yang hanya bisa dipercaya di belakang proxy te
 
 ## D-023 · Riwayat otomatis risiko tinggi (langkah 9)
 
+> **Diganti D-038:** satu entri per **kab/kota** per hari, berisi daftar desa/kelurahan.
+
 Setiap `LevelRisiko` baru bernilai TINGGI disimpan sebagai `Informasi` kategori `RIWAYAT_KEJADIAN`, **maksimal satu per wilayah per hari kalender WIB**. Deteksi berikutnya di hari yang sama tidak menambah entri. Entri otomatis dikenali dari awalan judul "Risiko banjir TINGGI terdeteksi di …", jadi schema tidak perlu diubah. Isinya menyebut parameter pemicu dan menegaskan bahwa ini **deteksi otomatis, bukan laporan kejadian banjir terverifikasi**, supaya tidak tercampur dengan riwayat kejadian nyata dari seed.
 
 ## D-024 · State machine sebagai reducer (tanpa XState)
@@ -197,6 +207,8 @@ Beranda dan `/cuaca` juga diperbarui otomatis tiap 30 menit (`router.refresh()`)
 - memperingatkan jumlah pelanggan aktif, karena mereka menerima push sungguhan.
 
 Script ini juga dipakai global setup/teardown e2e.
+
+Sejak D-033/D-034: kode boleh tingkat apa pun (ambang diwariskan ke desa di bawahnya, D-037); yang dibuat kedaluwarsa/dihapus adalah data cuaca **sel grid** desa-desa itu, dan riwayat yang dibersihkan adalah riwayat kab/kota terkait. Perintah `cari <kata kunci>` menggantikan daftar semua wilayah di `status`. Keterbatasan: baris desa simulasi yang ditambahkan ke riwayat kab/kota yang **sudah ada sebelum simulasi** tidak ikut terhapus.
 
 ## D-027 · PWA (Fase 5)
 
@@ -261,3 +273,66 @@ Keduanya dipantau; perbarui saat Next 15.x / Prisma 6.x merilis patch, atau saat
 ## D-021 · Integration test memakai database pengembangan
 
 `npm run test:integration` menjalankan `prosesPeringatan()` terhadap PostgreSQL dari `.env`, dengan push service di-mock. Test membuat datanya sendiri di wilayah `kota-pekalongan` dan menghapusnya lagi. Namun test juga **menonaktifkan langganan lain di wilayah itu**, jadi jangan dijalankan terhadap database produksi.
+
+Sejak D-033: wilayah uji adalah desa/kelurahan asli (Kelurahan Bandengan `33.75.03.1009` untuk notifikasi; Kelurahan Belakang Pondok & Parak Gadang Timur di Kota Padang untuk riwayat per kab/kota). `DataCuaca` uji memakai sel grid `0.0,0.0` (laut, tanpa desa) agar tidak tercampur cache nyata. Ditambah test pencarian desa, desa terdekat, dan pemilih bertingkat terhadap data Kemendagri di database.
+
+---
+
+## D-033 · Cakupan seluruh Indonesia: data wilayah Kemendagri
+
+**Konteks.** Cakupan diperluas dari 14 wilayah pilihan ke seluruh Indonesia: Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan, dengan kotak pencarian dan "Gunakan lokasi saya" ke desa/kelurahan terdekat.
+
+**Keputusan.**
+- **Kode & nama:** [cahyadsn/wilayah](https://github.com/cahyadsn/wilayah) (`db/wilayah.sql`, Kepmendagri No. 300.2.2-2430/2025), commit dipin `55a496d`. `idWilayah` = kode bertitik (`36.71.01.1001`); tingkat ditentukan dari jumlah segmen. Kolom baru: `level` (enum `TingkatWilayah`), `idInduk` (relasi ke diri sendiri), `namaLengkap` (desa, kecamatan, kab/kota, provinsi; untuk pencarian), `koordinatPerkiraan`, `kunciGrid`, `aktif`.
+- **Koordinat:** centroid poligon dari [cahyadsn/wilayah_boundaries](https://github.com/cahyadsn/wilayah_boundaries), commit dipin `3c5a796`. Hanya centroid yang disimpan. Poligon sumber sudah disederhanakan, jadi centroid adalah perkiraan titik tengah wilayah.
+- **Pencocokan kode ↔ nama saat impor** (`scripts/impor-wilayah.ts`, `scripts/lib/cocok-nama.ts`): nama dinormalisasi (huruf kecil, singkatan Kab./Kec./Kel./Ds., tanda baca), lalu dikelompokkan `sama` / `ejaan` / `berbeda`. `ejaan` mencakup beda spasi, ejaan lama (oe→u, dj→j, tj→c, ch→kh), atau kemiripan Levenshtein ≥ 0,8. Koordinat dipakai hanya jika `sama`/`ejaan` dan berada di kotak batas Indonesia. Nama **selalu** dari Kemendagri.
+- **Data yang hilang:** desa/kelurahan tanpa data batas memakai centroid kecamatannya, `koordinatPerkiraan = true`, dan UI menampilkan catatan. Pencarian GPS mengutamakan desa dengan koordinat asli.
+- **"Jauh dari induk" hanya dilaporkan.** Impor pertama menandai wilayah yang centroidnya > 80 km (desa) / > 250 km (kecamatan) dari induknya. Setelah diperiksa manual, semua kasus sah secara geografis: pulau terpencil (misal Kec. Liukang Tangaya & Liukang Tupabbiring di Kab. Pangkajene dan Kepulauan, Kec. Tambelan di Kab. Bintan, Pekajang di Kab. Lingga, Mapia di Kab. Supiori, pulau-pulau Babar & Masela di Kab. Maluku Barat Daya) atau kecamatan yang sangat luas (Kab. Kapuas Hulu, Kab. Kapuas). Karena itu koordinatnya tetap dipakai dan hanya dicantumkan di laporan.
+- **Hasil disimpan di repo:** `prisma/data/wilayah.tsv.gz` (±1,3 MB) + `laporan-impor-wilayah.md` + `sumber-wilayah.json`. Seed dan deploy tidak butuh internet atau GitHub. Lisensi MIT kedua sumber disalin di `prisma/data/LISENSI-DATA-WILAYAH.md` dan README.
+- **Pencarian:** `ILIKE` per kata terhadap `namaLengkap`, dibantu index GIN trigram (`pg_trgm`, tersedia di PostgreSQL lokal, Neon, dan Supabase). Minimal 3 huruf, rate limit sama dengan D-031.
+- **Wilayah yang hilang dari data baru** ditandai `aktif = false` (tidak dihapus) agar langganan dan riwayat lama tetap utuh.
+
+**Hasil impor (25 September 2026).** 38 provinsi, 514 kab/kota, 7.285 kecamatan, 83.762 desa/kelurahan. Tidak ada kode tambahan/ganda, **0 nama berbeda**, 19 beda ejaan (3 kecamatan, 16 desa; nama Kemendagri yang dipakai), 359 desa/kelurahan memakai koordinat kecamatan, dan 25 wilayah jauh dari induk (sah, lihat di atas).
+
+**Konsekuensi.** Migrasi `20260925152150_wilayah_nasional` **mengosongkan** tabel `wilayah` dan `data_cuaca`. Karena cascade, semua langganan, level risiko, notifikasi, dan konten per wilayah lama ikut terhapus; konten dibuat ulang oleh seed dengan kode baru. Pengguna yang sudah berlangganan harus memilih desa/kelurahan dan mengaktifkan notifikasi lagi.
+
+## D-034 · `DataCuaca` per sel grid 0,1° (menyimpang dari UML)
+
+**Konteks.** Di class diagram, `DataCuaca` milik `Wilayah`. Dengan 83.762 desa/kelurahan, satu request per desa tidak mungkin dalam kuota gratis Open-Meteo (D-035).
+
+**Keputusan.** `DataCuaca` tidak lagi berelasi ke `Wilayah`. Kolom `idWilayah` diganti `kunciGrid` (misal `-6.2,106.6`), `gridLatitude`, dan `gridLongitude`. Koordinat desa dibulatkan ke 0,1° (±11 km), dan semua desa di satu sel berbagi satu request dan satu cache 30 menit. Relasi ke wilayah dijaga lewat `LevelRisiko`: satu `LevelRisiko` per (desa, `DataCuaca`), karena ambang tiap desa bisa berbeda (D-037).
+
+**Alasan.** Resolusi model Open-Meteo untuk Indonesia 9–25 km, jadi dua desa dalam satu sel 11 km hampir selalu mendapat nilai yang sama. Sel 0,1° menghemat request tanpa kehilangan detail. Seluruh desa/kelurahan terbagi ke ±13.000 sel. UI menjelaskan bahwa data cuaca berlaku untuk area ±11 km.
+
+## D-035 · Anggaran kuota Open-Meteo
+
+**Konteks.** Open-Meteo gratis: 10.000 call/hari (non-komersial). Satu request Siap Banjir (≤ 10 variabel, satu lokasi) = 1 call.
+
+**Keputusan** (`src/server/services/kuota.service.ts`):
+- Pemakaian = jumlah `DataCuaca` dengan `waktuAmbil` 24 jam terakhir (setiap request sukses = satu baris), tanpa tabel penghitung tambahan.
+- Kunjungan halaman boleh meminta data baru sampai pemakaian 9.000. Di atas itu, halaman memakai data tersimpan terakhir dengan label "Batas harian permintaan data cuaca hampir tercapai" (`sumber = "hemat-kuota"`).
+- Cron hanya memproses sel yang berisi desa dengan langganan aktif, maksimal 125 sel per putaran (±6.000/hari pada jadwal 30 menit), data tertua lebih dulu. Cron boleh memakai kuota sampai 9.800 karena notifikasi lebih penting daripada kunjungan.
+- `DataCuaca` lebih tua dari 3 hari dihapus di akhir tiap putaran cron (cascade ke `LevelRisiko` & `Notifikasi`; anti-spam hanya melihat 6 jam terakhir).
+
+**Konsekuensi.** Jika pelanggan tersebar di lebih dari 125 sel dengan cache kedaluwarsa, sebagian sel diperbarui di putaran berikutnya (paling lambat ±1 jam untuk ≤ 250 sel). Hitungan tidak memasukkan request yang gagal; selisih kecil ini tertutup oleh margin 200 call.
+
+## D-036 · Variabel `rain` dihapus dari request Open-Meteo
+
+`current.rain` tidak dipakai perhitungan mana pun (curah hujan memakai `precipitation`). Menghapusnya membuat request tetap ≤ 10 variabel, sehingga dihitung 1,0 call, bukan 1,1.
+
+## D-037 · Pewarisan ambang & konten bertingkat, kontak darurat otomatis
+
+**Konteks.** Prompt: wilayah tanpa ambang khusus memakai ambang global. Dengan hierarki 4 tingkat, ambang khusus sebaiknya bisa dipasang di kab/kota atau provinsi tanpa mengisi puluhan ribu desa.
+
+**Keputusan.**
+- **Ambang:** untuk setiap parameter, dipakai ambang dari tingkat **paling spesifik** yang punya ambang untuk parameter itu: desa > kecamatan > kab/kota > provinsi > global (`pilihAmbangEfektif`). Ambang antartingkat tidak dicampur. Parameter tanpa ambang khusus di tingkat mana pun memakai ambang global.
+- **Persiapan dini, rekomendasi, informasi:** konten milik wilayah itu dan semua leluhurnya ditampilkan, yang paling spesifik lebih dulu, ditambah konten global.
+- **Kontak darurat:** kolom `Wilayah.kontakDarurat` dihapus. Kontak dibuat dari hierarki: nomor nasional (112, 117, 119, 113) + "BPBD {kab/kota}" tanpa nomor (D-007). Kota/kabupaten administrasi DKI Jakarta tidak punya BPBD sendiri, jadi dipakai "BPBD Provinsi Daerah Khusus Ibukota Jakarta".
+- **Unit pemantauan = desa/kelurahan.** Cuaca, risiko, langganan, dan notifikasi selalu per desa/kelurahan. Tingkat di atasnya hanya untuk navigasi, pewarisan, dan riwayat.
+- Deskripsi wilayah dari seed lama dipindah ke kode Kemendagri yang sesuai (`profilWilayahSeed`); test memastikan nama profil sama persis dengan nama Kemendagri.
+
+## D-038 · Riwayat risiko tinggi per kab/kota per hari
+
+**Konteks.** D-023 menyimpan satu riwayat per wilayah per hari. Dengan unit desa, hujan lebat di satu kota bisa menghasilkan puluhan entri sehari.
+
+**Keputusan.** Satu entri `RIWAYAT_KEJADIAN` per **kab/kota** per hari kalender WIB (`idWilayah` = kode kab/kota), berjudul "Risiko banjir TINGGI terdeteksi di {kab/kota}". Isinya daftar desa/kelurahan yang terdeteksi hari itu beserta jam dan penyebabnya. Desa yang sudah tercantum tidak ditambahkan lagi. Penulisan diserialkan dengan `pg_advisory_xact_lock(hashtext('riwayat:{kab}:{hari}'))` di dalam transaksi, sehingga cron paralel dan kunjungan halaman tidak membuat entri ganda (diuji di integration test). `npm run db:seed` tidak menghapus riwayat otomatis.

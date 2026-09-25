@@ -1,67 +1,72 @@
 /**
  * Orkestrasi alur sequence diagram:
- *  4. koordinat wilayah → ambil/cache data cuaca (Open-Meteo) → simpanData()
- *  5. hitungLevelRisiko() → cekAmbang()
+ *  4. koordinat wilayah → sel grid → ambil/cache data cuaca (Open-Meteo) → simpanData()
+ *  5. hitungLevelRisiko() → cekAmbang() (per desa; ambang diwariskan dari leluhur)
  *  6. lihatPersiapan() & lihatRekomendasi()
  *  8. alt [Sedang/Tinggi] → buatNotifikasi() → cariLanggananAktif() → kirimNotifikasi()
- *  9. simpan kejadian risiko tinggi sebagai riwayat
- * Dipakai halaman/API (lihatKondisiWilayah) dan cron (pantauWilayah + tindakLanjutRisiko).
+ *  9. simpan kejadian risiko tinggi sebagai riwayat (per kab/kota per hari)
+ * Dipakai halaman/API (lihatKondisiWilayah) dan cron (ambilCuacaSel + risikoDesa + tindakLanjutRisiko).
  */
-import type { LevelRisiko, TingkatRisiko, Wilayah } from "@prisma/client";
+import type { DataCuaca, LevelRisiko, TingkatRisiko, Wilayah } from "@prisma/client";
 import { after } from "next/server";
+import { titikDariKunci } from "@/lib/grid";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
 import { db } from "@/server/db";
-import { lihatPersiapan, lihatRekomendasi, lihatWilayah } from "@/server/services/content.service";
+import type { OpenMeteoResponse } from "@/server/integrations/open-meteo";
+import { lihatPersiapan, lihatRekomendasi } from "@/server/services/content.service";
 import { prosesPeringatan, type RingkasanPeringatan } from "@/server/services/notification.service";
 import { evaluasiDanSimpanRisiko } from "@/server/services/risk.service";
-import { simpanRiwayatRisikoTinggi } from "@/server/services/riwayat.service";
-import { lihatDataCuaca } from "@/server/services/weather.service";
+import { simpanRiwayatRisikoTinggi, type HasilRiwayat } from "@/server/services/riwayat.service";
+import { lihatDataCuaca, type HasilDataCuaca } from "@/server/services/weather.service";
+import { lihatDesa, namaInduk, namaTampilan } from "@/server/services/wilayah.service";
 import { daftarHasilParameterSchema } from "@/server/validators/risiko";
 
-type WilayahPantau = Pick<Wilayah, "idWilayah" | "namaWilayah" | "koordinatLatitude" | "koordinatLongitude">;
-
-/**
- * Langkah 4–5 untuk satu wilayah. `risikoBaru` terisi jika LevelRisiko baru saja dihitung
- * (data cuaca baru), sehingga tindak lanjut (notifikasi & riwayat) hanya sekali per data.
- */
-export async function pantauWilayah(wilayah: WilayahPantau, opsi: { paksa?: boolean } = {}) {
-  const cuaca = await lihatDataCuaca(wilayah, opsi);
-  if (!cuaca) return { cuaca: null, risiko: null, risikoBaru: null };
-
-  // Satu LevelRisiko per DataCuaca; hitung hanya jika belum ada.
-  const ada = await db.levelRisiko.findFirst({
-    where: { idCuaca: cuaca.dataCuaca.idCuaca },
-    orderBy: { waktu: "desc" },
-  });
-  const risikoBaru = ada ? null : await evaluasiDanSimpanRisiko(cuaca.dataCuaca, cuaca.raw);
-  const risiko = ada ?? risikoBaru;
-  if (!risiko) return { cuaca, risiko: null, risikoBaru: null };
-
-  const parsed = daftarHasilParameterSchema.safeParse(risiko.parameterPemicu);
-  return {
-    cuaca,
-    risiko: { ...risiko, hasilPerParameter: parsed.success ? parsed.data : [] },
-    risikoBaru,
-  };
+/** Langkah 4: data cuaca sel grid (cache 30 menit, pengaman kuota). */
+export async function ambilCuacaSel(kunciGrid: string, opsi: { paksa?: boolean; batasKuota?: number } = {}) {
+  return lihatDataCuaca(titikDariKunci(kunciGrid), opsi);
 }
 
-export type HasilTindakLanjut = { notifikasi: RingkasanPeringatan; riwayatDisimpan: boolean };
+/**
+ * Langkah 5 untuk satu desa. Satu LevelRisiko per (desa, DataCuaca): `risikoBaru` terisi jika
+ * baru saja dihitung, sehingga tindak lanjut (notifikasi & riwayat) hanya sekali per data.
+ */
+export async function risikoDesa(idWilayah: string, cuaca: { dataCuaca: DataCuaca; raw: OpenMeteoResponse }) {
+  const ada = await db.levelRisiko.findFirst({
+    where: { idCuaca: cuaca.dataCuaca.idCuaca, idWilayah },
+    orderBy: { waktu: "desc" },
+  });
+  const risikoBaru = ada ? null : await evaluasiDanSimpanRisiko(idWilayah, cuaca.dataCuaca, cuaca.raw);
+  const risiko = (ada ?? risikoBaru) as LevelRisiko;
+  const parsed = daftarHasilParameterSchema.safeParse(risiko.parameterPemicu);
+  return { risiko: { ...risiko, hasilPerParameter: parsed.success ? parsed.data : [] }, risikoBaru };
+}
+
+export type HasilTindakLanjut = { notifikasi: RingkasanPeringatan; riwayat: HasilRiwayat };
 
 /** Langkah 8–9: kirim peringatan (Sedang/Tinggi) dan simpan riwayat (Tinggi). */
 export async function tindakLanjutRisiko(risiko: LevelRisiko): Promise<HasilTindakLanjut> {
-  const [notifikasi, riwayatDisimpan] = await Promise.all([
-    prosesPeringatan(risiko),
-    simpanRiwayatRisikoTinggi(risiko),
-  ]);
-  return { notifikasi, riwayatDisimpan };
+  const [notifikasi, riwayat] = await Promise.all([prosesPeringatan(risiko), simpanRiwayatRisikoTinggi(risiko)]);
+  return { notifikasi, riwayat };
 }
 
-/** Data cuaca + level risiko terkini untuk satu wilayah. null jika wilayah tidak ada. */
-export async function lihatKondisiWilayah(idWilayah: string) {
-  const wilayah = await lihatWilayah(idWilayah);
-  if (!wilayah) return null;
+/** Pantau satu desa (langkah 4–5). */
+export async function pantauWilayah(wilayah: Pick<Wilayah, "idWilayah" | "kunciGrid">, opsi: { paksa?: boolean } = {}) {
+  if (!wilayah.kunciGrid) return { cuaca: null, risiko: null, risikoBaru: null };
+  const cuaca = await ambilCuacaSel(wilayah.kunciGrid, opsi);
+  if (!cuaca) return { cuaca: null, risiko: null, risikoBaru: null };
+  const { risiko, risikoBaru } = await risikoDesa(wilayah.idWilayah, cuaca);
+  return { cuaca, risiko, risikoBaru };
+}
 
-  const { cuaca, risiko, risikoBaru } = await pantauWilayah(wilayah);
+/**
+ * Data cuaca + level risiko terkini untuk satu desa/kelurahan.
+ * null jika kode bukan desa/kelurahan aktif (pengguna harus memilih sampai tingkat desa).
+ */
+export async function lihatKondisiWilayah(idWilayah: string) {
+  const desa = await lihatDesa(idWilayah);
+  if (!desa) return null;
+
+  const { cuaca, risiko, risikoBaru } = await pantauWilayah(desa.wilayah);
 
   // Tindak lanjut dijalankan setelah respons terkirim agar halaman tidak menunggu push service.
   if (risikoBaru && risikoBaru.level !== "RENDAH") {
@@ -75,19 +80,21 @@ export async function lihatKondisiWilayah(idWilayah: string) {
     });
   }
 
-  return { wilayah, cuaca, risiko };
+  return { wilayah: desa.wilayah, leluhur: desa.leluhur, cuaca, risiko };
 }
 
 export type KondisiWilayah = NonNullable<Awaited<ReturnType<typeof lihatKondisiWilayah>>>;
 
 /** Bentuk JSON risiko untuk klien (API & state machine). */
 export function keRisikoKlien(kondisi: KondisiWilayah): RisikoKlien | null {
-  const { wilayah, cuaca, risiko } = kondisi;
+  const { wilayah, leluhur, cuaca, risiko } = kondisi;
   if (!cuaca || !risiko) return null;
   return {
     idRisiko: risiko.idRisiko,
     idWilayah: wilayah.idWilayah,
-    namaWilayah: wilayah.namaWilayah,
+    namaWilayah: namaTampilan(leluhur),
+    namaInduk: namaInduk(leluhur),
+    koordinatPerkiraan: wilayah.koordinatPerkiraan,
     level: risiko.level,
     skorRisiko: risiko.skorRisiko,
     deskripsi: risiko.deskripsi,
@@ -110,3 +117,5 @@ export async function lihatPenanganan(idWilayah: string, level: TingkatRisiko): 
     rekomendasi: rekomendasi.map(({ idRekomendasi, isiRekomendasi }) => ({ idRekomendasi, isiRekomendasi })),
   };
 }
+
+export type { HasilDataCuaca };

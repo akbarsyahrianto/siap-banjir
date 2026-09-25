@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { otorisasiCron, petakanTerbatas } from "@/server/cron";
-import { rentangHariWib, susunIsiRiwayat } from "@/server/services/riwayat.service";
+import { barisDesa, rentangHariWib, susunIsiRiwayat, tambahkanDesaKeIsi } from "@/server/services/riwayat.service";
 
 const SECRET = "rahasia-cron-yang-cukup-panjang-123";
 
@@ -56,20 +56,24 @@ describe("riwayat", () => {
     expect(rentangHariWib(new Date("2026-09-25T17:30:00Z")).awal.toISOString()).toBe("2026-09-25T17:00:00.000Z");
   });
 
-  it("isi riwayat memuat parameter dan catatan bahwa ini deteksi otomatis", () => {
-    const isi = susunIsiRiwayat(
-      {
-        deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm.",
-        waktu: new Date("2026-09-25T06:00:00Z"),
-        parameterPemicu: [
-          { parameter: "hujan_24jam", nilai: 72, level: "TINGGI", skor: 90, ambangKhusus: false, pemicu: true },
-        ],
-      },
-      "Kota Semarang",
-    );
-    expect(isi).toContain("Kota Semarang");
-    expect(isi).toContain("pukul 13:00 WIB");
-    expect(isi).toContain("- Curah hujan 24 jam terakhir: 72 mm (Tinggi)");
+  const waktu = new Date("2026-09-25T06:00:00Z"); // 13:00 WIB
+  const barisA = barisDesa("Kelurahan Tanjung Mas, Kec. Semarang Utara", waktu, "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm.");
+  const barisB = barisDesa("Kelurahan Kemijen, Kec. Semarang Timur", new Date("2026-09-25T08:30:00Z"), "Risiko TINGGI karena curah hujan 1 jam terakhir 25 mm.");
+
+  it("isi riwayat kab/kota memuat daftar desa, jam deteksi, dan catatan deteksi otomatis", () => {
+    const isi = susunIsiRiwayat("Kota Semarang", waktu, [barisA]);
+    expect(isi).toContain("risiko banjir TINGGI di Kota Semarang");
+    expect(isi).toContain("- Kelurahan Tanjung Mas, Kec. Semarang Utara (13:00 WIB): Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm.");
     expect(isi).toContain("bukan laporan kejadian banjir yang terverifikasi");
+  });
+
+  it("desa baru ditambahkan ke daftar; desa yang sudah tercantum tidak digandakan", () => {
+    const isi = susunIsiRiwayat("Kota Semarang", waktu, [barisA]);
+    const baru = tambahkanDesaKeIsi(isi, "Kelurahan Kemijen, Kec. Semarang Timur", barisB);
+    expect(baru).not.toBeNull();
+    expect(baru).toContain(`${barisA}\n${barisB}`);
+    // Catatan tetap di akhir.
+    expect(baru?.trimEnd().endsWith("BPBD setempat.")).toBe(true);
+    expect(tambahkanDesaKeIsi(baru ?? "", "Kelurahan Kemijen, Kec. Semarang Timur", barisB)).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
+import { DESA_UJI, identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
 
 test.beforeEach(async ({ context, page }, testInfo) => {
   await context.grantPermissions(["notifications", "geolocation"]);
@@ -22,29 +22,33 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
     await expect(page.getByText("Pilih wilayah terlebih dulu")).toBeVisible();
   });
 
-  await test.step("aturLokasi(wilayah) → dialog izin notifikasi muncul", async () => {
-    await page.getByLabel("Wilayah yang dipantau").selectOption("kota-semarang");
-    await expect(page).toHaveURL(/wilayah=kota-semarang/);
+  await test.step("aturLokasi(wilayah) lewat pencarian → dialog izin notifikasi muncul", async () => {
+    await page.getByRole("combobox", { name: "Cari desa/kelurahan" }).fill("bulu lor semarang");
+    await page.getByRole("option", { name: /Kelurahan Bulu Lor/ }).click();
+    await expect(page).toHaveURL(new RegExp(`wilayah=${DESA_UJI.replaceAll(".", "\\.")}`));
     await expect(page.getByRole("dialog", { name: "Aktifkan peringatan banjir?" })).toBeVisible();
   });
 
   await test.step("[izin notifikasi] → daftarkanPerangkat() → aktifkan() → status aktif", async () => {
     await page.getByRole("button", { name: "Izinkan notifikasi" }).click();
-    await expect(page.getByText("Peringatan aktif untuk Kota Semarang.")).toBeVisible();
+    await expect(page.getByText("Peringatan aktif untuk Kelurahan Bulu Lor, Kota Semarang.")).toBeVisible();
     await expect(page.getByRole("link", { name: /Peringatan aktif/ })).toBeVisible();
-    expect(await statusLangganan()).toMatchObject({ status: true, idWilayah: "kota-semarang", levelMinimum: "SEDANG" });
+    expect(await statusLangganan()).toMatchObject({ status: true, idWilayah: DESA_UJI, levelMinimum: "SEDANG" });
   });
 
-  await test.step("Beranda menampilkan cuaca, level risiko, dan grafik", async () => {
+  await test.step("Beranda menampilkan wilayah terpilih, cuaca, level risiko, dan grafik", async () => {
+    await expect(page.getByText("Wilayah yang dipantau")).toBeVisible();
     await expect(page.getByText(/^Risiko (Rendah|Sedang|Tinggi)$/).first()).toBeVisible();
-    await expect(page.getByText(/Cuaca terkini · Kota Semarang/)).toBeVisible();
+    await expect(page.getByText("Cuaca terkini · Kelurahan Bulu Lor, Kota Semarang")).toBeVisible();
+    await expect(page.getByText(/area ±11 km/).first()).toBeVisible();
     await expect(page.getByText("Curah hujan 48 jam")).toBeVisible();
     await expect(page.getByText("Data cuaca: Open-Meteo.com").first()).toBeVisible();
   });
 
   await test.step("Detail risiko: gauge, penanganan, checklist tersimpan", async () => {
     await page.getByRole("link", { name: "Lihat persiapan & rekomendasi" }).click();
-    await expect(page).toHaveURL(/\/risiko\?wilayah=kota-semarang/);
+    await expect(page).toHaveURL(new RegExp(`/risiko\\?wilayah=${DESA_UJI.replaceAll(".", "\\.")}`));
+    await expect(page.getByText("Kec. Semarang Utara, Kota Semarang, Jawa Tengah")).toBeVisible();
     await expect(page.getByRole("img", { name: /Skor risiko \d+ dari 100/ })).toBeVisible();
     await expect(page.getByText(/bukan peringatan resmi/).first()).toBeVisible();
 
@@ -58,6 +62,7 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
     await page.getByRole("tab", { name: "Detail Mitigasi" }).click();
     await expect(page.getByRole("tabpanel").getByRole("listitem").first()).toBeVisible();
     await expect(page.getByRole("link", { name: /Layanan Darurat\s*112/ })).toHaveAttribute("href", "tel:112");
+    await expect(page.getByText("BPBD Kota Semarang")).toBeVisible();
   });
 
   await test.step("Pengaturan: level minimum & nonaktifkan notifikasi", async () => {
@@ -76,13 +81,35 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
   });
 });
 
-test("Gunakan lokasi saya memilih wilayah terdekat", async ({ page, context }) => {
+test("Gunakan lokasi saya memilih desa/kelurahan terdekat", async ({ page, context }) => {
   await context.setGeolocation({ latitude: -6.98, longitude: 110.41 }); // Semarang
   await page.goto("/cuaca");
   await page.getByRole("button", { name: "Gunakan lokasi saya" }).click();
-  await expect(page.getByText(/Wilayah terdekat: Kota Semarang/)).toBeVisible();
-  await expect(page).toHaveURL(/wilayah=kota-semarang/);
+  await expect(page).toHaveURL(/wilayah=33\.74\.\d{2}\.\d{4}/);
+  // Dibatasi ke konten utama: dialog izin notifikasi juga menyebut nama wilayah.
+  await expect(page.locator("#konten").getByText(/^(Kelurahan|Desa) .+, Kota Semarang$/)).toBeVisible();
+  // Pesan hasil GPS tetap tampil setelah halaman dirender ulang untuk wilayah itu.
+  await expect(page.getByText(/Desa\/kelurahan terdekat: (Kelurahan|Desa) .+, Kota Semarang \(±/)).toBeVisible();
+  await expect(page.getByLabel("Kabupaten/Kota", { exact: true })).toHaveValue("33.74");
   await expect(page.getByRole("heading", { name: "Prakiraan harian" })).toBeVisible();
+});
+
+test("pilih bertingkat Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan", async ({ page }) => {
+  await page.goto("/cuaca");
+  const pilih = async (label: string, opsi: string) => {
+    const select = page.getByLabel(label, { exact: true });
+    await expect(select).toBeEnabled();
+    await expect(select.locator("option", { hasText: opsi })).toHaveCount(1);
+    await select.selectOption({ label: opsi });
+  };
+  await pilih("Provinsi", "Jawa Tengah");
+  await pilih("Kabupaten/Kota", "Kota Semarang");
+  await pilih("Kecamatan", "Semarang Utara");
+  await pilih("Desa/Kelurahan", "Kelurahan Bulu Lor");
+  await expect(page).toHaveURL(new RegExp(`wilayah=${DESA_UJI.replaceAll(".", "\\.")}`));
+  await expect(page.getByText("Cuaca terkini · Kelurahan Bulu Lor, Kota Semarang")).toBeVisible();
+  // Setelah render ulang, pilihan bertingkat tetap terisi sesuai wilayah terpilih.
+  await expect(page.getByLabel("Kecamatan", { exact: true })).toHaveValue("33.74.02");
 });
 
 test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
@@ -91,7 +118,7 @@ test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
     await expect(page.getByRole("alert").filter({ hasText: /Bahaya potensi banjir terdeteksi|Ikuti langkah penanganan/ })).toBeVisible();
 
     // Perangkat tidak berlangganan wilayah ini → peringatan dalam aplikasi.
-    await expect(page.getByText(/Risiko banjir TINGGI di Kota Pekalongan/)).toBeVisible();
+    await expect(page.getByText(/Risiko banjir TINGGI di Kelurahan Bandengan, Kota Pekalongan/)).toBeVisible();
     // Kedua jalur selesai → join → Detail Penanganan.
     await expect(page.getByText("Detail penanganan", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Penanganan \(risiko tinggi\)/ })).toBeFocused();
@@ -111,9 +138,9 @@ test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
 
 test("tidak ada scroll horizontal (mobile-first)", async ({ page }) => {
   for (const url of [
-    "/?wilayah=kota-semarang",
+    `/?wilayah=${DESA_UJI}`,
     `/risiko?wilayah=${WILAYAH_SIMULASI}`,
-    "/cuaca?wilayah=kota-semarang",
+    `/cuaca?wilayah=${DESA_UJI}`,
     "/informasi",
     "/pengaturan",
   ]) {
@@ -153,7 +180,7 @@ test.describe("PWA & keamanan", () => {
     await context.setOffline(true);
     await page.reload();
     await expect(page.getByRole("heading", { name: "Informasi", level: 1 })).toBeVisible();
-    await page.goto("/cuaca?wilayah=kota-medan");
+    await page.goto("/cuaca?wilayah=13.71.01.1001");
     await expect(page.getByRole("heading", { name: "Anda sedang offline" })).toBeVisible();
     await context.setOffline(false);
   });

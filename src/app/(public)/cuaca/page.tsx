@@ -11,10 +11,10 @@ import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { formatAngka, formatTanggalLokal } from "@/lib/format";
 import { kategoriHujanHarian } from "@/lib/weather-code";
-import { daftarWilayah } from "@/server/services/content.service";
 import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { ringkasanHarian, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
-import { idWilayahTerpilih } from "@/server/wilayah-terpilih";
+import { namaTampilan } from "@/server/services/wilayah.service";
+import { muatPemilih } from "@/server/wilayah-terpilih";
 
 export const metadata: Metadata = { title: "Prakiraan Cuaca" };
 
@@ -22,15 +22,15 @@ type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
 
 export default async function CuacaPage({ searchParams }: Props) {
   const { wilayah } = await searchParams;
-  const [daftar, idWilayah] = await Promise.all([daftarWilayah(), idWilayahTerpilih(wilayah)]);
-  const terpilih = daftar.some((w) => w.idWilayah === idWilayah) ? idWilayah : null;
+  const { pemilih, desa, namaTerpilih } = await muatPemilih(wilayah);
+  const terpilih = desa?.wilayah.idWilayah ?? null;
 
   return (
     <div className="space-y-6">
       <PageHeader title="Prakiraan Cuaca" description="Prakiraan 3 hari per jam dan harian." />
       <Card>
         <CardContent>
-          <PilihWilayah daftar={daftar} terpilih={terpilih} />
+          <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
         </CardContent>
       </Card>
       {terpilih ? (
@@ -50,12 +50,17 @@ async function Prakiraan({ idWilayah }: { idWilayah: string }) {
   if (!kondisi) return <BelumPilihWilayah />;
   if (!kondisi.cuaca) return <DataCuacaTidakTersedia />;
 
-  const { wilayah, cuaca } = kondisi;
+  const { wilayah, leluhur, cuaca } = kondisi;
   const harian = ringkasanHarian(cuaca.raw);
 
   return (
     <div className="space-y-6">
-      <KartuCuaca dataCuaca={cuaca.dataCuaca} sumber={cuaca.sumber} namaWilayah={wilayah.namaWilayah} />
+      <KartuCuaca
+        dataCuaca={cuaca.dataCuaca}
+        sumber={cuaca.sumber}
+        namaWilayah={namaTampilan(leluhur)}
+        koordinatPerkiraan={wilayah.koordinatPerkiraan}
+      />
 
       <section aria-labelledby="judul-harian" className="space-y-3">
         <h2 id="judul-harian" className="text-xl font-bold">

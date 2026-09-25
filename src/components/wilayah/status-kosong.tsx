@@ -8,7 +8,7 @@ export function BelumPilihWilayah() {
         <MapPin className="size-10 text-primary" aria-hidden="true" />
         <p className="text-lg font-semibold">Pilih wilayah terlebih dulu</p>
         <p className="max-w-sm text-muted-foreground">
-          Pilih dari daftar atau gunakan lokasi Anda untuk melihat cuaca dan level risiko banjir.
+          Cari atau pilih desa/kelurahan Anda, atau gunakan lokasi Anda, untuk melihat cuaca dan level risiko banjir.
         </p>
       </CardContent>
     </Card>

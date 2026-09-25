@@ -1,6 +1,9 @@
 /**
- * Seed Siap Banjir. Idempoten: Wilayah di-upsert, konten (ambang, informasi,
- * persiapan, rekomendasi) dikosongkan lalu diisi ulang.
+ * Seed Siap Banjir. Idempoten:
+ *  1. Wilayah Indonesia dari prisma/data/wilayah.tsv.gz (upsert; kode yang hilang dinonaktifkan).
+ *  2. Profil (deskripsi) wilayah rawan banjir.
+ *  3. Konten (ambang, informasi, persiapan, rekomendasi) dikosongkan lalu diisi ulang.
+ *     Riwayat otomatis dari aplikasi (Informasi berawalan "Risiko banjir TINGGI terdeteksi di") dipertahankan.
  * Jalankan: npm run db:seed
  */
 import { db } from "../src/server/db";
@@ -12,18 +15,27 @@ import {
   tambahWilayah,
   ubahWilayah,
 } from "../src/server/services/content.service";
-import { ambangSeed, informasiSeed, persiapanSeed, rekomendasiSeed, wilayahSeed } from "./seed-data";
+import { AWALAN_JUDUL_RIWAYAT } from "../src/server/services/riwayat.service";
+import { bacaDataWilayah } from "./data-wilayah";
+import { ambangSeed, informasiSeed, persiapanSeed, profilWilayahSeed, rekomendasiSeed } from "./seed-data";
 
 async function main() {
-  for (const { idWilayah, ...data } of wilayahSeed) {
-    const ada = await db.wilayah.findUnique({ where: { idWilayah } });
-    if (ada) await ubahWilayah(idWilayah, data);
-    else await tambahWilayah({ idWilayah, ...data });
+  const wilayah = bacaDataWilayah();
+  const mulai = Date.now();
+  const { disimpan, dinonaktifkan } = await tambahWilayah(wilayah, { nonaktifkanSisanya: true });
+  console.log(`Wilayah: ${disimpan} disimpan, ${dinonaktifkan} dinonaktifkan (${((Date.now() - mulai) / 1000).toFixed(1)} dtk)`);
+
+  for (const p of profilWilayahSeed) {
+    const w = await db.wilayah.findUnique({ where: { idWilayah: p.idWilayah }, select: { namaWilayah: true } });
+    if (w?.namaWilayah !== p.namaWilayah) {
+      throw new Error(`Profil ${p.idWilayah}: nama "${p.namaWilayah}" tidak cocok dengan data Kemendagri "${w?.namaWilayah}"`);
+    }
+    await ubahWilayah(p.idWilayah, { deskripsi: p.deskripsi });
   }
 
   await db.$transaction([
     db.ambangRisiko.deleteMany(),
-    db.informasi.deleteMany(),
+    db.informasi.deleteMany({ where: { NOT: { judul: { startsWith: AWALAN_JUDUL_RIWAYAT } } } }),
     db.persiapanDini.deleteMany(),
     db.rekomendasi.deleteMany(),
   ]);
@@ -34,8 +46,8 @@ async function main() {
   for (const r of rekomendasiSeed) await tambahRekomendasi(r);
 
   console.log(
-    `Seed selesai: ${wilayahSeed.length} wilayah, ${ambangSeed.length} ambang, ` +
-      `${informasiSeed.length} informasi, ${persiapanSeed.length} persiapan, ${rekomendasiSeed.length} rekomendasi.`,
+    `Konten: ${profilWilayahSeed.length} profil wilayah, ${ambangSeed.length} ambang, ${informasiSeed.length} informasi, ` +
+      `${persiapanSeed.length} persiapan, ${rekomendasiSeed.length} rekomendasi.`,
   );
 }
 

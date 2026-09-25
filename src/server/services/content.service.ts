@@ -6,16 +6,15 @@
  * API publik; hanya dipakai oleh prisma/seed.ts.
  */
 import type { KategoriInformasi, TingkatRisiko } from "@prisma/client";
-import { z } from "zod";
+import { leluhurKode } from "@/lib/kode-wilayah";
 import { db } from "@/server/db";
+import { simpanWilayahMassal } from "@/server/services/wilayah.service";
 import {
-  kontakDaruratSchema,
   ambangRisikoBaseSchema,
   ambangRisikoInputSchema,
   informasiInputSchema,
   persiapanDiniInputSchema,
   rekomendasiInputSchema,
-  wilayahInputSchema,
   type AmbangRisikoInput,
   type InformasiInput,
   type PersiapanDiniInput,
@@ -25,42 +24,34 @@ import {
 
 // ---------- Baca ----------
 
-// Konten khusus wilayah ditampilkan lebih dulu, lalu konten global (idWilayah null).
-const khususDulu = { idWilayah: { sort: "asc", nulls: "last" } } as const;
-
-export async function daftarWilayah() {
-  return db.wilayah.findMany({
-    orderBy: { namaWilayah: "asc" },
-    select: { idWilayah: true, namaWilayah: true, koordinatLatitude: true, koordinatLongitude: true },
-  });
-}
-
-export async function lihatWilayah(idWilayah: string) {
-  return db.wilayah.findUnique({ where: { idWilayah } });
-}
-
-export function bacaKontakDarurat(json: unknown) {
-  const hasil = z.array(kontakDaruratSchema).safeParse(json);
-  return hasil.success ? hasil.data : [];
-}
+/**
+ * Konten berlaku untuk wilayah itu dan diwariskan ke wilayah di bawahnya (desa ← kecamatan ←
+ * kab/kota ← provinsi ← global). Yang paling spesifik tampil lebih dulu: kode yang lebih
+ * panjang lebih besar secara leksikografis ("32.04.12" > "32.04"), jadi urut menurun.
+ */
+const spesifikDulu = { idWilayah: { sort: "desc", nulls: "last" } } as const;
+const berlakuUntuk = (idWilayah?: string) => [
+  { idWilayah: null },
+  ...(idWilayah ? [{ idWilayah: { in: leluhurKode(idWilayah) } }] : []),
+];
 
 export async function lihatPersiapan(levelRisiko: TingkatRisiko, idWilayah?: string) {
   return db.persiapanDini.findMany({
-    where: { levelRisiko, OR: [{ idWilayah: null }, ...(idWilayah ? [{ idWilayah }] : [])] },
-    orderBy: [khususDulu, { urutan: "asc" }],
+    where: { levelRisiko, OR: berlakuUntuk(idWilayah) },
+    orderBy: [spesifikDulu, { urutan: "asc" }],
   });
 }
 
 export async function lihatRekomendasi(levelRisiko: TingkatRisiko, idWilayah?: string) {
   return db.rekomendasi.findMany({
-    where: { levelRisiko, OR: [{ idWilayah: null }, ...(idWilayah ? [{ idWilayah }] : [])] },
-    orderBy: [khususDulu, { urutan: "asc" }],
+    where: { levelRisiko, OR: berlakuUntuk(idWilayah) },
+    orderBy: [spesifikDulu, { urutan: "asc" }],
   });
 }
 
 /**
- * lihatInformasi(wilayah): artikel umum (global + khusus wilayah) atau riwayat kejadian.
- * Riwayat kejadian ditampilkan untuk semua wilayah; wilayah terpilih lebih dulu.
+ * lihatInformasi(wilayah): artikel umum atau riwayat kejadian untuk semua wilayah.
+ * Informasi milik wilayah terpilih atau leluhurnya (mis. kab/kota-nya) tampil lebih dulu.
  */
 export async function lihatInformasi(opsi: { kategori?: KategoriInformasi; idWilayah?: string } = {}) {
   const daftar = await db.informasi.findMany({
@@ -69,7 +60,8 @@ export async function lihatInformasi(opsi: { kategori?: KategoriInformasi; idWil
     include: { wilayah: { select: { idWilayah: true, namaWilayah: true } } },
   });
   if (!opsi.idWilayah) return daftar;
-  const milikWilayah = (i: (typeof daftar)[number]) => (i.idWilayah === opsi.idWilayah ? 0 : 1);
+  const leluhur = new Set(leluhurKode(opsi.idWilayah));
+  const milikWilayah = (i: (typeof daftar)[number]) => (i.idWilayah && leluhur.has(i.idWilayah) ? 0 : 1);
   return [...daftar].sort((a, b) => milikWilayah(a) - milikWilayah(b));
 }
 
@@ -82,18 +74,22 @@ export async function lihatDetailInformasi(idInformasi: string) {
 
 // ---------- Wilayah ----------
 
-export async function tambahWilayah(input: WilayahInput) {
-  const data = wilayahInputSchema.parse(input);
-  return db.wilayah.create({ data });
+/** tambahWilayah(): satu atau banyak wilayah Kemendagri (upsert; induk harus sudah ada). */
+export async function tambahWilayah(input: WilayahInput | WilayahInput[], opsi?: { nonaktifkanSisanya?: boolean }) {
+  return simpanWilayahMassal(Array.isArray(input) ? input : [input], opsi);
 }
 
-export async function ubahWilayah(idWilayah: string, input: Partial<Omit<WilayahInput, "idWilayah">>) {
-  const data = wilayahInputSchema.omit({ idWilayah: true }).partial().parse(input);
-  return db.wilayah.update({ where: { idWilayah }, data });
+/** ubahWilayah(): hanya deskripsi yang bisa diubah; kode/nama/koordinat mengikuti data Kemendagri. */
+export async function ubahWilayah(idWilayah: string, input: { deskripsi: string | null }) {
+  return db.wilayah.update({ where: { idWilayah }, data: { deskripsi: input.deskripsi } });
 }
 
+/**
+ * hapusWilayah(): dinonaktifkan, bukan dihapus, agar riwayat & langganan lama tetap utuh
+ * (wilayah punya anak; penghapusan fisik akan melanggar hierarki).
+ */
 export async function hapusWilayah(idWilayah: string) {
-  return db.wilayah.delete({ where: { idWilayah } });
+  return db.wilayah.update({ where: { idWilayah }, data: { aktif: false } });
 }
 
 // ---------- AmbangRisiko ----------

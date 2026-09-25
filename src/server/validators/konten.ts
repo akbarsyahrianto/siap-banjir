@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { POLA_KODE_WILAYAH } from "@/lib/kode-wilayah";
 
 export const tingkatRisikoSchema = z.enum(["RENDAH", "SEDANG", "TINGGI"]);
 
@@ -12,11 +13,9 @@ export const parameterRisikoSchema = z.enum([
 
 export const kategoriInformasiSchema = z.enum(["UMUM", "RIWAYAT_KEJADIAN"]);
 
-const idWilayahSchema = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[a-z0-9-]+$/, "idWilayah harus berupa slug huruf kecil");
+/** Kode Kemendagri bertitik: 36 · 36.71 · 36.71.01 · 36.71.01.1001. */
+export const kodeWilayahSchema = z.string().max(13).regex(POLA_KODE_WILAYAH, "kode wilayah Kemendagri tidak valid");
+const idWilayahSchema = kodeWilayahSchema;
 
 export const kontakDaruratSchema = z.object({
   nama: z.string().min(1).max(120),
@@ -30,8 +29,7 @@ export const wilayahInputSchema = z.object({
   // Batas kasar wilayah Indonesia.
   koordinatLatitude: z.number().min(-11.5).max(6.5),
   koordinatLongitude: z.number().min(94).max(141.5),
-  deskripsi: z.string().max(1000).nullish(),
-  kontakDarurat: z.array(kontakDaruratSchema).default([]),
+  koordinatPerkiraan: z.boolean().default(false),
 });
 
 export const ambangRisikoBaseSchema = z.object({

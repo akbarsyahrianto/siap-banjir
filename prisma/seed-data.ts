@@ -1,139 +1,109 @@
 /**
  * Data seed Siap Banjir. Dipisah dari seed.ts agar bisa diuji (tests/unit/seed-data.test.ts).
- * Koordinat = titik pusat kota/kecamatan (WGS84).
+ *
+ * Wilayah (kode, nama, koordinat) diimpor dari prisma/data/wilayah.tsv.gz (Kemendagri 2025,
+ * lihat scripts/impor-wilayah.ts). Di sini hanya profil tambahan dan konten.
+ * Kode diambil dari data impor, bukan diketik dari ingatan; test memastikan kode & namanya cocok.
  */
 import type {
   AmbangRisikoInput,
   InformasiInput,
   PersiapanDiniInput,
   RekomendasiInput,
-  WilayahInput,
 } from "../src/server/validators/konten";
 
-// Nomor darurat nasional, dipakai di semua wilayah.
-const kontakNasional = [
-  { nama: "Layanan Darurat", telepon: "112" },
-  { nama: "Call Center BNPB", telepon: "117" },
-  { nama: "Ambulans / Layanan Kesehatan", telepon: "119" },
-  { nama: "Pemadam Kebakaran & Penyelamatan", telepon: "113" },
-];
+/** Kode Kemendagri wilayah yang dirujuk konten seed. */
+export const KODE = {
+  jakartaUtara: "31.72",
+  jakartaBarat: "31.73",
+  jakartaTimur: "31.75",
+  kotaMedan: "12.71",
+  kotaPadang: "13.71",
+  kotaPalembang: "16.71",
+  kabBandung: "32.04",
+  dayeuhkolot: "32.04.12",
+  kotaBekasi: "32.75",
+  kotaSemarang: "33.74",
+  kotaPekalongan: "33.75",
+  kotaTangerang: "36.71",
+  kotaBanjarmasin: "63.71",
+  kotaSamarinda: "64.72",
+  kotaManado: "71.71",
+} as const;
 
-// Nomor BPBD daerah tidak diisi karena berbeda-beda dan sering berubah:
-// telepon null → UI mengarahkan pengguna ke 112 / situs resmi BPBD.
-const kontak = (namaBpbd: string) => [...kontakNasional, { nama: namaBpbd, telepon: null }];
+export type ProfilWilayah = { idWilayah: string; namaWilayah: string; deskripsi: string };
 
-export const wilayahSeed: WilayahInput[] = [
+/** Deskripsi wilayah rawan banjir. `namaWilayah` = nama resmi Kemendagri (diperiksa test). */
+export const profilWilayahSeed: ProfilWilayah[] = [
   {
-    idWilayah: "jakarta-utara",
-    namaWilayah: "Jakarta Utara",
-    koordinatLatitude: -6.1214,
-    koordinatLongitude: 106.8656,
+    idWilayah: KODE.jakartaUtara,
+    namaWilayah: "Kota Administrasi Jakarta Utara",
     deskripsi: "Kawasan pesisir dataran rendah; rawan banjir kiriman, genangan hujan, dan banjir rob.",
-    kontakDarurat: kontak("BPBD Provinsi DKI Jakarta"),
   },
   {
-    idWilayah: "jakarta-timur",
-    namaWilayah: "Jakarta Timur",
-    koordinatLatitude: -6.225,
-    koordinatLongitude: 106.9004,
+    idWilayah: KODE.jakartaTimur,
+    namaWilayah: "Kota Administrasi Jakarta Timur",
     deskripsi: "Dilalui Sungai Ciliwung dan Kali Sunter; permukiman bantaran sungai rawan luapan.",
-    kontakDarurat: kontak("BPBD Provinsi DKI Jakarta"),
   },
   {
-    idWilayah: "jakarta-barat",
-    namaWilayah: "Jakarta Barat",
-    koordinatLatitude: -6.1674,
-    koordinatLongitude: 106.7637,
+    idWilayah: KODE.jakartaBarat,
+    namaWilayah: "Kota Administrasi Jakarta Barat",
     deskripsi: "Dilalui Kali Angke dan Kali Pesanggrahan; beberapa kawasan rawan genangan saat hujan lebat.",
-    kontakDarurat: kontak("BPBD Provinsi DKI Jakarta"),
   },
   {
-    idWilayah: "kota-bekasi",
+    idWilayah: KODE.kotaBekasi,
     namaWilayah: "Kota Bekasi",
-    koordinatLatitude: -6.2383,
-    koordinatLongitude: 106.9756,
     deskripsi: "Dilalui Kali Bekasi; perumahan di sekitar pertemuan Kali Cikeas dan Cileungsi rawan banjir.",
-    kontakDarurat: kontak("BPBD Kota Bekasi"),
   },
   {
-    idWilayah: "kota-tangerang",
+    idWilayah: KODE.kotaTangerang,
     namaWilayah: "Kota Tangerang",
-    koordinatLatitude: -6.1783,
-    koordinatLongitude: 106.6319,
     deskripsi: "Dilalui Sungai Cisadane; beberapa kecamatan rawan genangan saat hujan lebat.",
-    kontakDarurat: kontak("BPBD Kota Tangerang"),
   },
   {
-    idWilayah: "dayeuhkolot",
-    namaWilayah: "Dayeuhkolot, Kabupaten Bandung",
-    koordinatLatitude: -6.9867,
-    koordinatLongitude: 107.6269,
+    idWilayah: KODE.dayeuhkolot,
+    namaWilayah: "Dayeuhkolot",
     deskripsi: "Cekungan Bandung di tepi Sungai Citarum; langganan banjir luapan saat musim hujan.",
-    kontakDarurat: kontak("BPBD Kabupaten Bandung"),
   },
   {
-    idWilayah: "kota-semarang",
+    idWilayah: KODE.kotaSemarang,
     namaWilayah: "Kota Semarang",
-    koordinatLatitude: -6.9932,
-    koordinatLongitude: 110.4203,
     deskripsi: "Kota pesisir dengan penurunan muka tanah; rawan banjir hujan dan banjir rob.",
-    kontakDarurat: kontak("BPBD Kota Semarang"),
   },
   {
-    idWilayah: "kota-pekalongan",
+    idWilayah: KODE.kotaPekalongan,
     namaWilayah: "Kota Pekalongan",
-    koordinatLatitude: -6.8886,
-    koordinatLongitude: 109.6753,
     deskripsi: "Pesisir utara Jawa Tengah; rawan banjir rob dan genangan akibat hujan lebat.",
-    kontakDarurat: kontak("BPBD Kota Pekalongan"),
   },
   {
-    idWilayah: "kota-medan",
+    idWilayah: KODE.kotaMedan,
     namaWilayah: "Kota Medan",
-    koordinatLatitude: 3.5952,
-    koordinatLongitude: 98.6722,
     deskripsi: "Dilalui Sungai Deli dan Sungai Babura; permukiman bantaran sungai rawan luapan.",
-    kontakDarurat: kontak("BPBD Kota Medan"),
   },
   {
-    idWilayah: "kota-samarinda",
+    idWilayah: KODE.kotaSamarinda,
     namaWilayah: "Kota Samarinda",
-    koordinatLatitude: -0.5022,
-    koordinatLongitude: 117.1536,
     deskripsi: "Dilalui Sungai Mahakam dan Sungai Karang Mumus; sering tergenang saat hujan deras.",
-    kontakDarurat: kontak("BPBD Kota Samarinda"),
   },
   {
-    idWilayah: "kota-banjarmasin",
+    idWilayah: KODE.kotaBanjarmasin,
     namaWilayah: "Kota Banjarmasin",
-    koordinatLatitude: -3.3186,
-    koordinatLongitude: 114.5944,
     deskripsi: "Kota sungai di dataran rendah muara Barito–Martapura; rawan banjir hujan dan pasang.",
-    kontakDarurat: kontak("BPBD Kota Banjarmasin"),
   },
   {
-    idWilayah: "kota-palembang",
+    idWilayah: KODE.kotaPalembang,
     namaWilayah: "Kota Palembang",
-    koordinatLatitude: -2.9761,
-    koordinatLongitude: 104.7754,
     deskripsi: "Dilalui Sungai Musi; kawasan rawa dan dataran rendah rawan genangan.",
-    kontakDarurat: kontak("BPBD Kota Palembang"),
   },
   {
-    idWilayah: "kota-manado",
+    idWilayah: KODE.kotaManado,
     namaWilayah: "Kota Manado",
-    koordinatLatitude: 1.4748,
-    koordinatLongitude: 124.8421,
     deskripsi: "Dilalui Sungai Tondano dan beberapa sungai kecil; pernah dilanda banjir bandang.",
-    kontakDarurat: kontak("BPBD Kota Manado"),
   },
   {
-    idWilayah: "kota-padang",
+    idWilayah: KODE.kotaPadang,
     namaWilayah: "Kota Padang",
-    koordinatLatitude: -0.9471,
-    koordinatLongitude: 100.4172,
     deskripsi: "Kota pesisir dengan curah hujan tinggi; beberapa kawasan rawan banjir dan genangan.",
-    kontakDarurat: kontak("BPBD Kota Padang"),
   },
 ];
 
@@ -176,9 +146,9 @@ export const persiapanSeed: PersiapanDiniInput[] = [
   { levelRisiko: "TINGGI", urutan: 4, isiPersiapan: "Siap mematikan listrik dan gas dari sumber utama jika air mulai masuk rumah." },
   { levelRisiko: "TINGGI", urutan: 5, isiPersiapan: "Berkoordinasi dengan RT/RW dan ikuti arahan petugas." },
   // Contoh konten khusus wilayah (ditampilkan lebih dulu dari konten global).
-  { idWilayah: "jakarta-utara", levelRisiko: "SEDANG", urutan: 0, isiPersiapan: "Perhatikan jadwal pasang air laut; hujan lebat saat pasang dapat memperparah genangan rob." },
-  { idWilayah: "kota-semarang", levelRisiko: "SEDANG", urutan: 0, isiPersiapan: "Perhatikan jadwal pasang air laut; kawasan pesisir Semarang rawan rob bersamaan dengan hujan." },
-  { idWilayah: "dayeuhkolot", levelRisiko: "SEDANG", urutan: 0, isiPersiapan: "Pantau tinggi muka air Sungai Citarum dan informasi dari aparat desa/kelurahan." },
+  { idWilayah: KODE.jakartaUtara, levelRisiko: "SEDANG", urutan: 0, isiPersiapan: "Perhatikan jadwal pasang air laut; hujan lebat saat pasang dapat memperparah genangan rob." },
+  { idWilayah: KODE.kotaSemarang, levelRisiko: "SEDANG", urutan: 0, isiPersiapan: "Perhatikan jadwal pasang air laut; kawasan pesisir Semarang rawan rob bersamaan dengan hujan." },
+  { idWilayah: KODE.dayeuhkolot, levelRisiko: "SEDANG", urutan: 0, isiPersiapan: "Pantau tinggi muka air Sungai Citarum dan informasi dari aparat desa/kelurahan." },
 ];
 
 export const rekomendasiSeed: RekomendasiInput[] = [
@@ -235,7 +205,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "UMUM",
-    idWilayah: "dayeuhkolot",
+    idWilayah: KODE.dayeuhkolot,
     tanggal: "2026-01-10",
     judul: "Banjir Luapan Citarum di Cekungan Bandung",
     isi:
@@ -244,7 +214,7 @@ export const informasiSeed: InformasiInput[] = [
   // ----- RIWAYAT_KEJADIAN -----
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "jakarta-timur",
+    idWilayah: KODE.jakartaTimur,
     tanggal: "2020-01-01",
     judul: "Banjir Jabodetabek Awal Tahun 2020",
     isi:
@@ -252,7 +222,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "kota-bekasi",
+    idWilayah: KODE.kotaBekasi,
     tanggal: "2020-01-01",
     judul: "Banjir Kota Bekasi 1 Januari 2020",
     isi:
@@ -260,7 +230,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "jakarta-utara",
+    idWilayah: KODE.jakartaUtara,
     tanggal: "2007-02-02",
     judul: "Banjir Besar Jakarta Februari 2007",
     isi:
@@ -268,7 +238,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "kota-manado",
+    idWilayah: KODE.kotaManado,
     tanggal: "2014-01-15",
     judul: "Banjir Bandang Manado Januari 2014",
     isi:
@@ -276,7 +246,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "kota-banjarmasin",
+    idWilayah: KODE.kotaBanjarmasin,
     tanggal: "2021-01-15",
     judul: "Banjir Kalimantan Selatan Januari 2021",
     isi:
@@ -284,7 +254,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "kota-semarang",
+    idWilayah: KODE.kotaSemarang,
     tanggal: "2021-02-06",
     judul: "Banjir Semarang Februari 2021",
     isi:
@@ -292,7 +262,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "kota-medan",
+    idWilayah: KODE.kotaMedan,
     tanggal: "2020-12-04",
     judul: "Banjir Medan Desember 2020",
     isi:
@@ -300,7 +270,7 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: "kota-samarinda",
+    idWilayah: KODE.kotaSamarinda,
     tanggal: "2019-06-09",
     judul: "Banjir Samarinda Juni 2019",
     isi:

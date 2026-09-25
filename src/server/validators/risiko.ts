@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parameterRisikoSchema, tingkatRisikoSchema } from "@/server/validators/konten";
+import { kodeWilayahSchema, parameterRisikoSchema, tingkatRisikoSchema } from "@/server/validators/konten";
 
 /** Isi kolom LevelRisiko.parameterPemicu (JSON). */
 export const hasilParameterSchema = z.object({
@@ -17,7 +17,7 @@ export const daftarHasilParameterSchema = z.array(hasilParameterSchema);
 export type HasilParameter = z.infer<typeof hasilParameterSchema>;
 
 export const queryWilayahSchema = z.object({
-  wilayah: z.string().min(1).max(64).regex(/^[a-z0-9-]+$/),
+  wilayah: kodeWilayahSchema,
 });
 
 export const queryPenangananSchema = z.object({

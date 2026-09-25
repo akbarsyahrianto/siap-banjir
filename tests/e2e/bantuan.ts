@@ -1,7 +1,10 @@
 import type { Page, TestInfo } from "@playwright/test";
 
-/** Wilayah yang disimulasikan berisiko TINGGI oleh global-setup. */
-export const WILAYAH_SIMULASI = "kota-pekalongan";
+/** Desa/kelurahan yang disimulasikan berisiko TINGGI oleh global-setup (Kelurahan Bandengan, Kota Pekalongan). */
+export const WILAYAH_SIMULASI = "33.75.03.1009";
+
+/** Kelurahan Bulu Lor, Kec. Semarang Utara, Kota Semarang. */
+export const DESA_UJI = "33.74.02.1002";
 
 /** Token perangkat & endpoint push tetap per project, agar bisa dibersihkan di teardown. */
 export function identitasUji(testInfo: TestInfo) {

@@ -1,5 +1,6 @@
 /**
  * Integration test langkah 9 (riwayat risiko tinggi) terhadap database asli.
+ * Riwayat diagregasi per kab/kota per hari WIB (D-038).
  * Jalankan: npm run test:integration
  */
 import type { TingkatRisiko } from "@prisma/client";
@@ -16,14 +17,19 @@ const { db } = await import("@/server/db");
 const { tindakLanjutRisiko } = await import("@/server/services/pemantauan.service");
 const { AWALAN_JUDUL_RIWAYAT } = await import("@/server/services/riwayat.service");
 
-const WILAYAH = "kota-padang";
+const KAB_KOTA = "13.71"; // Kota Padang
+const DESA_A = "13.71.01.1001"; // Kelurahan Belakang Pondok, Kec. Padang Selatan
+const DESA_B = "13.71.02.1009"; // Kelurahan Parak Gadang Timur, Kec. Padang Timur
 const cuacaDibuat: string[] = [];
 const waktuUji = new Date("2020-02-02T05:00:00Z"); // tanggal lampau agar tidak bentrok dengan data nyata
 
-async function buatRisiko(level: TingkatRisiko, waktu = waktuUji) {
+async function buatRisiko(level: TingkatRisiko, idWilayah = DESA_A, waktu = waktuUji) {
   const cuaca = await db.dataCuaca.create({
     data: {
-      idWilayah: WILAYAH,
+      // Sel grid di laut (tanpa desa) agar tidak tercampur cache cuaca nyata.
+      kunciGrid: "0.0,0.0",
+      gridLatitude: 0,
+      gridLongitude: 0,
       curahHujan: 0,
       suhu: 27,
       kelembapan: 90,
@@ -37,7 +43,7 @@ async function buatRisiko(level: TingkatRisiko, waktu = waktuUji) {
   cuacaDibuat.push(cuaca.idCuaca);
   return db.levelRisiko.create({
     data: {
-      idWilayah: WILAYAH,
+      idWilayah,
       idCuaca: cuaca.idCuaca,
       level,
       skorRisiko: 85,
@@ -51,10 +57,11 @@ async function buatRisiko(level: TingkatRisiko, waktu = waktuUji) {
 const riwayatUji = () =>
   db.informasi.findMany({
     where: {
-      idWilayah: WILAYAH,
+      idWilayah: KAB_KOTA,
       judul: { startsWith: AWALAN_JUDUL_RIWAYAT },
       tanggal: { gte: new Date("2020-02-01T00:00:00Z"), lt: new Date("2020-02-05T00:00:00Z") },
     },
+    orderBy: { tanggal: "asc" },
   });
 
 afterAll(async () => {
@@ -65,22 +72,37 @@ afterAll(async () => {
 
 describe("tindakLanjutRisiko: simpan riwayat risiko tinggi", () => {
   it("SEDANG tidak disimpan sebagai riwayat", async () => {
-    expect((await tindakLanjutRisiko(await buatRisiko("SEDANG"))).riwayatDisimpan).toBe(false);
+    expect((await tindakLanjutRisiko(await buatRisiko("SEDANG"))).riwayat).toBe(false);
     expect(await riwayatUji()).toHaveLength(0);
   });
 
-  it("TINGGI disimpan sekali per wilayah per hari (WIB)", async () => {
-    expect((await tindakLanjutRisiko(await buatRisiko("TINGGI"))).riwayatDisimpan).toBe(true);
-    // Deteksi kedua di hari yang sama tidak menambah riwayat.
-    const kedua = await buatRisiko("TINGGI", new Date("2020-02-02T10:00:00Z"));
-    expect((await tindakLanjutRisiko(kedua)).riwayatDisimpan).toBe(false);
-    // Hari berikutnya (WIB) → riwayat baru.
-    const besok = await buatRisiko("TINGGI", new Date("2020-02-02T18:00:00Z")); // 3 Feb 01:00 WIB
-    expect((await tindakLanjutRisiko(besok)).riwayatDisimpan).toBe(true);
+  it("TINGGI: satu entri per kab/kota per hari (WIB), desa lain ditambahkan ke entri yang sama", async () => {
+    expect((await tindakLanjutRisiko(await buatRisiko("TINGGI"))).riwayat).toBe("dibuat");
+    // Desa yang sama di hari yang sama tidak menambah apa pun.
+    const lagi = await buatRisiko("TINGGI", DESA_A, new Date("2020-02-02T10:00:00Z"));
+    expect((await tindakLanjutRisiko(lagi)).riwayat).toBe(false);
+    // Desa lain di kab/kota yang sama → entri hari itu diperbarui.
+    const desaLain = await buatRisiko("TINGGI", DESA_B, new Date("2020-02-02T11:00:00Z"));
+    expect((await tindakLanjutRisiko(desaLain)).riwayat).toBe("diperbarui");
+    // Hari berikutnya (WIB) → entri baru.
+    const besok = await buatRisiko("TINGGI", DESA_A, new Date("2020-02-02T18:00:00Z")); // 3 Feb 01:00 WIB
+    expect((await tindakLanjutRisiko(besok)).riwayat).toBe("dibuat");
 
     const daftar = await riwayatUji();
     expect(daftar).toHaveLength(2);
-    expect(daftar[0]).toMatchObject({ kategori: "RIWAYAT_KEJADIAN", idWilayah: WILAYAH });
+    expect(daftar[0]).toMatchObject({ kategori: "RIWAYAT_KEJADIAN", idWilayah: KAB_KOTA, judul: `${AWALAN_JUDUL_RIWAYAT} Kota Padang` });
+    expect(daftar[0]?.isi).toContain("Kelurahan Belakang Pondok, Kec. Padang Selatan");
+    expect(daftar[0]?.isi).toContain("Kelurahan Parak Gadang Timur, Kec. Padang Timur");
     expect(daftar[0]?.isi).toContain("bukan laporan kejadian banjir yang terverifikasi");
+    expect(daftar[1]?.isi).not.toContain("Parak Gadang Timur");
+  });
+
+  it("deteksi paralel di kab/kota yang sama tidak membuat entri ganda", async () => {
+    const waktu = new Date("2020-02-04T03:00:00Z");
+    const risiko = await Promise.all([buatRisiko("TINGGI", DESA_A, waktu), buatRisiko("TINGGI", DESA_B, waktu)]);
+    const hasil = await Promise.all(risiko.map((r) => tindakLanjutRisiko(r)));
+    expect(hasil.map((h) => h.riwayat).sort()).toEqual(["dibuat", "diperbarui"]);
+    const hariItu = (await riwayatUji()).filter((i) => i.tanggal >= new Date("2020-02-03T17:00:00Z"));
+    expect(hariItu).toHaveLength(1);
   });
 });

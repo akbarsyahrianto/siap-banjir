@@ -9,18 +9,18 @@ import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/
 import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { APP_TAGLINE } from "@/lib/constants";
-import { daftarWilayah } from "@/server/services/content.service";
 import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { seriHujan48Jam } from "@/server/services/seri-cuaca";
-import { idWilayahTerpilih } from "@/server/wilayah-terpilih";
+import { namaTampilan } from "@/server/services/wilayah.service";
+import { muatPemilih } from "@/server/wilayah-terpilih";
 
 type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
 
 export default async function BerandaPage({ searchParams }: Props) {
   const { wilayah } = await searchParams;
-  // lihatInformasi(wilayah): daftar wilayah + info cuaca awal (langkah 1 sequence diagram).
-  const [daftar, idWilayah] = await Promise.all([daftarWilayah(), idWilayahTerpilih(wilayah)]);
-  const terpilih = daftar.some((w) => w.idWilayah === idWilayah) ? idWilayah : null;
+  // lihatInformasi(wilayah): pemilih wilayah + info cuaca awal (langkah 1 sequence diagram).
+  const { pemilih, desa, namaTerpilih } = await muatPemilih(wilayah);
+  const terpilih = desa?.wilayah.idWilayah ?? null;
 
   return (
     <div className="space-y-6">
@@ -31,7 +31,7 @@ export default async function BerandaPage({ searchParams }: Props) {
 
       <Card>
         <CardContent>
-          <PilihWilayah daftar={daftar} terpilih={terpilih} />
+          <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
         </CardContent>
       </Card>
 
@@ -50,9 +50,7 @@ export default async function BerandaPage({ searchParams }: Props) {
             <p className="text-lg font-semibold">Dapatkan peringatan dini</p>
             <p className="text-muted-foreground">Terima notifikasi saat risiko banjir Sedang atau Tinggi.</p>
           </div>
-          <TombolAktifkanPeringatan
-            wilayah={daftar.find((w) => w.idWilayah === terpilih) ?? null}
-          />
+          <TombolAktifkanPeringatan wilayah={terpilih && namaTerpilih ? { idWilayah: terpilih, namaWilayah: namaTerpilih } : null} />
         </CardContent>
       </Card>
     </div>
@@ -64,12 +62,17 @@ async function RingkasanWilayah({ idWilayah }: { idWilayah: string }) {
   if (!kondisi) return <BelumPilihWilayah />;
   if (!kondisi.cuaca || !kondisi.risiko) return <DataCuacaTidakTersedia />;
 
-  const { wilayah, cuaca, risiko } = kondisi;
+  const { wilayah, leluhur, cuaca, risiko } = kondisi;
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
         <KartuRingkasanRisiko risiko={risiko} idWilayah={wilayah.idWilayah} />
-        <KartuCuaca dataCuaca={cuaca.dataCuaca} sumber={cuaca.sumber} namaWilayah={wilayah.namaWilayah} />
+        <KartuCuaca
+          dataCuaca={cuaca.dataCuaca}
+          sumber={cuaca.sumber}
+          namaWilayah={namaTampilan(leluhur)}
+          koordinatPerkiraan={wilayah.koordinatPerkiraan}
+        />
       </div>
       <Card>
         <CardHeader>
