@@ -136,6 +136,20 @@ test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
   });
 });
 
+test("Informasi: riwayat kejadian punya tautan sumber; artikel umum bertanggal terbit", async ({ page }) => {
+  await page.goto("/informasi");
+  const riwayat = page.getByRole("region", { name: "Riwayat kejadian banjir" });
+  const sumber = riwayat.getByRole("link", { name: /ANTARA, 1 Januari 2020/ });
+  await expect(sumber).toHaveAttribute("href", /^https:\/\/www\.antaranews\.com\//);
+  await expect(sumber).toHaveAttribute("target", "_blank");
+  await expect(sumber).toHaveAttribute("rel", "noopener noreferrer");
+
+  const umum = page.getByRole("region", { name: "Informasi umum" });
+  await expect(umum.getByText(/^Terbit /).first()).toBeVisible();
+  await umum.getByRole("link", { name: "Mengenal Risiko Banjir Luapan Citarum di Cekungan Bandung" }).click();
+  await expect(page.getByText("bukan laporan kejadian banjir pada tanggal tertentu", { exact: false })).toBeVisible();
+});
+
 test("tidak ada scroll horizontal (mobile-first)", async ({ page }) => {
   for (const url of [
     `/?wilayah=${DESA_UJI}`,

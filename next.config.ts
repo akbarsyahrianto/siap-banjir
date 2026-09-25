@@ -32,6 +32,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Build/e2e bisa diarahkan ke folder lain agar tidak menimpa .next milik `next dev` yang sedang jalan.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   experimental: {
     // Barrel "radix-ui" menarik semua primitive jika tidak dioptimasi.

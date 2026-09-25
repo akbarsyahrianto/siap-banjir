@@ -67,6 +67,8 @@ Nomor telepon BPBD per daerah berbeda-beda dan sering berubah. Supaya tidak meng
 
 ## D-008 · Riwayat kejadian di seed
 
+> **Diperbarui D-039:** setiap riwayat kini punya tautan sumber yang sudah diperiksa, dan beberapa isi/tanggal dikoreksi agar sesuai sumbernya.
+
 Riwayat kejadian (Informasi `RIWAYAT_KEJADIAN`) hanya memuat peristiwa banjir besar yang terdokumentasi luas. Deskripsinya sengaja umum, tanpa angka korban atau kerugian. Satu-satunya angka adalah curah hujan 377 mm/hari di Halim Perdanakusuma (1 Januari 2020, data BMKG).
 
 ## D-009 · Seed memakai service konten
@@ -336,3 +338,23 @@ Sejak D-033: wilayah uji adalah desa/kelurahan asli (Kelurahan Bandengan `33.75.
 **Konteks.** D-023 menyimpan satu riwayat per wilayah per hari. Dengan unit desa, hujan lebat di satu kota bisa menghasilkan puluhan entri sehari.
 
 **Keputusan.** Satu entri `RIWAYAT_KEJADIAN` per **kab/kota** per hari kalender WIB (`idWilayah` = kode kab/kota), berjudul "Risiko banjir TINGGI terdeteksi di {kab/kota}". Isinya daftar desa/kelurahan yang terdeteksi hari itu beserta jam dan penyebabnya. Desa yang sudah tercantum tidak ditambahkan lagi. Penulisan diserialkan dengan `pg_advisory_xact_lock(hashtext('riwayat:{kab}:{hari}'))` di dalam transaksi, sehingga cron paralel dan kunjungan halaman tidak membuat entri ganda (diuji di integration test). `npm run db:seed` tidak menghapus riwayat otomatis.
+
+## D-039 · Sumber untuk setiap riwayat kejadian (menyimpang dari UML)
+
+**Konteks.** Riwayat kejadian banjir di halaman Informasi harus bisa dirujuk. Class diagram `Informasi` tidak punya atribut sumber.
+
+**Keputusan.**
+- `Informasi` mendapat dua kolom nullable, `sumberNama` dan `sumberUrl` (migrasi `20260925160000_sumber_informasi`). Validator hanya menerima URL `https`. Tautan dibuka di tab baru dengan `rel="noopener noreferrer"`.
+- Di kartu daftar, judul menjadi tautan ke detail (area klik meluas ke seluruh kartu) dan sumber menjadi tautan terpisah di atasnya, karena tautan bersarang tidak valid di HTML.
+- **Setiap riwayat seed wajib punya sumber** (diuji). Setiap URL dibuka dan isinya dicocokkan pada 25 September 2026. Teks riwayat hanya memuat hal yang disebut sumbernya. Koreksi yang dilakukan:
+  - Banjir Samarinda Juni 2019: frasa "terutama di sekitar Sungai Karang Mumus" dihapus karena tidak ada sumber terverifikasi yang menyebutnya; diganti kawasan yang disebut sumber (Sempaja Timur, Gunung Lingai).
+  - Banjir Medan: tanggal 4 → 3 Desember 2020 (puncak banjir menurut data BNPB); Sungai Denai dan empat kecamatan terdampak ditambahkan sesuai sumber.
+  - Banjir Jakarta 2007 dipindah dari Jakarta Utara ke Provinsi DKI Jakarta, dan Banjir Kalsel 2021 dari Kota Banjarmasin ke Provinsi Kalimantan Selatan, karena sumbernya menggambarkan kejadian tingkat provinsi. Lewat pewarisan (D-037) riwayat ini tampil untuk semua desa/kelurahan di provinsi itu.
+- **Riwayat otomatis** (D-038) diberi sumber "Deteksi otomatis Siap Banjir, data cuaca Open-Meteo" → `https://open-meteo.com/`. Entri lama diisi saat `npm run db:seed`.
+- **Artikel umum bukan kejadian.** "Banjir Luapan Citarum di Cekungan Bandung" (kategori UMUM, 10 Jan 2026) bukan laporan kejadian: tanggalnya hanya urutan tanggal terbit seed, dan isinya penjelasan risiko umum. Judulnya diganti menjadi "Mengenal Risiko Banjir Luapan Citarum di Cekungan Bandung", ditambah kalimat bahwa artikel ini bukan laporan kejadian pada tanggal tertentu. Semua artikel umum kini menampilkan label "Terbit" di depan tanggal.
+
+## D-040 · `NEXT_DIST_DIR` untuk build/e2e saat `next dev` berjalan
+
+`next build` menulis ke `.next`, yang juga dipakai `next dev`, sehingga build saat server pengembangan berjalan bisa merusaknya. `next.config.ts` kini membaca `distDir` dari `NEXT_DIST_DIR` (default `.next`). Contoh: `$env:NEXT_DIST_DIR = ".next-e2e"; npm run build; npm run test:e2e`. Path `.next-e2e/types` sudah ada di `tsconfig.json`, sehingga Next.js tidak menulis ulang file itu. Folder `.next-*` diabaikan git dan ESLint.
+
+Catatan Windows: `prisma generate` gagal dengan `EPERM` saat `next dev` memegang file engine. File client (JS & tipe) tetap diperbarui; engine yang lama tetap valid selama versi Prisma sama. `next dev` memuat client baru setelah worker-nya dimulai ulang (misalnya setelah `next.config.ts` berubah, atau server di-restart).

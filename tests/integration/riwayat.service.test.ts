@@ -15,7 +15,7 @@ vi.mock("next/server", () => ({ after: () => undefined }));
 
 const { db } = await import("@/server/db");
 const { tindakLanjutRisiko } = await import("@/server/services/pemantauan.service");
-const { AWALAN_JUDUL_RIWAYAT } = await import("@/server/services/riwayat.service");
+const { AWALAN_JUDUL_RIWAYAT, SUMBER_DETEKSI } = await import("@/server/services/riwayat.service");
 
 const KAB_KOTA = "13.71"; // Kota Padang
 const DESA_A = "13.71.01.1001"; // Kelurahan Belakang Pondok, Kec. Padang Selatan
@@ -94,6 +94,7 @@ describe("tindakLanjutRisiko: simpan riwayat risiko tinggi", () => {
     expect(daftar[0]?.isi).toContain("Kelurahan Belakang Pondok, Kec. Padang Selatan");
     expect(daftar[0]?.isi).toContain("Kelurahan Parak Gadang Timur, Kec. Padang Timur");
     expect(daftar[0]?.isi).toContain("bukan laporan kejadian banjir yang terverifikasi");
+    expect(daftar[0]).toMatchObject({ sumberNama: SUMBER_DETEKSI.nama, sumberUrl: "https://open-meteo.com/" });
     expect(daftar[1]?.isi).not.toContain("Parak Gadang Timur");
   });
 

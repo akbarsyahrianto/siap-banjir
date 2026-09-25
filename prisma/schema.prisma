@@ -224,6 +224,9 @@ model Informasi {
   isi         String
   kategori    KategoriInformasi
   tanggal     DateTime          @default(now())
+  /// Rujukan asli (DECISIONS D-039). Wajib untuk riwayat kejadian dari seed.
+  sumberNama  String?           @map("sumber_nama")
+  sumberUrl   String?           @map("sumber_url")
 
   wilayah Wilayah? @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
 

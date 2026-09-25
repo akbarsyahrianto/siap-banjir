@@ -108,4 +108,20 @@ describe("seed konten", () => {
     expect(informasiSeed.some((i) => i.kategori === "UMUM")).toBe(true);
     expect(informasiSeed.some((i) => i.kategori === "RIWAYAT_KEJADIAN")).toBe(true);
   });
+
+  it("setiap riwayat kejadian punya nama sumber dan tautan https yang unik", () => {
+    const riwayat = informasiSeed.filter((i) => i.kategori === "RIWAYAT_KEJADIAN");
+    for (const r of riwayat) {
+      expect(r.sumberNama, r.judul).toBeTruthy();
+      expect(r.sumberUrl, r.judul).toMatch(/^https:\/\//);
+    }
+    expect(new Set(riwayat.map((r) => r.sumberUrl)).size).toBe(riwayat.length);
+  });
+
+  it("sumberUrl selain https ditolak validator", () => {
+    const dasar = { kategori: "RIWAYAT_KEJADIAN" as const, judul: "Uji", isi: "Uji", sumberNama: "Uji" };
+    expect(informasiInputSchema.safeParse({ ...dasar, sumberUrl: "http://contoh.go.id/a" }).success).toBe(false);
+    expect(informasiInputSchema.safeParse({ ...dasar, sumberUrl: "javascript:alert(1)" }).success).toBe(false);
+    expect(informasiInputSchema.safeParse({ ...dasar, sumberUrl: "https://contoh.go.id/a" }).success).toBe(true);
+  });
 });

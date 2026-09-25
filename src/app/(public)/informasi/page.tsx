@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { BookOpen, History, MapPin } from "lucide-react";
+import { TanggalInformasi } from "@/components/informasi/tanggal-informasi";
+import { TautanSumber } from "@/components/informasi/tautan-sumber";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatTanggal } from "@/lib/format";
 import { lihatInformasi } from "@/server/services/content.service";
 import { idWilayahTerpilih } from "@/server/wilayah-terpilih";
 
@@ -19,25 +20,32 @@ function DaftarInformasi({ items, kosong }: { items: ItemInformasi[]; kosong: st
     <ul className="grid gap-3 md:grid-cols-2">
       {items.map((i) => (
         <li key={i.idInformasi}>
-          <Link href={`/informasi/${i.idInformasi}`} className="block h-full rounded-xl focus-visible:outline-2">
-            <Card className="h-full transition-colors hover:bg-accent/50">
-              <CardHeader>
-                <CardTitle className="text-lg leading-snug">{i.judul}</CardTitle>
-                <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span>{formatTanggal(i.tanggal)}</span>
-                  {i.wilayah ? (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3.5" aria-hidden="true" />
-                      {i.wilayah.namaWilayah}
-                    </span>
-                  ) : null}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="line-clamp-3 text-muted-foreground">{i.isi}</p>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* Seluruh kartu bisa diklik lewat tautan judul (after:inset-0); tautan sumber di atasnya (z-10). */}
+          <Card className="relative h-full transition-colors hover:bg-accent/50">
+            <CardHeader>
+              <CardTitle className="text-lg leading-snug">
+                <Link
+                  href={`/informasi/${i.idInformasi}`}
+                  className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2"
+                >
+                  {i.judul}
+                </Link>
+              </CardTitle>
+              <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <TanggalInformasi kategori={i.kategori} tanggal={i.tanggal} />
+                {i.wilayah ? (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="size-3.5" aria-hidden="true" />
+                    {i.wilayah.namaWilayah}
+                  </span>
+                ) : null}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="line-clamp-3 text-muted-foreground">{i.isi}</p>
+              <TautanSumber nama={i.sumberNama} url={i.sumberUrl} className="relative z-10" />
+            </CardContent>
+          </Card>
         </li>
       ))}
     </ul>

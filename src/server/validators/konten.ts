@@ -52,6 +52,9 @@ export const informasiInputSchema = z.object({
   isi: z.string().min(1),
   kategori: kategoriInformasiSchema,
   tanggal: z.coerce.date().optional(),
+  sumberNama: z.string().min(1).max(200).nullish(),
+  // Hanya https: tautan ditampilkan ke pengguna dan dibuka di tab baru.
+  sumberUrl: z.url({ protocol: /^https$/ }).max(500).nullish(),
 });
 
 export const persiapanDiniInputSchema = z.object({

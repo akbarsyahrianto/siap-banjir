@@ -15,7 +15,7 @@ import {
   tambahWilayah,
   ubahWilayah,
 } from "../src/server/services/content.service";
-import { AWALAN_JUDUL_RIWAYAT } from "../src/server/services/riwayat.service";
+import { AWALAN_JUDUL_RIWAYAT, SUMBER_DETEKSI } from "../src/server/services/riwayat.service";
 import { bacaDataWilayah } from "./data-wilayah";
 import { ambangSeed, informasiSeed, persiapanSeed, profilWilayahSeed, rekomendasiSeed } from "./seed-data";
 
@@ -44,6 +44,11 @@ async function main() {
   for (const i of informasiSeed) await tambahInformasi(i);
   for (const p of persiapanSeed) await tambahPersiapan(p);
   for (const r of rekomendasiSeed) await tambahRekomendasi(r);
+  // Riwayat otomatis dari sebelum kolom sumber ada (D-039).
+  await db.informasi.updateMany({
+    where: { judul: { startsWith: AWALAN_JUDUL_RIWAYAT }, sumberUrl: null },
+    data: { sumberNama: SUMBER_DETEKSI.nama, sumberUrl: SUMBER_DETEKSI.url },
+  });
 
   console.log(
     `Konten: ${profilWilayahSeed.length} profil wilayah, ${ambangSeed.length} ambang, ${informasiSeed.length} informasi, ` +

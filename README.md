@@ -30,7 +30,7 @@ Keputusan desain dan penyimpangan dari rancangan dicatat di [docs/DECISIONS.md](
 | `/` Beranda | Pilih desa/kelurahan (pencarian, pilihan bertingkat Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan, atau "Gunakan lokasi saya"), kartu cuaca terkini, badge level risiko, grafik curah hujan 48 jam, tombol "Aktifkan Peringatan" |
 | `/risiko` | Gauge skor, parameter pemicu, Detail Penanganan (Checklist Siaga + Detail Mitigasi), kontak darurat. Dikendalikan state machine; refresh tiap 30 menit |
 | `/cuaca` | Prakiraan 3 hari per jam dan harian |
-| `/informasi` | Artikel umum banjir & riwayat risiko tinggi per kab/kota |
+| `/informasi` | Artikel umum banjir (bertanggal terbit), riwayat kejadian banjir dengan tautan sumber, dan riwayat risiko tinggi otomatis per kab/kota |
 | `/pengaturan` | Wilayah, aktif/nonaktif notifikasi, level minimum, kirim notifikasi uji |
 | `/offline` | Halaman cadangan PWA saat tidak ada koneksi |
 
@@ -196,6 +196,12 @@ npm run simulasi -- pulihkan 36.71.01.1001           # hapus ambang, riwayat & d
 | `npm run test:integration` | `prosesPeringatan()`, riwayat per kab/kota, pencarian & desa terdekat terhadap database asli (push di-mock) | PostgreSQL dari `.env` yang sudah di-seed. **Jangan ke database produksi** |
 | `npm run test:e2e` | Playwright (Pixel 7 + Desktop Chrome): cari desa → lihat risiko → aktifkan notifikasi → atur notifikasi; pilihan bertingkat; GPS; state machine (desa disimulasikan TINGGI); deep link; PWA offline; security headers | `npm run build` lebih dulu, database ter-seed, internet (Open-Meteo) |
 
+Jika `npm run dev` sedang berjalan, build ke folder lain agar `.next` miliknya tidak tertimpa (DECISIONS D-040):
+
+```powershell
+$env:NEXT_DIST_DIR = ".next-e2e"; npm run build; npm run test:e2e; $env:NEXT_DIST_DIR = $null
+```
+
 Pertama kali: `npx playwright install chromium`. E2E menjalankan server produksi di port 3100 dan mensimulasikan risiko TINGGI di Kelurahan Bandengan, Kota Pekalongan (`33.75.03.1009`) selama test (dipulihkan otomatis). Chromium headless tidak bisa berlangganan push sungguhan, jadi `PushManager`/`Notification` di-stub; request ke server tetap asli.
 
 ## Mengubah ambang & konten
@@ -205,6 +211,8 @@ Tidak ada halaman admin (sesuai rancangan). Ambang risiko, deskripsi wilayah, in
 ```powershell
 npm run db:seed   # idempoten: wilayah di-upsert, tabel konten diisi ulang (riwayat otomatis tidak dihapus)
 ```
+
+Riwayat kejadian (`RIWAYAT_KEJADIAN`) wajib diberi `sumberNama` dan `sumberUrl` (https) yang sudah dibuka dan isinya sesuai; test `seed-data` menolak riwayat tanpa sumber. Artikel `UMUM` bukan laporan kejadian: tanggalnya ditampilkan sebagai tanggal terbit.
 
 Ambang khusus wilayah: tambahkan entri `ambangSeed` dengan `idWilayah` berupa kode Kemendagri tingkat apa pun (tambahkan kodenya ke konstanta `KODE`). Untuk parameter itu, ambang tersebut berlaku bagi semua desa/kelurahan di bawahnya, kecuali ada ambang di tingkat yang lebih spesifik. Test `seed-data` memastikan setiap kode yang dirujuk ada di data Kemendagri dan nama profilnya cocok. Ikon PWA dibuat dari logo dengan `node scripts/buat-ikon.mjs`.
 

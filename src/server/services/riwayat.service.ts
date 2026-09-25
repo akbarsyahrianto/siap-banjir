@@ -17,6 +17,12 @@ const JUDUL_DAFTAR = "Desa/kelurahan yang terdeteksi:";
 const CATATAN =
   "Catatan: ini adalah deteksi otomatis berdasarkan data cuaca Open-Meteo dan ambang batas risiko, bukan laporan kejadian banjir yang terverifikasi. Informasi resmi: BMKG dan BPBD setempat.";
 
+/** Riwayat otomatis bukan laporan pihak lain; sumbernya data cuaca yang dipakai deteksi. */
+export const SUMBER_DETEKSI = {
+  nama: "Deteksi otomatis Siap Banjir, data cuaca Open-Meteo",
+  url: "https://open-meteo.com/",
+} as const;
+
 const WIB_MS = 7 * 60 * 60 * 1000;
 
 /** Rentang [awal, akhir) satu hari kalender WIB yang memuat `waktu`. */
@@ -97,6 +103,8 @@ export async function simpanRiwayatRisikoTinggi(risiko: LevelRisiko): Promise<Ha
       judul: `${AWALAN_JUDUL_RIWAYAT} ${namaKab}`,
       isi: susunIsiRiwayat(namaKab, risiko.waktu, [baris]),
       tanggal: risiko.waktu,
+      sumberNama: SUMBER_DETEKSI.nama,
+      sumberUrl: SUMBER_DETEKSI.url,
     });
     await tx.informasi.create({ data });
     return "dibuat";

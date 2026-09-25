@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowLeft, MapPin } from "lucide-react";
-import { formatTanggalPanjang } from "@/lib/format";
+import { TanggalInformasi } from "@/components/informasi/tanggal-informasi";
+import { TautanSumber } from "@/components/informasi/tautan-sumber";
 import { lihatDetailInformasi } from "@/server/services/content.service";
 
 type Props = { params: Promise<{ id: string }> };
@@ -34,7 +35,7 @@ export default async function InformasiDetailPage({ params }: Props) {
       </p>
       <h1 className="text-3xl font-bold leading-tight">{info.judul}</h1>
       <p className="flex flex-wrap gap-x-3 text-muted-foreground">
-        <time dateTime={info.tanggal.toISOString()}>{formatTanggalPanjang(info.tanggal)}</time>
+        <TanggalInformasi kategori={info.kategori} tanggal={info.tanggal} panjang />
         {info.wilayah ? (
           <span className="flex items-center gap-1">
             <MapPin className="size-4" aria-hidden="true" />
@@ -51,6 +52,7 @@ export default async function InformasiDetailPage({ params }: Props) {
           ),
         )}
       </div>
+      <TautanSumber nama={info.sumberNama} url={info.sumberUrl} className="border-t pt-4 text-base" />
     </article>
   );
 }

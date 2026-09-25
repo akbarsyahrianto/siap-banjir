@@ -14,6 +14,8 @@ import type {
 
 /** Kode Kemendagri wilayah yang dirujuk konten seed. */
 export const KODE = {
+  dkiJakarta: "31",
+  kalimantanSelatan: "63",
   jakartaUtara: "31.72",
   jakartaBarat: "31.73",
   jakartaTimur: "31.75",
@@ -204,21 +206,27 @@ export const informasiSeed: InformasiInput[] = [
       "Level risiko pada Siap Banjir adalah estimasi berdasarkan data cuaca Open-Meteo dan ambang batas risiko yang telah ditentukan. Informasi ini bukan peringatan resmi. Selalu ikuti arahan BMKG, BPBD, dan pemerintah setempat.",
   },
   {
+    // Artikel pengenalan risiko, bukan laporan kejadian: tanggal = tanggal terbit.
     kategori: "UMUM",
     idWilayah: KODE.dayeuhkolot,
     tanggal: "2026-01-10",
-    judul: "Banjir Luapan Citarum di Cekungan Bandung",
+    judul: "Mengenal Risiko Banjir Luapan Citarum di Cekungan Bandung",
     isi:
-      "Dayeuhkolot dan sekitarnya berada di dataran rendah Cekungan Bandung yang dilalui Sungai Citarum. Saat hujan lebat berlangsung beberapa hari di wilayah hulu, luapan Citarum dapat menggenangi permukiman selama berhari-hari. Pantau curah hujan akumulasi 3 hari, bukan hanya hujan hari ini.",
+      "Dayeuhkolot dan sekitarnya berada di dataran rendah Cekungan Bandung yang dilalui Sungai Citarum. Saat hujan lebat berlangsung beberapa hari di wilayah hulu, luapan Citarum dapat menggenangi permukiman selama berhari-hari. Pantau curah hujan akumulasi 3 hari, bukan hanya hujan hari ini.\n\nArtikel ini menjelaskan risiko secara umum, bukan laporan kejadian banjir pada tanggal tertentu. Kejadian banjir yang terdokumentasi ada di bagian Riwayat kejadian banjir.",
   },
   // ----- RIWAYAT_KEJADIAN -----
+  // Setiap entri wajib punya sumber yang bisa dibuka (diperiksa 25 September 2026) dan isinya
+  // hanya memuat hal yang disebut sumber tersebut (DECISIONS D-039).
   {
     kategori: "RIWAYAT_KEJADIAN",
     idWilayah: KODE.jakartaTimur,
     tanggal: "2020-01-01",
     judul: "Banjir Jabodetabek Awal Tahun 2020",
     isi:
-      "Pada malam pergantian tahun 2019–2020 hujan ekstrem mengguyur Jabodetabek. BMKG mencatat curah hujan 377 mm/hari di Halim Perdanakusuma, Jakarta Timur, salah satu yang tertinggi dalam catatan pengamatan. Banyak permukiman di Jakarta Timur tergenang.",
+      "Pada malam pergantian tahun 2019–2020 hujan ekstrem mengguyur Jabodetabek dan menyebabkan banjir di banyak wilayah. BMKG mencatat curah hujan tertinggi 377 mm/hari di Bandara Halim Perdanakusuma, Jakarta Timur, dan menyebutnya yang paling ekstrem sepanjang sejarah pengukuran.",
+    sumberNama: "Kompas.com, 3 Januari 2020",
+    sumberUrl:
+      "https://nasional.kompas.com/read/2020/01/03/10141971/bmkg-sebut-curah-hujan-di-jakarta-awal-2020-paling-ekstrem-dalam-sejarah",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -226,15 +234,19 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2020-01-01",
     judul: "Banjir Kota Bekasi 1 Januari 2020",
     isi:
-      "Hujan ekstrem pada malam pergantian tahun menyebabkan Kali Bekasi meluap. Banyak kompleks perumahan di Kota Bekasi terendam dan warga harus dievakuasi.",
+      "Hujan lebat sejak sore hari terakhir 2019 membuat Kali Bekasi meluap. Pada 1 Januari 2020 banyak kawasan dan perumahan di Kota Bekasi terendam, dan warga meminta bantuan evakuasi dari BPBD.",
+    sumberNama: "ANTARA, 1 Januari 2020",
+    sumberUrl: "https://www.antaranews.com/berita/1230684/kota-bekasi-dikepung-banjir-pada-awal-2020",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: KODE.jakartaUtara,
+    idWilayah: KODE.dkiJakarta,
     tanggal: "2007-02-02",
     judul: "Banjir Besar Jakarta Februari 2007",
     isi:
-      "Pada awal Februari 2007 hujan lebat berhari-hari di Jakarta dan wilayah hulu menyebabkan banjir besar yang merendam sebagian besar wilayah ibu kota, termasuk kawasan pesisir Jakarta Utara.",
+      "Hujan deras yang terus-menerus di Jakarta dan daerah aliran Sungai Ciliwung sejak akhir Januari 2007 memuncak pada awal Februari 2007 dan menyebabkan banjir besar yang merendam sebagian besar wilayah ibu kota.",
+    sumberNama: "detikNews, 2 Januari 2020",
+    sumberUrl: "https://news.detik.com/berita/d-4844138/memori-banjir-bandang-2007-yang-bikin-aktivitas-jakarta-ambyar",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -242,15 +254,20 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2014-01-15",
     judul: "Banjir Bandang Manado Januari 2014",
     isi:
-      "Pada 15 Januari 2014 hujan lebat memicu banjir bandang dan tanah longsor di Kota Manado. Sejumlah sungai meluap dan merendam banyak kelurahan.",
+      "Pada 15 Januari 2014 hujan deras terus-menerus di Kota Manado dan sekitarnya membuat DAS Sawangan dan DAS Tondano tidak mampu menampung debit air, sehingga meluap dan menyebabkan banjir serta tanah longsor.",
+    sumberNama: "BNPB, 16 Januari 2014",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-banjir-manado-5-tewas",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: KODE.kotaBanjarmasin,
+    idWilayah: KODE.kalimantanSelatan,
     tanggal: "2021-01-15",
     judul: "Banjir Kalimantan Selatan Januari 2021",
     isi:
-      "Pada pertengahan Januari 2021 hujan lebat berkepanjangan menyebabkan banjir besar di banyak kabupaten/kota di Kalimantan Selatan, termasuk sebagian wilayah Kota Banjarmasin.",
+      "Cuaca ekstrem berupa hujan lebat pada 12–15 Januari 2021 menyebabkan banjir besar di banyak kabupaten/kota di Kalimantan Selatan, termasuk Kota Banjarmasin. Lebih dari 10.000 rumah terendam.",
+    sumberNama: "Kompas.com, 18 Januari 2021",
+    sumberUrl:
+      "https://www.kompas.com/sains/read/2021/01/18/120500823/bmkg--banjir-kalimantan-selatan-akibat-cuaca-ekstrem-dipicu-dinamika?page=all",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -258,15 +275,20 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2021-02-06",
     judul: "Banjir Semarang Februari 2021",
     isi:
-      "Pada awal Februari 2021 hujan lebat menyebabkan banjir di banyak titik di Kota Semarang, termasuk kawasan sekitar Stasiun Tawang, sehingga perjalanan kereta api sempat terganggu.",
+      "Curah hujan tinggi sejak Jumat malam, 5 Februari 2021, menyebabkan banjir di Kota Semarang. Stasiun Semarang Tawang terendam hingga 70 cm di hall stasiun, sehingga sejumlah perjalanan kereta api terganggu.",
+    sumberNama: "Kompas.com, 6 Februari 2021",
+    sumberUrl:
+      "https://www.kompas.com/tren/read/2021/02/06/135452165/stasiun-semarang-tawang-terendam-banjir-7-perjalanan-kereta-ini-terganggu?page=all",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
     idWilayah: KODE.kotaMedan,
-    tanggal: "2020-12-04",
+    tanggal: "2020-12-03",
     judul: "Banjir Medan Desember 2020",
     isi:
-      "Pada awal Desember 2020 hujan lebat menyebabkan Sungai Deli dan Sungai Babura meluap. Sejumlah kelurahan di Kota Medan terendam.",
+      "Hujan berintensitas tinggi membuat Sungai Deli, Sungai Babura, dan Sungai Denai meluap. Banjir mencapai puncaknya pada 3 Desember 2020 dan merendam empat kecamatan di Kota Medan: Medan Johor, Medan Maimun, Medan Sunggal, dan Medan Tuntungan.",
+    sumberNama: "Liputan6.com (data BNPB), 5 Desember 2020",
+    sumberUrl: "https://www.liputan6.com/regional/read/4426111/bnpb-banjir-kota-medan-berangsur-surut",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -274,6 +296,8 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2019-06-09",
     judul: "Banjir Samarinda Juni 2019",
     isi:
-      "Pada Juni 2019 hujan lebat berhari-hari menyebabkan banjir yang merendam banyak kawasan di Kota Samarinda, terutama di sekitar Sungai Karang Mumus.",
+      "Hujan lebat sejak Sabtu malam, 8 Juni 2019, hingga Minggu, 9 Juni 2019, membuat banyak kawasan permukiman di Kota Samarinda terendam, antara lain di Sempaja Timur dan Gunung Lingai, karena air belum dapat mengalir dengan baik ke saluran pembuangan.",
+    sumberNama: "VIVA, 9 Juni 2019",
+    sumberUrl: "https://www.viva.co.id/berita/nasional/1155549-kota-samarinda-banjir-ribuan-jiwa-terdampak",
   },
 ];
