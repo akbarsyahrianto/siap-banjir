@@ -111,3 +111,41 @@ Selain lima service di prompt (weather, risk, notification, subscription, conten
 ## D-016 · Checklist persiapan sudah interaktif di Fase 2
 
 Checklist persiapan dini di `/risiko` sudah bisa dicentang dan progresnya disimpan di localStorage (per wilayah + level). Hal ini bagian dari "Checklist Siaga" di state machine Fase 4, tetapi komponennya sederhana dan dibutuhkan halaman `/risiko` sekarang. Fase 4 tinggal menyambungkannya ke state machine.
+
+## D-017 · Identitas perangkat & kapan data disimpan di server (Fase 3)
+
+- `Perangkat.deviceToken` = UUID acak (`crypto.randomUUID()`) yang dibuat browser dan disimpan di localStorage. Tidak ada data pribadi.
+- Tanpa login, perangkat tidak bisa dikaitkan satu sama lain. Jadi satu `Pengguna` dibuat per perangkat (relasi 1..* di UML tetap didukung schema).
+- Sesuai sequence diagram, `daftarkanPerangkat()` hanya dipanggil pada cabang **[izin notifikasi]**. Pengguna yang menolak izin tidak punya data di server; preferensi wilayahnya hanya di localStorage + cookie. `Pengguna.wilayahPreferensi` diperbarui setiap perangkat mendaftar atau mengganti wilayah.
+- Jika browser memberi endpoint yang sama ke perangkat baru (misal localStorage dihapus), langganan lama dengan endpoint itu dihapus agar `pushEndpoint` tetap unik.
+
+## D-018 · Endpoint push dibatasi ke push service resmi (anti-SSRF)
+
+Server mengirim POST ke `subscription.endpoint`. Tanpa pembatasan, siapa pun bisa mendaftarkan URL internal (misal `http://169.254.169.254/...`) dan menjadikan server alat SSRF. Endpoint wajib `https` tanpa port khusus, dengan host:
+- `fcm.googleapis.com`: Chrome, Opera, Samsung Internet
+- `updates.push.services.mozilla.com`: Firefox
+- `web.push.apple.com`: Safari
+- `*.notify.windows.com`: Edge desktop
+
+Browser dengan push service lain perlu ditambahkan ke daftar di `src/server/validators/push.ts`.
+
+## D-019 · Rate limit di memori proses
+
+`/api/push/subscribe` dan `/unsubscribe` dibatasi 10 permintaan/menit per IP, `/api/push/test` 3/menit per IP. Implementasinya fixed window di memori (`src/lib/rate-limit.ts`), cukup untuk satu instance server. Di Vercel (banyak instance serverless), batas berlaku per instance. Jika perlu batas global, ganti dengan store bersama (misal Upstash Redis) di Fase 5.
+
+IP dibaca dari `x-forwarded-for`, yang hanya bisa dipercaya di belakang proxy tepercaya (Vercel/Nginx).
+
+## D-020 · Perilaku notifikasi
+
+- **Aktif/nonaktif** di Pengaturan mengubah `LanggananNotifikasi.status`. Subscription browser tidak dihapus, sehingga menyalakan kembali tidak perlu izin ulang. `/api/push/subscribe` juga dipakai untuk memperbarui wilayah dan level minimum (upsert).
+- **Level minimum** hanya `SEDANG` (Sedang + Tinggi) atau `TINGGI`. Risiko Rendah tidak pernah dikirim.
+- **Pemicu (langkah 8):** setiap kali `LevelRisiko` baru bernilai Sedang/Tinggi, `prosesPeringatan()` dijalankan lewat `after()` dari Next.js. Pengiriman berlangsung setelah respons terkirim, sehingga halaman tidak menunggu push service. Fase 4 menambahkan cron agar ini berjalan tanpa ada yang membuka web.
+- **Anti-spam:** notifikasi dilewati jika dalam 6 jam terakhir langganan itu sudah menerima (status PENDING/TERKIRIM) notifikasi untuk wilayah yang sama dengan level ≥ level sekarang. Notifikasi GAGAL tidak dihitung, jadi percobaan berikutnya tetap dikirim.
+- **Push service 404/410:** langganan dihapus beserta riwayat notifikasinya (cascade).
+- **Notifikasi uji** tidak dicatat di tabel `Notifikasi`, karena `idLevelRisiko` wajib diisi dan notifikasi uji tidak terkait level risiko.
+- **Dialog izin kustom** muncul otomatis sekali setelah memilih wilayah (jika izin browser belum pernah diminta). Setelah itu pengguna bisa mengaktifkan dari tombol di Beranda atau Pengaturan.
+- **Ikon notifikasi** sementara memakai `/icon.svg`. Ikon PNG dibuat di Fase 5 bersama manifest PWA.
+
+## D-021 · Integration test memakai database pengembangan
+
+`npm run test:integration` menjalankan `prosesPeringatan()` terhadap PostgreSQL dari `.env`, dengan push service di-mock. Test membuat datanya sendiri di wilayah `kota-pekalongan` dan menghapusnya lagi. Namun test juga **menonaktifkan langganan lain di wilayah itu**, jadi jangan dijalankan terhadap database produksi.

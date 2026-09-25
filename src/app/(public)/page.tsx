@@ -1,10 +1,8 @@
 import { Suspense } from "react";
-import Link from "next/link";
-import { BellRing } from "lucide-react";
 import { GrafikHujan48Jam } from "@/components/cuaca/grafik-hujan-48jam";
 import { KartuCuaca } from "@/components/cuaca/kartu-cuaca";
+import { TombolAktifkanPeringatan } from "@/components/notifikasi/tombol-aktifkan-peringatan";
 import { KartuRingkasanRisiko } from "@/components/risiko/kartu-ringkasan-risiko";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
@@ -50,12 +48,9 @@ export default async function BerandaPage({ searchParams }: Props) {
             <p className="text-lg font-semibold">Dapatkan peringatan dini</p>
             <p className="text-muted-foreground">Terima notifikasi saat risiko banjir Sedang atau Tinggi.</p>
           </div>
-          <Button asChild size="lg">
-            <Link href="/pengaturan">
-              <BellRing aria-hidden="true" />
-              Aktifkan Peringatan
-            </Link>
-          </Button>
+          <TombolAktifkanPeringatan
+            wilayah={daftar.find((w) => w.idWilayah === terpilih) ?? null}
+          />
         </CardContent>
       </Card>
     </div>

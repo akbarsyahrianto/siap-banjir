@@ -1,9 +1,11 @@
 /**
  * Orkestrasi alur sequence diagram langkah 4–7:
  * koordinat wilayah → ambil/cache data cuaca → hitung level risiko → persiapan & rekomendasi.
- * (Langkah 8–9, notifikasi & riwayat, ditambahkan di Fase 3–4.)
+ * Langkah 8 (notifikasi) dipicu saat LevelRisiko baru Sedang/Tinggi. Langkah 9 (riwayat) di Fase 4.
  */
+import { after } from "next/server";
 import { db } from "@/server/db";
+import { prosesPeringatan } from "@/server/services/notification.service";
 import { lihatPersiapan, lihatRekomendasi, lihatWilayah } from "@/server/services/content.service";
 import { evaluasiDanSimpanRisiko } from "@/server/services/risk.service";
 import { lihatDataCuaca } from "@/server/services/weather.service";
@@ -18,11 +20,26 @@ export async function lihatKondisiWilayah(idWilayah: string) {
   if (!cuaca) return { wilayah, cuaca: null, risiko: null };
 
   // Satu LevelRisiko per DataCuaca; hitung hanya jika belum ada.
-  const risiko =
-    (await db.levelRisiko.findFirst({
-      where: { idCuaca: cuaca.dataCuaca.idCuaca },
-      orderBy: { waktu: "desc" },
-    })) ?? (await evaluasiDanSimpanRisiko(cuaca.dataCuaca, cuaca.raw));
+  let risiko = await db.levelRisiko.findFirst({
+    where: { idCuaca: cuaca.dataCuaca.idCuaca },
+    orderBy: { waktu: "desc" },
+  });
+  if (!risiko) {
+    const baru = await evaluasiDanSimpanRisiko(cuaca.dataCuaca, cuaca.raw);
+    risiko = baru;
+    // Langkah 8: alt [Sedang/Tinggi] → kirim notifikasi. Dijalankan setelah respons
+    // terkirim agar halaman tidak menunggu push service.
+    if (baru.level !== "RENDAH") {
+      after(async () => {
+        try {
+          const hasil = await prosesPeringatan(baru);
+          console.info(`[push] ${baru.idWilayah} ${baru.level}:`, hasil);
+        } catch (err) {
+          console.error(`[push] Gagal memproses peringatan ${baru.idWilayah}:`, err);
+        }
+      });
+    }
+  }
 
   const parsed = daftarHasilParameterSchema.safeParse(risiko.parameterPemicu);
   return {

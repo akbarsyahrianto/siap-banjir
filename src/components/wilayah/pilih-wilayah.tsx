@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { LoaderCircle, LocateFixed } from "lucide-react";
+import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
 import { Button } from "@/components/ui/button";
 import { useWilayah } from "@/hooks/useWilayah";
 import { cariWilayahTerdekat } from "@/lib/geo";
@@ -16,9 +17,17 @@ export type OpsiWilayah = {
 type StatusGps = { tipe: "idle" } | { tipe: "mencari" } | { tipe: "info" | "galat"; pesan: string };
 
 export function PilihWilayah({ daftar, terpilih }: { daftar: OpsiWilayah[]; terpilih: string | null }) {
-  const { pilihWilayah } = useWilayah();
+  const { pilihWilayah: simpanPilihan } = useWilayah();
+  const { setelahPilihWilayah } = useNotifikasi();
   const [gps, setGps] = useState<StatusGps>({ tipe: "idle" });
   const idSelect = useId();
+
+  // aturLokasi(wilayah) → popup izin notifikasi / sinkron wilayah langganan.
+  function pilihWilayah(idWilayah: string) {
+    simpanPilihan(idWilayah);
+    const wilayah = daftar.find((w) => w.idWilayah === idWilayah);
+    if (wilayah) setelahPilihWilayah({ idWilayah, namaWilayah: wilayah.namaWilayah });
+  }
 
   function pakaiLokasi() {
     if (!("geolocation" in navigator)) {

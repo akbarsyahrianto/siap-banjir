@@ -22,8 +22,14 @@ Copy-Item .env.example .env
 npm install
 npm run db:migrate   # terapkan migrasi
 npm run db:seed      # isi wilayah, ambang risiko, informasi, persiapan, rekomendasi
+
+# 3. Kunci Web Push (VAPID): salin publicKey & privateKey ke .env
+npx web-push generate-vapid-keys --json
+
 npm run dev          # http://localhost:3000
 ```
+
+Notifikasi push hanya bekerja di `localhost` atau HTTPS. Buka **Pengaturan → Kirim notifikasi uji** untuk mengecek.
 
 ## Script
 
@@ -33,6 +39,7 @@ npm run dev          # http://localhost:3000
 | `npm run build` / `npm start` | Build & jalankan produksi |
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
 | `npm test` | Unit test (Vitest) |
+| `npm run test:integration` | Integration test ke database `.env` (jangan ke produksi) |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:seed` | Isi ulang data seed (idempoten) |
 | `npm run db:reset` | Hapus database, migrasi ulang, dan seed |
