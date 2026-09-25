@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SinkronWilayah } from "@/components/wilayah/sinkron-wilayah";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +21,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <SiteFooter />
       </div>
       <BottomNav />
+      <SinkronWilayah />
     </div>
   );
 }

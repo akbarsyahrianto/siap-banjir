@@ -153,7 +153,8 @@ model LevelRisiko {
   // 0–100, untuk gauge.
   skorRisiko      Int           @map("skor_risiko")
   deskripsi       String
-  // [{ parameter, nilai, level }] parameter yang memicu level akhir.
+  // [{ parameter, nilai, level, skor, ambangKhusus, pemicu }] hasil semua parameter;
+  // pemicu = true untuk parameter yang menentukan level akhir.
   parameterPemicu Json          @default("[]") @map("parameter_pemicu")
   waktu           DateTime      @default(now())
 

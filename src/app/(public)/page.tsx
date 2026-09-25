@@ -1,39 +1,87 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import { BellRing, MapPin } from "lucide-react";
-import { FaseMendatang } from "@/components/layout/fase-mendatang";
+import { BellRing } from "lucide-react";
+import { GrafikHujan48Jam } from "@/components/cuaca/grafik-hujan-48jam";
+import { KartuCuaca } from "@/components/cuaca/kartu-cuaca";
+import { KartuRingkasanRisiko } from "@/components/risiko/kartu-ringkasan-risiko";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
+import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
+import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { APP_TAGLINE } from "@/lib/constants";
+import { daftarWilayah } from "@/server/services/content.service";
+import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
+import { seriHujan48Jam } from "@/server/services/seri-cuaca";
+import { idWilayahTerpilih } from "@/server/wilayah-terpilih";
 
-export default function BerandaPage() {
+type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
+
+export default async function BerandaPage({ searchParams }: Props) {
+  const { wilayah } = await searchParams;
+  // lihatInformasi(wilayah): daftar wilayah + info cuaca awal (langkah 1 sequence diagram).
+  const [daftar, idWilayah] = await Promise.all([daftarWilayah(), idWilayahTerpilih(wilayah)]);
+  const terpilih = daftar.some((w) => w.idWilayah === idWilayah) ? idWilayah : null;
+
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl bg-primary px-6 py-8 text-primary-foreground">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Siap Banjir</h1>
-        <p className="mt-2 max-w-prose text-lg opacity-90">{APP_TAGLINE}.</p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Button asChild size="lg" variant="secondary">
-            <Link href="/pengaturan">
-              <MapPin aria-hidden="true" />
-              Pilih Wilayah
-            </Link>
-          </Button>
-          <Button asChild size="lg" variant="outline" className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
+      <section className="rounded-2xl bg-primary px-5 py-6 text-primary-foreground">
+        <h1 className="text-3xl font-bold tracking-tight">Siap Banjir</h1>
+        <p className="mt-1 text-lg opacity-90">{APP_TAGLINE}.</p>
+      </section>
+
+      <Card>
+        <CardContent>
+          <PilihWilayah daftar={daftar} terpilih={terpilih} />
+        </CardContent>
+      </Card>
+
+      {terpilih ? (
+        <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
+          <RingkasanWilayah idWilayah={terpilih} />
+        </Suspense>
+      ) : (
+        <BelumPilihWilayah />
+      )}
+
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-lg font-semibold">Dapatkan peringatan dini</p>
+            <p className="text-muted-foreground">Terima notifikasi saat risiko banjir Sedang atau Tinggi.</p>
+          </div>
+          <Button asChild size="lg">
             <Link href="/pengaturan">
               <BellRing aria-hidden="true" />
               Aktifkan Peringatan
             </Link>
           </Button>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
-      <FaseMendatang
-        fase={2}
-        fitur={[
-          "Pilihan wilayah dan kartu cuaca terkini",
-          "Badge level risiko (Rendah / Sedang / Tinggi)",
-          "Grafik curah hujan 48 jam",
-        ]}
-      />
+async function RingkasanWilayah({ idWilayah }: { idWilayah: string }) {
+  const kondisi = await lihatKondisiWilayah(idWilayah);
+  if (!kondisi) return <BelumPilihWilayah />;
+  if (!kondisi.cuaca || !kondisi.risiko) return <DataCuacaTidakTersedia />;
+
+  const { wilayah, cuaca, risiko } = kondisi;
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        <KartuRingkasanRisiko risiko={risiko} idWilayah={wilayah.idWilayah} />
+        <KartuCuaca dataCuaca={cuaca.dataCuaca} sumber={cuaca.sumber} namaWilayah={wilayah.namaWilayah} />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Curah hujan 48 jam</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GrafikHujan48Jam data={seriHujan48Jam(cuaca.raw)} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

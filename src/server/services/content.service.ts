@@ -1,12 +1,15 @@
 /**
- * Operasi kelola konten dari Class Diagram (tambah/ubah/hapus Wilayah, AmbangRisiko,
- * Informasi, PersiapanDini, Rekomendasi).
+ * Konten: Wilayah, AmbangRisiko, Informasi, PersiapanDini, Rekomendasi.
  *
- * Sesuai rancangan, fungsi-fungsi ini TIDAK diekspos sebagai halaman atau API publik.
- * Hanya dipakai oleh prisma/seed.ts.
+ * Fungsi baca (lihat*) dipakai halaman & API publik (GET).
+ * Operasi tambah/ubah/hapus dari class diagram TIDAK diekspos sebagai halaman atau
+ * API publik; hanya dipakai oleh prisma/seed.ts.
  */
+import type { KategoriInformasi, TingkatRisiko } from "@prisma/client";
+import { z } from "zod";
 import { db } from "@/server/db";
 import {
+  kontakDaruratSchema,
   ambangRisikoBaseSchema,
   ambangRisikoInputSchema,
   informasiInputSchema,
@@ -19,6 +22,63 @@ import {
   type RekomendasiInput,
   type WilayahInput,
 } from "@/server/validators/konten";
+
+// ---------- Baca ----------
+
+// Konten khusus wilayah ditampilkan lebih dulu, lalu konten global (idWilayah null).
+const khususDulu = { idWilayah: { sort: "asc", nulls: "last" } } as const;
+
+export async function daftarWilayah() {
+  return db.wilayah.findMany({
+    orderBy: { namaWilayah: "asc" },
+    select: { idWilayah: true, namaWilayah: true, koordinatLatitude: true, koordinatLongitude: true },
+  });
+}
+
+export async function lihatWilayah(idWilayah: string) {
+  return db.wilayah.findUnique({ where: { idWilayah } });
+}
+
+export function bacaKontakDarurat(json: unknown) {
+  const hasil = z.array(kontakDaruratSchema).safeParse(json);
+  return hasil.success ? hasil.data : [];
+}
+
+export async function lihatPersiapan(levelRisiko: TingkatRisiko, idWilayah?: string) {
+  return db.persiapanDini.findMany({
+    where: { levelRisiko, OR: [{ idWilayah: null }, ...(idWilayah ? [{ idWilayah }] : [])] },
+    orderBy: [khususDulu, { urutan: "asc" }],
+  });
+}
+
+export async function lihatRekomendasi(levelRisiko: TingkatRisiko, idWilayah?: string) {
+  return db.rekomendasi.findMany({
+    where: { levelRisiko, OR: [{ idWilayah: null }, ...(idWilayah ? [{ idWilayah }] : [])] },
+    orderBy: [khususDulu, { urutan: "asc" }],
+  });
+}
+
+/**
+ * lihatInformasi(wilayah): artikel umum (global + khusus wilayah) atau riwayat kejadian.
+ * Riwayat kejadian ditampilkan untuk semua wilayah; wilayah terpilih lebih dulu.
+ */
+export async function lihatInformasi(opsi: { kategori?: KategoriInformasi; idWilayah?: string } = {}) {
+  const daftar = await db.informasi.findMany({
+    where: opsi.kategori ? { kategori: opsi.kategori } : undefined,
+    orderBy: { tanggal: "desc" },
+    include: { wilayah: { select: { idWilayah: true, namaWilayah: true } } },
+  });
+  if (!opsi.idWilayah) return daftar;
+  const milikWilayah = (i: (typeof daftar)[number]) => (i.idWilayah === opsi.idWilayah ? 0 : 1);
+  return [...daftar].sort((a, b) => milikWilayah(a) - milikWilayah(b));
+}
+
+export async function lihatDetailInformasi(idInformasi: string) {
+  return db.informasi.findUnique({
+    where: { idInformasi },
+    include: { wilayah: { select: { idWilayah: true, namaWilayah: true } } },
+  });
+}
 
 // ---------- Wilayah ----------
 
