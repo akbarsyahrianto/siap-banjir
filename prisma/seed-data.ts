@@ -215,18 +215,18 @@ export const informasiSeed: InformasiInput[] = [
       "Dayeuhkolot dan sekitarnya berada di dataran rendah Cekungan Bandung yang dilalui Sungai Citarum. Saat hujan lebat berlangsung beberapa hari di wilayah hulu, luapan Citarum dapat menggenangi permukiman selama berhari-hari. Pantau curah hujan akumulasi 3 hari, bukan hanya hujan hari ini.\n\nArtikel ini menjelaskan risiko secara umum, bukan laporan kejadian banjir pada tanggal tertentu. Kejadian banjir yang terdokumentasi ada di bagian Riwayat kejadian banjir.",
   },
   // ----- RIWAYAT_KEJADIAN -----
-  // Setiap entri wajib punya sumber yang bisa dibuka (diperiksa 25 September 2026) dan isinya
-  // hanya memuat hal yang disebut sumber tersebut (DECISIONS D-039).
+  // Setiap entri wajib punya sumber yang bisa dibuka dan isinya hanya memuat hal yang disebut
+  // sumber tersebut (DECISIONS D-039). Utamakan sumber resmi (BNPB/BMKG, lalu instansi
+  // pemerintah lain). Semua tautan diperiksa 25 September 2026; cek ulang: npm run cek:sumber.
   {
     kategori: "RIWAYAT_KEJADIAN",
-    idWilayah: KODE.jakartaTimur,
+    idWilayah: KODE.dkiJakarta,
     tanggal: "2020-01-01",
     judul: "Banjir Jabodetabek Awal Tahun 2020",
     isi:
-      "Pada malam pergantian tahun 2019–2020 hujan ekstrem mengguyur Jabodetabek dan menyebabkan banjir di banyak wilayah. BMKG mencatat curah hujan tertinggi 377 mm/hari di Bandara Halim Perdanakusuma, Jakarta Timur, dan menyebutnya yang paling ekstrem sepanjang sejarah pengukuran.",
-    sumberNama: "Kompas.com, 3 Januari 2020",
-    sumberUrl:
-      "https://nasional.kompas.com/read/2020/01/03/10141971/bmkg-sebut-curah-hujan-di-jakarta-awal-2020-paling-ekstrem-dalam-sejarah",
+      "Hujan ekstrem yang mengguyur Jabodetabek pada malam tahun baru, 1 Januari 2020, menyebabkan banjir. BNPB mencatat 16 orang meninggal pada hari itu, tersebar di DKI Jakarta, Kota Bekasi, Kota Depok, Kota dan Kabupaten Bogor, Kota Tangerang, dan Tangerang Selatan.",
+    sumberNama: "BNPB, 1 Januari 2020",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-korban-banjir-jabodetabek-16-orang",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -234,19 +234,20 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2020-01-01",
     judul: "Banjir Kota Bekasi 1 Januari 2020",
     isi:
-      "Hujan lebat sejak sore hari terakhir 2019 membuat Kali Bekasi meluap. Pada 1 Januari 2020 banyak kawasan dan perumahan di Kota Bekasi terendam, dan warga meminta bantuan evakuasi dari BPBD.",
-    sumberNama: "ANTARA, 1 Januari 2020",
-    sumberUrl: "https://www.antaranews.com/berita/1230684/kota-bekasi-dikepung-banjir-pada-awal-2020",
+      "Kota Bekasi menjadi salah satu wilayah yang parah terdampak banjir awal tahun 2020, dengan ketinggian air mencapai 6 meter. Pemerintah Kota Bekasi menetapkan status tanggap darurat banjir dan longsor pada 1–7 Januari 2020.",
+    sumberNama: "BNPB, 3 Januari 2020",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-data-dampak-banjir-di-kota-bekasi-per-3-januari-2020-pukul-1100-wib",
   },
   {
+    // Sebelum BNPB berdiri (2008); sumber resmi: arsip Pemprov DKI Jakarta.
     kategori: "RIWAYAT_KEJADIAN",
     idWilayah: KODE.dkiJakarta,
-    tanggal: "2007-02-02",
+    tanggal: "2007-02-01",
     judul: "Banjir Besar Jakarta Februari 2007",
     isi:
-      "Hujan deras yang terus-menerus di Jakarta dan daerah aliran Sungai Ciliwung sejak akhir Januari 2007 memuncak pada awal Februari 2007 dan menyebabkan banjir besar yang merendam sebagian besar wilayah ibu kota.",
-    sumberNama: "detikNews, 2 Januari 2020",
-    sumberUrl: "https://news.detik.com/berita/d-4844138/memori-banjir-bandang-2007-yang-bikin-aktivitas-jakarta-ambyar",
+      "Hujan lebat sejak sore 1 Februari hingga 2 Februari 2007, ditambah volume air 13 sungai dari Bogor-Puncak-Cianjur dan air laut yang pasang, menyebabkan banjir sejak 1 Februari malam hingga 12 Februari 2007. Hampir 60 persen wilayah DKI Jakarta terendam, dengan kedalaman hingga lima meter di beberapa titik.",
+    sumberNama: "Dinas Perpustakaan dan Kearsipan Provinsi DKI Jakarta",
+    sumberUrl: "https://dispusip.jakarta.go.id/dinas/publications/article/banjir-abad-ke-20-dan-abad-ke-21",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -261,13 +262,12 @@ export const informasiSeed: InformasiInput[] = [
   {
     kategori: "RIWAYAT_KEJADIAN",
     idWilayah: KODE.kalimantanSelatan,
-    tanggal: "2021-01-15",
+    tanggal: "2021-01-12",
     judul: "Banjir Kalimantan Selatan Januari 2021",
     isi:
-      "Cuaca ekstrem berupa hujan lebat pada 12–15 Januari 2021 menyebabkan banjir besar di banyak kabupaten/kota di Kalimantan Selatan, termasuk Kota Banjarmasin. Lebih dari 10.000 rumah terendam.",
-    sumberNama: "Kompas.com, 18 Januari 2021",
-    sumberUrl:
-      "https://www.kompas.com/sains/read/2021/01/18/120500823/bmkg--banjir-kalimantan-selatan-akibat-cuaca-ekstrem-dipicu-dinamika?page=all",
+      "Hujan yang turun sejak Selasa, 12 Januari 2021, menyebabkan banjir di 10 kabupaten/kota di Kalimantan Selatan, termasuk Kota Banjarmasin. Hingga 17 Januari 2021, BNPB mencatat 24.379 rumah terendam dan 39.549 warga mengungsi.",
+    sumberNama: "BNPB, 17 Januari 2021",
+    sumberUrl: "https://www.bnpb.go.id/berita/-update-10-kabupaten-kota-terdampak-banjir-di-kalimantan-selatan",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -275,10 +275,9 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2021-02-06",
     judul: "Banjir Semarang Februari 2021",
     isi:
-      "Curah hujan tinggi sejak Jumat malam, 5 Februari 2021, menyebabkan banjir di Kota Semarang. Stasiun Semarang Tawang terendam hingga 70 cm di hall stasiun, sehingga sejumlah perjalanan kereta api terganggu.",
-    sumberNama: "Kompas.com, 6 Februari 2021",
-    sumberUrl:
-      "https://www.kompas.com/tren/read/2021/02/06/135452165/stasiun-semarang-tawang-terendam-banjir-7-perjalanan-kereta-ini-terganggu?page=all",
+      "Hujan lebat memicu banjir di sejumlah wilayah Kota Semarang pada Jumat, 5 Februari, dan Sabtu, 6 Februari 2021, antara lain di Kecamatan Semarang Utara, Gayamsari, Tugu, Semarang Barat, dan Ngaliyan. Ketinggian air umumnya 70–100 cm dan di beberapa titik mencapai 150 cm.",
+    sumberNama: "BNPB, 7 Februari 2021",
+    sumberUrl: "https://www.bnpb.go.id/berita/-update-sejumlah-wilayah-kota-semarang-masih-dilanda-banjir-parah-",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
@@ -286,18 +285,19 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2020-12-03",
     judul: "Banjir Medan Desember 2020",
     isi:
-      "Hujan berintensitas tinggi membuat Sungai Deli, Sungai Babura, dan Sungai Denai meluap. Banjir mencapai puncaknya pada 3 Desember 2020 dan merendam empat kecamatan di Kota Medan: Medan Johor, Medan Maimun, Medan Sunggal, dan Medan Tuntungan.",
-    sumberNama: "Liputan6.com (data BNPB), 5 Desember 2020",
-    sumberUrl: "https://www.liputan6.com/regional/read/4426111/bnpb-banjir-kota-medan-berangsur-surut",
+      "Pada Kamis, 3 Desember 2020, sekitar pukul 22.30 WIB, hujan berintensitas tinggi membuat Sungai Deli, Sungai Babura, dan Sungai Denai meluap. Banjir setinggi 3–5 meter merendam empat kecamatan di Kota Medan (Medan Johor, Medan Maimun, Medan Sunggal, dan Medan Tuntungan); 5.965 jiwa terdampak.",
+    sumberNama: "BNPB, 4 Desember 2020",
+    sumberUrl: "https://www.bnpb.go.id/berita/5-965-jiwa-terdampak-banjir-kota-medan",
   },
   {
     kategori: "RIWAYAT_KEJADIAN",
     idWilayah: KODE.kotaSamarinda,
-    tanggal: "2019-06-09",
+    tanggal: "2019-06-12",
     judul: "Banjir Samarinda Juni 2019",
     isi:
-      "Hujan lebat sejak Sabtu malam, 8 Juni 2019, hingga Minggu, 9 Juni 2019, membuat banyak kawasan permukiman di Kota Samarinda terendam, antara lain di Sempaja Timur dan Gunung Lingai, karena air belum dapat mengalir dengan baik ke saluran pembuangan.",
-    sumberNama: "VIVA, 9 Juni 2019",
-    sumberUrl: "https://www.viva.co.id/berita/nasional/1155549-kota-samarinda-banjir-ribuan-jiwa-terdampak",
+      "Luapan Sungai Bengkuring dan hujan berintensitas tinggi menyebabkan banjir di delapan kelurahan di empat kecamatan Kota Samarinda, antara lain Sempaja Utara, Gunung Lingai, dan Sempaja Timur, dengan ketinggian air rata-rata 25–125 cm. Hingga 12 Juni 2019, BNPB mencatat 35.684 jiwa terdampak sejak sepekan sebelumnya.",
+    sumberNama: "BNPB, 12 Juni 2019",
+    sumberUrl:
+      "https://www.bnpb.go.id/berita/banjir-kepung-sejumlah-wilayah-di-indonesia-bnpb-terjunkan-lebih-banyak-tim-dan-peralatan",
   },
 ];

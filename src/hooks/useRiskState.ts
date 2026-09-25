@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
 import { konteksAwal, transisi, type KanalPeringatan } from "@/lib/mesin-risiko";
+import { LABEL_SIMULASI } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
 import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
 
@@ -81,6 +82,7 @@ export function useRiskState(awal: {
   const jalurPush = s.nama === "bahaya" ? s.jalurPush : null;
   const levelBahaya = s.nama === "bahaya" ? s.data.level : null;
   const namaWilayah = s.data?.namaWilayah ?? "";
+  const simulasi = s.data?.simulasi ?? false;
 
   useEffect(() => {
     if (jalurPush === "trigger-push") kirim({ type: "PUSH_DIPICU" });
@@ -93,12 +95,15 @@ export function useRiskState(awal: {
     const kanal: KanalPeringatan =
       statusPush === "aktif" && langganan?.idWilayah === idWilayah ? "push" : "dalam-aplikasi";
     if (kanal === "dalam-aplikasi") {
-      toast.warning(`Risiko banjir ${levelBahaya === "TINGGI" ? "TINGGI" : "SEDANG"} di ${namaWilayah}`, {
-        description: "Periksa persiapan dini dan rekomendasi di halaman ini.",
+      const judul = `Risiko banjir ${levelBahaya === "TINGGI" ? "TINGGI" : "SEDANG"} di ${namaWilayah}`;
+      toast.warning(simulasi ? `${LABEL_SIMULASI} ${judul}` : judul, {
+        description: simulasi
+          ? "Ini simulasi uji, bukan kondisi cuaca sebenarnya."
+          : "Periksa persiapan dini dan rekomendasi di halaman ini.",
       });
     }
     kirim({ type: "PUSH_SELESAI", kanal });
-  }, [jalurPush, statusPush, langganan, idWilayah, levelBahaya, namaWilayah]);
+  }, [jalurPush, statusPush, langganan, idWilayah, levelBahaya, namaWilayah, simulasi]);
 
   // --- Bahaya, Jalur 2: PermintaanGrafik → MenyiapkanGrafik → SelesaiRender ---
   const jalurGrafik = s.nama === "bahaya" ? s.jalurGrafik : null;

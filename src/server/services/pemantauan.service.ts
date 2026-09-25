@@ -15,7 +15,7 @@ import { db } from "@/server/db";
 import type { OpenMeteoResponse } from "@/server/integrations/open-meteo";
 import { lihatPersiapan, lihatRekomendasi } from "@/server/services/content.service";
 import { prosesPeringatan, type RingkasanPeringatan } from "@/server/services/notification.service";
-import { evaluasiDanSimpanRisiko } from "@/server/services/risk.service";
+import { evaluasiDanSimpanRisiko, simulasiAktif } from "@/server/services/risk.service";
 import { simpanRiwayatRisikoTinggi, type HasilRiwayat } from "@/server/services/riwayat.service";
 import { lihatDataCuaca, type HasilDataCuaca } from "@/server/services/weather.service";
 import { lihatDesa, namaInduk, namaTampilan } from "@/server/services/wilayah.service";
@@ -29,13 +29,19 @@ export async function ambilCuacaSel(kunciGrid: string, opsi: { paksa?: boolean; 
 /**
  * Langkah 5 untuk satu desa. Satu LevelRisiko per (desa, DataCuaca): `risikoBaru` terisi jika
  * baru saja dihitung, sehingga tindak lanjut (notifikasi & riwayat) hanya sekali per data.
+ * Jika status simulasi berubah (diaktifkan/dipulihkan), risiko dihitung ulang dari data yang
+ * sama, jadi simulasi tidak memakai kuota Open-Meteo (D-041).
  */
 export async function risikoDesa(idWilayah: string, cuaca: { dataCuaca: DataCuaca; raw: OpenMeteoResponse }) {
-  const ada = await db.levelRisiko.findFirst({
-    where: { idCuaca: cuaca.dataCuaca.idCuaca, idWilayah },
-    orderBy: { waktu: "desc" },
-  });
-  const risikoBaru = ada ? null : await evaluasiDanSimpanRisiko(idWilayah, cuaca.dataCuaca, cuaca.raw);
+  const [terakhir, simulasi] = await Promise.all([
+    db.levelRisiko.findFirst({
+      where: { idCuaca: cuaca.dataCuaca.idCuaca, idWilayah },
+      orderBy: { waktu: "desc" },
+    }),
+    simulasiAktif(idWilayah),
+  ]);
+  const ada = terakhir && terakhir.simulasi === (simulasi != null) ? terakhir : null;
+  const risikoBaru = ada ? null : await evaluasiDanSimpanRisiko(idWilayah, cuaca.dataCuaca, cuaca.raw, simulasi);
   const risiko = (ada ?? risikoBaru) as LevelRisiko;
   const parsed = daftarHasilParameterSchema.safeParse(risiko.parameterPemicu);
   return { risiko: { ...risiko, hasilPerParameter: parsed.success ? parsed.data : [] }, risikoBaru };
@@ -96,6 +102,7 @@ export function keRisikoKlien(kondisi: KondisiWilayah): RisikoKlien | null {
     namaInduk: namaInduk(leluhur),
     koordinatPerkiraan: wilayah.koordinatPerkiraan,
     level: risiko.level,
+    simulasi: risiko.simulasi,
     skorRisiko: risiko.skorRisiko,
     deskripsi: risiko.deskripsi,
     parameter: risiko.hasilPerParameter,

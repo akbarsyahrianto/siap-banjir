@@ -5,6 +5,7 @@ import {
   cekAmbang,
   hitungLevelRisiko,
   pilihAmbangEfektif,
+  terapkanSimulasi,
   type AmbangAcuan,
 } from "@/server/services/risk.service";
 
@@ -102,6 +103,27 @@ describe("hitungLevelRisiko", () => {
 
   it("skor tidak melebihi 100 untuk nilai ekstrem", () => {
     expect(hitungLevelRisiko({ hujan_24jam: 377 }, ambangGlobal).skorRisiko).toBe(100);
+  });
+});
+
+describe("terapkanSimulasi (ambang tidak diubah)", () => {
+  it("hujan simulasi 60 mm melewati ambang TINGGI global (≥ 50 mm)", () => {
+    const asli = { hujan_1jam: 0, hujan_24jam: 0.5, hujan_3hari: 2, prakiraan_hujan_24jam: 1 };
+    expect(hitungLevelRisiko(asli, ambangGlobal).level).toBe("RENDAH");
+
+    const hasil = hitungLevelRisiko(terapkanSimulasi(asli, 60), ambangGlobal);
+    expect(hasil.level).toBe("TINGGI");
+    expect(hasil.parameterPemicu.map((p) => p.parameter)).toEqual(["hujan_24jam"]);
+    expect(buatDeskripsiRisiko(hasil)).toBe("Risiko TINGGI karena curah hujan 24 jam terakhir 60 mm.");
+  });
+
+  it("hanya menaikkan: hujan asli yang lebih besar tetap dipakai; parameter lain tidak diubah", () => {
+    const nilai = terapkanSimulasi({ hujan_1jam: 3, hujan_24jam: 80, hujan_3hari: 30, prakiraan_hujan_24jam: 5 }, 60);
+    expect(nilai).toEqual({ hujan_1jam: 3, hujan_24jam: 80, hujan_3hari: 60, prakiraan_hujan_24jam: 5 });
+  });
+
+  it("nilai di bawah ambang TINGGI tidak menjadi TINGGI", () => {
+    expect(hitungLevelRisiko(terapkanSimulasi({}, 35), ambangGlobal).level).toBe("SEDANG");
   });
 });
 

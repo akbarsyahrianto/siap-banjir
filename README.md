@@ -175,18 +175,21 @@ Invoke-RestMethod "http://localhost:3000/api/cron/update-weather?paksa=1" -Heade
 
 ## Simulasi risiko tinggi
 
-Untuk melihat alur Bahaya → Detail Penanganan tanpa menunggu hujan lebat. Simulasi memasang ambang khusus sementara di database (kode tidak diubah) dan membuat cache cuaca sel grid wilayah itu kedaluwarsa. Kode boleh tingkat apa pun; ambangnya diwariskan ke semua desa/kelurahan di bawahnya.
+Untuk melihat alur Bahaya → Detail Penanganan tanpa menunggu hujan lebat. **Ambang risiko tidak diubah.** Simulasi menyimpan nilai hujan 24 jam yang benar-benar melewati ambang level tujuan, lalu risiko desa/kelurahan dihitung dengan ambang asli (DECISIONS D-041). Kode boleh tingkat apa pun; simulasi berlaku untuk semua desa/kelurahan di bawahnya.
 
 ```powershell
-npm run simulasi -- cari sukarasa tangerang          # cari kode wilayah
-npm run simulasi -- aktifkan 36.71.01.1001 TINGGI    # satu kelurahan (atau SEDANG)
-npm run simulasi -- aktifkan 36.71 TINGGI            # semua desa/kelurahan di Kota Tangerang
+npm run simulasi -- cari sukarasa tangerang                        # cari kode wilayah
+npm run simulasi -- aktifkan 36.71.01.1001 TINGGI                  # hujan default: batas TINGGI + 10 mm (60 mm)
+npm run simulasi -- aktifkan 36.71 SEDANG                          # semua desa/kelurahan di Kota Tangerang
+npm run simulasi -- aktifkan 36.71.01.1001 TINGGI --hujan-24jam 90 # nilai sendiri (ditolak jika tidak melewati ambang)
 # buka http://localhost:3000/risiko?wilayah=36.71.01.1001, atau jalankan cron
-npm run simulasi -- status                           # simulasi aktif
-npm run simulasi -- pulihkan 36.71.01.1001           # hapus ambang, riwayat & data simulasi (--semua untuk semua)
+npm run simulasi -- status                                         # simulasi aktif
+npm run simulasi -- pulihkan 36.71.01.1001                         # kembali ke risiko asli (--semua untuk semua)
 ```
 
-> Perangkat yang berlangganan notifikasi untuk wilayah itu akan menerima **push sungguhan**. Script menolak berjalan jika `DATABASE_URL` bukan database lokal (kecuali `--izinkan-remote`).
+Hasil simulasi selalu berlabel **[SIMULASI]** (deskripsi risiko, judul notifikasi push, toast), **tidak ditulis ke riwayat**, dan tidak menahan peringatan asli (anti-spam dihitung terpisah). Simulasi tidak memakai kuota Open-Meteo tambahan karena risiko dihitung ulang dari data cuaca yang sudah tersimpan.
+
+> Perangkat yang berlangganan notifikasi untuk wilayah itu akan menerima **push sungguhan** berlabel [SIMULASI]. Script menolak berjalan jika `DATABASE_URL` bukan database lokal (kecuali `--izinkan-remote`).
 
 ## Testing
 
@@ -212,7 +215,7 @@ Tidak ada halaman admin (sesuai rancangan). Ambang risiko, deskripsi wilayah, in
 npm run db:seed   # idempoten: wilayah di-upsert, tabel konten diisi ulang (riwayat otomatis tidak dihapus)
 ```
 
-Riwayat kejadian (`RIWAYAT_KEJADIAN`) wajib diberi `sumberNama` dan `sumberUrl` (https) yang sudah dibuka dan isinya sesuai; test `seed-data` menolak riwayat tanpa sumber. Artikel `UMUM` bukan laporan kejadian: tanggalnya ditampilkan sebagai tanggal terbit.
+Riwayat kejadian (`RIWAYAT_KEJADIAN`) wajib diberi `sumberNama` dan `sumberUrl` (https) yang sudah dibuka dan isinya sesuai. Utamakan sumber resmi (BNPB/BMKG, lalu instansi pemerintah lain); test `seed-data` menolak riwayat tanpa sumber atau bersumber di luar `*.go.id`. Periksa bahwa semua tautan masih bisa dibuka dengan `npm run cek:sumber` (butuh internet). Artikel `UMUM` bukan laporan kejadian: tanggalnya ditampilkan sebagai tanggal terbit.
 
 Ambang khusus wilayah: tambahkan entri `ambangSeed` dengan `idWilayah` berupa kode Kemendagri tingkat apa pun (tambahkan kodenya ke konstanta `KODE`). Untuk parameter itu, ambang tersebut berlaku bagi semua desa/kelurahan di bawahnya, kecuali ada ambang di tingkat yang lebih spesifik. Test `seed-data` memastikan setiap kode yang dirujuk ada di data Kemendagri dan nama profilnya cocok. Ikon PWA dibuat dari logo dengan `node scripts/buat-ikon.mjs`.
 
@@ -268,6 +271,7 @@ Catatan: rate limit memakai memori proses, sehingga di Vercel batasnya berlaku p
 | `npm run db:reset` | Hapus database, migrasi ulang, dan seed |
 | `npm run db:studio` | Prisma Studio |
 | `npm run data:wilayah` | Impor ulang data wilayah dari sumber (lihat [Data wilayah](#data-wilayah-indonesia)) |
+| `npm run cek:sumber` | Pastikan semua tautan sumber riwayat bisa dibuka (butuh internet) |
 
 ## Atribusi & lisensi data
 

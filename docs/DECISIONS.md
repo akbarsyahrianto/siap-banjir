@@ -69,7 +69,7 @@ Nomor telepon BPBD per daerah berbeda-beda dan sering berubah. Supaya tidak meng
 
 > **Diperbarui D-039:** setiap riwayat kini punya tautan sumber yang sudah diperiksa, dan beberapa isi/tanggal dikoreksi agar sesuai sumbernya.
 
-Riwayat kejadian (Informasi `RIWAYAT_KEJADIAN`) hanya memuat peristiwa banjir besar yang terdokumentasi luas. Deskripsinya sengaja umum, tanpa angka korban atau kerugian. Satu-satunya angka adalah curah hujan 377 mm/hari di Halim Perdanakusuma (1 Januari 2020, data BMKG).
+Riwayat kejadian (Informasi `RIWAYAT_KEJADIAN`) hanya memuat peristiwa banjir besar yang terdokumentasi luas. ~~Deskripsinya sengaja umum, tanpa angka korban atau kerugian. Satu-satunya angka adalah curah hujan 377 mm/hari di Halim Perdanakusuma (1 Januari 2020, data BMKG).~~ Sejak D-039, angka (termasuk korban) hanya dicantumkan jika disebut sumber resmi yang dirujuk. Angka 377 mm dihapus karena tidak ditemukan di halaman BMKG/BNPB yang bisa dibuka (hanya di berita yang mengutip BMKG).
 
 ## D-009 · Seed memakai service konten
 
@@ -201,6 +201,8 @@ URL notifikasi: `/risiko?wilayah={id}#penanganan`. Path dan query tetap persis s
 Beranda dan `/cuaca` juga diperbarui otomatis tiap 30 menit (`router.refresh()`).
 
 ## D-026 · Script simulasi risiko
+
+> **Diganti D-041:** simulasi tidak lagi menurunkan ambang. Nilai hujan simulasi dinilai dengan ambang asli, dan hasilnya ditandai simulasi (tanpa riwayat, notifikasi berlabel [SIMULASI]).
 
 `npm run simulasi -- aktifkan <wilayah> [TINGGI|SEDANG]` memasang `AmbangRisiko` khusus wilayah (`id = simulasi-<wilayah>`, `hujan_24jam ≥ 0 mm` → level pilihan) dan membuat cache cuaca wilayah itu kedaluwarsa. Karena ambang dibaca dari DB, tidak ada kode yang diubah atau diberi mode khusus.
 
@@ -346,7 +348,9 @@ Sejak D-033: wilayah uji adalah desa/kelurahan asli (Kelurahan Bandengan `33.75.
 **Keputusan.**
 - `Informasi` mendapat dua kolom nullable, `sumberNama` dan `sumberUrl` (migrasi `20260925160000_sumber_informasi`). Validator hanya menerima URL `https`. Tautan dibuka di tab baru dengan `rel="noopener noreferrer"`.
 - Di kartu daftar, judul menjadi tautan ke detail (area klik meluas ke seluruh kartu) dan sumber menjadi tautan terpisah di atasnya, karena tautan bersarang tidak valid di HTML.
-- **Setiap riwayat seed wajib punya sumber** (diuji). Setiap URL dibuka dan isinya dicocokkan pada 25 September 2026. Teks riwayat hanya memuat hal yang disebut sumbernya. Koreksi yang dilakukan:
+- **Sumber resmi diutamakan.** Semua riwayat seed kini merujuk situs pemerintah (diuji: host `*.go.id`): tujuh ke rilis BNPB, dan Banjir Jakarta 2007 ke arsip Dinas Perpustakaan dan Kearsipan Provinsi DKI Jakarta (kejadian ini sebelum BNPB berdiri pada 2008; artikel sejarah BNPB tentang 2007 berstatus 404). Teks dan tanggal disesuaikan dengan isi halaman resmi: Kalsel dimulai 12 Januari 2021, Jakarta 1 Februari 2007, Samarinda per laporan BNPB 12 Juni 2019 (penyebab: luapan Sungai Bengkuring), Semarang tanpa klaim Stasiun Tawang (tidak disebut BNPB), dan Jabodetabek 2020 dipindah ke Provinsi DKI Jakarta tanpa angka 377 mm (lihat D-008). Tidak ada halaman BMKG yang memuat data kejadian ini dalam bentuk teks.
+- **Tautan harus bisa dibuka.** `npm run cek:sumber` membuka setiap tautan sumber (user agent browser, coba ulang sekali) dan gagal jika ada yang tidak terbuka; per 25 September 2026 kesembilan tautan (8 riwayat + Open-Meteo) berstatus 200. Tidak dijalankan di `npm test` karena butuh internet. Catatan: domain `bnpb.go.id` tanpa `www` menolak sebagian klien (403), jadi dipakai `www.bnpb.go.id`.
+- **Setiap riwayat seed wajib punya sumber** (diuji). Setiap URL dibuka dan isinya dicocokkan pada 25 September 2026. Teks riwayat hanya memuat hal yang disebut sumbernya. Koreksi versi pertama (sebelum diganti sumber resmi):
   - Banjir Samarinda Juni 2019: frasa "terutama di sekitar Sungai Karang Mumus" dihapus karena tidak ada sumber terverifikasi yang menyebutnya; diganti kawasan yang disebut sumber (Sempaja Timur, Gunung Lingai).
   - Banjir Medan: tanggal 4 → 3 Desember 2020 (puncak banjir menurut data BNPB); Sungai Denai dan empat kecamatan terdampak ditambahkan sesuai sumber.
   - Banjir Jakarta 2007 dipindah dari Jakarta Utara ke Provinsi DKI Jakarta, dan Banjir Kalsel 2021 dari Kota Banjarmasin ke Provinsi Kalimantan Selatan, karena sumbernya menggambarkan kejadian tingkat provinsi. Lewat pewarisan (D-037) riwayat ini tampil untuk semua desa/kelurahan di provinsi itu.
@@ -358,3 +362,25 @@ Sejak D-033: wilayah uji adalah desa/kelurahan asli (Kelurahan Bandengan `33.75.
 `next build` menulis ke `.next`, yang juga dipakai `next dev`, sehingga build saat server pengembangan berjalan bisa merusaknya. `next.config.ts` kini membaca `distDir` dari `NEXT_DIST_DIR` (default `.next`). Contoh: `$env:NEXT_DIST_DIR = ".next-e2e"; npm run build; npm run test:e2e`. Path `.next-e2e/types` sudah ada di `tsconfig.json`, sehingga Next.js tidak menulis ulang file itu. Folder `.next-*` diabaikan git dan ESLint.
 
 Catatan Windows: `prisma generate` gagal dengan `EPERM` saat `next dev` memegang file engine. File client (JS & tipe) tetap diperbarui; engine yang lama tetap valid selama versi Prisma sama. `next dev` memuat client baru setelah worker-nya dimulai ulang (misalnya setelah `next.config.ts` berubah, atau server di-restart).
+
+Catatan migrasi: `prisma migrate dev` memberi timestamp UTC, sedangkan dua migrasi sebelumnya bernama dengan jam lebih akhir. Folder migrasi baru diganti nama (`…160000_…`, `…170000_…`) sebelum diterapkan agar urutan leksikalnya benar.
+
+## D-041 · Simulasi memakai nilai hujan, bukan menurunkan ambang (menyimpang dari UML)
+
+**Konteks.** Simulasi D-026 memasang ambang `hujan_24jam ≥ 0 mm → TINGGI`. Akibatnya notifikasi berbunyi "Risiko TINGGI karena curah hujan 24 jam terakhir 0,5 mm", tidak berlabel simulasi, dan menulis riwayat Kabupaten Sleman seolah kejadian nyata.
+
+**Keputusan.**
+- **Ambang tidak diubah.** Tabel alat uji `SimulasiCuaca` (`idWilayah`, `hujan24Jam`, `levelTujuan`, `mulai`; di luar class diagram) menyimpan nilai hujan 24 jam simulasi untuk suatu kode wilayah dan semua desa di bawahnya (yang paling spesifik menang). Saat risiko desa dihitung, `hujan_24jam` = maks(asli, simulasi) dan `hujan_3hari` minimal sama. Parameter lain tetap data asli, dan level ditentukan oleh ambang asli.
+- **Nilai default benar-benar melewati ambang:** TINGGI = batas bawah TINGGI yang berlaku + 10 mm (60 mm untuk ambang global ≥ 50 mm); SEDANG = tengah rentang SEDANG. `--hujan-24jam <mm>` bisa dipakai, tetapi script menolak nilai yang tidak menghasilkan level tujuan.
+- **`LevelRisiko.simulasi`** (kolom tambahan) menandai hasilnya:
+  - deskripsi diawali `[SIMULASI]`, sehingga halaman dan API ikut berlabel;
+  - judul notifikasi push diawali `[SIMULASI]`, isinya "Ini simulasi uji, bukan kondisi cuaca sebenarnya.", dan tag-nya `simulasi-risiko-{kode}` agar tidak menggantikan peringatan asli di perangkat;
+  - toast dalam aplikasi juga berlabel;
+  - **tidak pernah ditulis ke riwayat** (`simpanRiwayatRisikoTinggi` langsung keluar);
+  - anti-spam 6 jam menghitung notifikasi simulasi dan asli **terpisah**, sehingga simulasi tidak menahan peringatan asli.
+- **Tanpa kuota tambahan.** `risikoDesa` menghitung ulang risiko dari `DataCuaca` yang sama jika status simulasi berbeda dari risiko terakhir. Cache tidak perlu dibuat kedaluwarsa, dan tidak ada request Open-Meteo tambahan.
+- **`pulihkan`** menghapus baris `SimulasiCuaca` dan `LevelRisiko` simulasi (beserta catatan notifikasinya). Riwayat dan data cuaca asli tidak disentuh, dan kunjungan berikutnya memakai lagi risiko asli.
+
+**Pembersihan.** Simulasi Sariharjo (`34.04.12.2001`) cara lama dipulihkan: ambang `simulasi-34.04.12.2001`, riwayat "Risiko banjir TINGGI terdeteksi di Kabupaten Sleman" (satu-satunya riwayat otomatis di database), dan dua data cuaca sel `-7.7,110.4` sejak simulasi dihapus.
+
+**Diuji:** unit (`terapkanSimulasi`, judul/isi/tag notifikasi) dan integrasi (simulasi tingkat kecamatan diwariskan ke desa, ambang tidak berubah, push berlabel, riwayat tidak bertambah, pulihkan kembali ke risiko asli, anti-spam terpisah).

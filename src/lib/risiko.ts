@@ -3,6 +3,9 @@ import type { ParameterRisiko, TingkatRisiko } from "@prisma/client";
 
 export const URUTAN_LEVEL: Record<TingkatRisiko, number> = { RENDAH: 0, SEDANG: 1, TINGGI: 2 };
 
+/** Penanda risiko hasil `npm run simulasi` di deskripsi, judul notifikasi, dan UI (D-041). */
+export const LABEL_SIMULASI = "[SIMULASI]";
+
 export const LABEL_LEVEL: Record<TingkatRisiko, string> = {
   RENDAH: "Rendah",
   SEDANG: "Sedang",

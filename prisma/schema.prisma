@@ -139,6 +139,7 @@ model Wilayah {
   levelRisiko   LevelRisiko[]
   informasi     Informasi[]
   ambangRisiko  AmbangRisiko[]
+  simulasiCuaca SimulasiCuaca[]
   persiapanDini PersiapanDini[]
   rekomendasi   Rekomendasi[]
   pengguna      Pengguna[]
@@ -190,6 +191,9 @@ model LevelRisiko {
   // pemicu = true untuk parameter yang menentukan level akhir.
   parameterPemicu Json          @default("[]") @map("parameter_pemicu")
   waktu           DateTime      @default(now())
+  /// true = dihitung dengan nilai hujan dari SimulasiCuaca (DECISIONS D-041): notifikasi berlabel
+  /// [SIMULASI], tidak ditulis ke riwayat, dan tidak dihitung anti-spam notifikasi asli.
+  simulasi        Boolean       @default(false)
 
   wilayah    Wilayah      @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
   dataCuaca  DataCuaca    @relation(fields: [idCuaca], references: [idCuaca], onDelete: Cascade)
@@ -198,6 +202,21 @@ model LevelRisiko {
   @@index([idWilayah, waktu])
   @@index([idCuaca, idWilayah])
   @@map("level_risiko")
+}
+
+/// Alat uji `npm run simulasi` (di luar UML, DECISIONS D-041): hujan 24 jam simulasi untuk wilayah
+/// ini dan semua desa/kelurahan di bawahnya. Ambang risiko tidak diubah.
+model SimulasiCuaca {
+  idWilayah   String        @id @map("id_wilayah")
+  // mm; dipakai sebagai hujan 24 jam terakhir (dan minimum akumulasi 3 hari).
+  hujan24Jam  Float         @map("hujan_24jam")
+  // Level yang dituju saat simulasi dibuat (informasi; level nyata dihitung dari ambang).
+  levelTujuan TingkatRisiko @map("level_tujuan")
+  mulai       DateTime      @default(now())
+
+  wilayah Wilayah @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
+
+  @@map("simulasi_cuaca")
 }
 
 model AmbangRisiko {

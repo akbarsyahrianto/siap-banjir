@@ -4,7 +4,7 @@
  */
 import type { LanggananNotifikasi, LevelRisiko, TingkatRisiko } from "@prisma/client";
 import { db } from "@/server/db";
-import { URUTAN_LEVEL } from "@/lib/risiko";
+import { LABEL_SIMULASI, URUTAN_LEVEL } from "@/lib/risiko";
 import { kirimPush, type PayloadPush } from "@/server/integrations/web-push";
 import {
   bacaPushSubscription,
@@ -28,28 +28,38 @@ export function perluKirim(levelBaru: TingkatRisiko, levelTerkirim: TingkatRisik
 
 /** buatNotifikasi(levelRisiko): judul, pesan, dan URL deep link. */
 export function buatNotifikasi(
-  risiko: Pick<LevelRisiko, "idWilayah" | "level" | "deskripsi">,
+  risiko: Pick<LevelRisiko, "idWilayah" | "level" | "deskripsi" | "simulasi">,
   namaWilayah: string,
 ): PayloadPush {
   const tinggi = risiko.level === "TINGGI";
+  const judul = tinggi ? `⚠️ Risiko banjir TINGGI di ${namaWilayah}` : `Waspada: risiko banjir SEDANG di ${namaWilayah}`;
+  const saran = tinggi ? "Siap mengungsi dan ikuti arahan petugas." : "Periksa persiapan dini Anda.";
+  // Label sudah ada di judul; di isi diganti kalimat penjelas.
+  const deskripsi = risiko.deskripsi.replace(`${LABEL_SIMULASI} `, "");
   return {
-    judul: tinggi ? `⚠️ Risiko banjir TINGGI di ${namaWilayah}` : `Waspada: risiko banjir SEDANG di ${namaWilayah}`,
-    pesan: `${risiko.deskripsi} ${tinggi ? "Siap mengungsi dan ikuti arahan petugas." : "Periksa persiapan dini Anda."}`,
+    judul: risiko.simulasi ? `${LABEL_SIMULASI} ${judul}` : judul,
+    pesan: risiko.simulasi
+      ? `${deskripsi} Ini simulasi uji, bukan kondisi cuaca sebenarnya.`
+      : `${deskripsi} ${saran}`,
     // #penanganan → state machine langsung ke Detail Penanganan.
     url: `/risiko?wilayah=${encodeURIComponent(risiko.idWilayah)}#penanganan`,
-    tag: `risiko-${risiko.idWilayah}`,
+    // Tag berbeda agar notifikasi simulasi tidak menggantikan peringatan asli di perangkat.
+    tag: `${risiko.simulasi ? "simulasi-" : ""}risiko-${risiko.idWilayah}`,
     level: risiko.level,
   };
 }
 
-/** Level yang sudah terkirim (atau sedang dikirim) per langganan untuk wilayah ini dalam 6 jam. */
-async function riwayatTerkirim(idLangganan: string[], idWilayah: string, sekarang: Date) {
+/**
+ * Level yang sudah terkirim (atau sedang dikirim) per langganan untuk wilayah ini dalam 6 jam.
+ * Notifikasi simulasi dan asli dihitung terpisah: simulasi tidak menahan peringatan asli.
+ */
+async function riwayatTerkirim(idLangganan: string[], idWilayah: string, simulasi: boolean, sekarang: Date) {
   const riwayat = await db.notifikasi.findMany({
     where: {
       idLangganan: { in: idLangganan },
       waktuKirim: { gte: new Date(sekarang.getTime() - JEDA_ANTI_SPAM_MS) },
       statusKirim: { in: ["PENDING", "TERKIRIM"] },
-      levelRisiko: { idWilayah },
+      levelRisiko: { idWilayah, simulasi },
     },
     select: { idLangganan: true, levelRisiko: { select: { level: true } } },
   });
@@ -116,6 +126,7 @@ export async function prosesPeringatan(risiko: LevelRisiko, sekarang = new Date(
   const riwayat = await riwayatTerkirim(
     langganan.map((l) => l.idLangganan),
     risiko.idWilayah,
+    risiko.simulasi,
     sekarang,
   );
   const payload = buatNotifikasi(risiko, namaTampilan(wilayah.leluhur));

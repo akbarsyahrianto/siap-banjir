@@ -16,6 +16,7 @@
     "cron:lokal": "tsx --env-file=.env scripts/cron-lokal.ts",
     "simulasi": "tsx --env-file=.env scripts/simulasi-risiko.ts",
     "data:wilayah": "tsx scripts/impor-wilayah.ts",
+    "cek:sumber": "tsx scripts/cek-tautan-sumber.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

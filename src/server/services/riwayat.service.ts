@@ -10,6 +10,7 @@ import type { LevelRisiko } from "@prisma/client";
 import { db } from "@/server/db";
 import { formatJam, formatTanggalPanjang } from "@/lib/format";
 import { jenisWilayah, kodeKabKota, leluhurKode } from "@/lib/kode-wilayah";
+import { SUMBER_DETEKSI } from "@/lib/sumber-informasi";
 import { informasiInputSchema } from "@/server/validators/konten";
 
 export const AWALAN_JUDUL_RIWAYAT = "Risiko banjir TINGGI terdeteksi di";
@@ -17,11 +18,7 @@ const JUDUL_DAFTAR = "Desa/kelurahan yang terdeteksi:";
 const CATATAN =
   "Catatan: ini adalah deteksi otomatis berdasarkan data cuaca Open-Meteo dan ambang batas risiko, bukan laporan kejadian banjir yang terverifikasi. Informasi resmi: BMKG dan BPBD setempat.";
 
-/** Riwayat otomatis bukan laporan pihak lain; sumbernya data cuaca yang dipakai deteksi. */
-export const SUMBER_DETEKSI = {
-  nama: "Deteksi otomatis Siap Banjir, data cuaca Open-Meteo",
-  url: "https://open-meteo.com/",
-} as const;
+export { SUMBER_DETEKSI };
 
 const WIB_MS = 7 * 60 * 60 * 1000;
 
@@ -56,9 +53,9 @@ export function tambahkanDesaKeIsi(isi: string, labelDesa: string, baris: string
 
 export type HasilRiwayat = "dibuat" | "diperbarui" | false;
 
-/** Simpan/perbarui riwayat kab/kota jika level TINGGI. */
+/** Simpan/perbarui riwayat kab/kota jika level TINGGI. Risiko simulasi tidak pernah ditulis (D-041). */
 export async function simpanRiwayatRisikoTinggi(risiko: LevelRisiko): Promise<HasilRiwayat> {
-  if (risiko.level !== "TINGGI") return false;
+  if (risiko.level !== "TINGGI" || risiko.simulasi) return false;
   const kodeKab = kodeKabKota(risiko.idWilayah);
   if (!kodeKab) return false;
 

@@ -118,6 +118,12 @@ describe("seed konten", () => {
     expect(new Set(riwayat.map((r) => r.sumberUrl)).size).toBe(riwayat.length);
   });
 
+  it("sumber riwayat seed adalah situs resmi pemerintah (BNPB/BMKG diutamakan)", () => {
+    for (const r of informasiSeed.filter((i) => i.kategori === "RIWAYAT_KEJADIAN")) {
+      expect(new URL(r.sumberUrl ?? "").hostname, r.judul).toMatch(/\.go\.id$/);
+    }
+  });
+
   it("sumberUrl selain https ditolak validator", () => {
     const dasar = { kategori: "RIWAYAT_KEJADIAN" as const, judul: "Uji", isi: "Uji", sumberNama: "Uji" };
     expect(informasiInputSchema.safeParse({ ...dasar, sumberUrl: "http://contoh.go.id/a" }).success).toBe(false);

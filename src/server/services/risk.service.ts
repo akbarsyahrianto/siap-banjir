@@ -2,12 +2,12 @@
  * Rule engine risiko banjir (inti sistem).
  * Ambang batas TIDAK di-hard-code; semuanya dibaca dari tabel AmbangRisiko.
  */
-import type { AmbangRisiko, DataCuaca, ParameterRisiko, TingkatRisiko } from "@prisma/client";
+import type { AmbangRisiko, DataCuaca, ParameterRisiko, SimulasiCuaca, TingkatRisiko } from "@prisma/client";
 import { db } from "@/server/db";
 import type { OpenMeteoResponse } from "@/server/integrations/open-meteo";
 import { hitungParameterCuaca, type NilaiParameter } from "@/server/services/parameter-cuaca";
 import { leluhurKode } from "@/lib/kode-wilayah";
-import { LABEL_LEVEL, PARAMETER_RISIKO, URUTAN_LEVEL, formatNilaiParameter } from "@/lib/risiko";
+import { LABEL_LEVEL, LABEL_SIMULASI, PARAMETER_RISIKO, URUTAN_LEVEL, formatNilaiParameter } from "@/lib/risiko";
 import type { HasilParameter } from "@/server/validators/risiko";
 
 export type AmbangAcuan = Pick<
@@ -126,6 +126,19 @@ export function buatDeskripsiRisiko(hasil: HasilRisiko) {
   return `Risiko ${LABEL_LEVEL[hasil.level].toUpperCase()} karena ${label} ${formatNilaiParameter(utama.parameter, utama.nilai)}.`;
 }
 
+/**
+ * Simulasi hujan (D-041): hujan 24 jam terakhir diganti nilai simulasi (jika lebih besar dari
+ * data asli), dan akumulasi 3 hari minimal sama dengannya. Parameter lain tetap data asli.
+ * Level tetap ditentukan oleh ambang asli.
+ */
+export function terapkanSimulasi(nilai: NilaiParameter, hujan24Jam: number): NilaiParameter {
+  return {
+    ...nilai,
+    hujan_24jam: Math.max(nilai.hujan_24jam ?? 0, hujan24Jam),
+    hujan_3hari: Math.max(nilai.hujan_3hari ?? 0, hujan24Jam),
+  };
+}
+
 // ---------- Operasi yang mengakses DB ----------
 
 /** Ambang global + ambang milik wilayah dan semua leluhurnya (untuk pewarisan hierarkis). */
@@ -135,21 +148,44 @@ export async function ambilAmbangWilayah(idWilayah: string) {
   });
 }
 
+export type SimulasiAcuan = Pick<SimulasiCuaca, "idWilayah" | "hujan24Jam">;
+
+/** Simulasi yang berlaku untuk wilayah ini (milik wilayah itu atau leluhur terdekat), atau null. */
+export async function simulasiAktif(idWilayah: string): Promise<SimulasiAcuan | null> {
+  const daftar = await db.simulasiCuaca.findMany({
+    where: { idWilayah: { in: leluhurKode(idWilayah) } },
+    select: { idWilayah: true, hujan24Jam: true },
+  });
+  return daftar.sort((a, b) => kedalaman(b.idWilayah) - kedalaman(a.idWilayah))[0] ?? null;
+}
+
 /**
  * Langkah 5 sequence diagram: hitung risiko wilayah dari DataCuaca (milik sel grid wilayah itu)
- * lalu simpan LevelRisiko.
+ * lalu simpan LevelRisiko. `simulasi` undefined = dicari sendiri.
  */
-export async function evaluasiDanSimpanRisiko(idWilayah: string, dataCuaca: DataCuaca, raw: OpenMeteoResponse) {
-  const ambangList = await ambilAmbangWilayah(idWilayah);
-  const hasil = hitungLevelRisiko(hitungParameterCuaca(raw), ambangList);
+export async function evaluasiDanSimpanRisiko(
+  idWilayah: string,
+  dataCuaca: DataCuaca,
+  raw: OpenMeteoResponse,
+  simulasi?: SimulasiAcuan | null,
+) {
+  const [ambangList, sim] = await Promise.all([
+    ambilAmbangWilayah(idWilayah),
+    simulasi === undefined ? simulasiAktif(idWilayah) : simulasi,
+  ]);
+  const nilai = hitungParameterCuaca(raw);
+  const hasil = hitungLevelRisiko(sim ? terapkanSimulasi(nilai, sim.hujan24Jam) : nilai, ambangList);
+  const deskripsi = buatDeskripsiRisiko(hasil);
   return db.levelRisiko.create({
     data: {
       idWilayah,
       idCuaca: dataCuaca.idCuaca,
       level: hasil.level,
       skorRisiko: hasil.skorRisiko,
-      deskripsi: buatDeskripsiRisiko(hasil),
+      // Label di deskripsi agar setiap tampilan (halaman, API) jelas menyebut simulasi.
+      deskripsi: sim ? `${LABEL_SIMULASI} ${deskripsi}` : deskripsi,
       parameterPemicu: hasil.hasilPerParameter,
+      simulasi: sim != null,
     },
   });
 }

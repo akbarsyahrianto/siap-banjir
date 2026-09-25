@@ -47,13 +47,31 @@ describe("memenuhiLevelMinimum", () => {
 describe("buatNotifikasi", () => {
   it("berisi deep link ke /risiko?wilayah={id} bagian Detail Penanganan", () => {
     const p = buatNotifikasi(
-      { idWilayah: "33.74.02.1002", level: "TINGGI", deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm." },
+      { idWilayah: "33.74.02.1002", level: "TINGGI", deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm.", simulasi: false },
       "Kelurahan Bulu Lor, Kota Semarang",
     );
     expect(p.url).toBe("/risiko?wilayah=33.74.02.1002#penanganan");
     expect(p.judul).toContain("TINGGI");
     expect(p.judul).toContain("Kelurahan Bulu Lor, Kota Semarang");
+    expect(p.judul).not.toContain("SIMULASI");
     expect(p.tag).toBe("risiko-33.74.02.1002");
+  });
+
+  it("risiko simulasi: judul diawali [SIMULASI], isi menjelaskan simulasi, tag terpisah dari peringatan asli", () => {
+    const p = buatNotifikasi(
+      {
+        idWilayah: "34.04.12.2001",
+        level: "TINGGI",
+        deskripsi: "[SIMULASI] Risiko TINGGI karena curah hujan 24 jam terakhir 60 mm.",
+        simulasi: true,
+      },
+      "Desa Sariharjo, Kabupaten Sleman",
+    );
+    expect(p.judul).toBe("[SIMULASI] ⚠️ Risiko banjir TINGGI di Desa Sariharjo, Kabupaten Sleman");
+    expect(p.pesan).toBe(
+      "Risiko TINGGI karena curah hujan 24 jam terakhir 60 mm. Ini simulasi uji, bukan kondisi cuaca sebenarnya.",
+    );
+    expect(p.tag).toBe("simulasi-risiko-34.04.12.2001");
   });
 });
 

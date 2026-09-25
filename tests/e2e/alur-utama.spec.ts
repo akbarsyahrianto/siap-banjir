@@ -139,8 +139,8 @@ test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
 test("Informasi: riwayat kejadian punya tautan sumber; artikel umum bertanggal terbit", async ({ page }) => {
   await page.goto("/informasi");
   const riwayat = page.getByRole("region", { name: "Riwayat kejadian banjir" });
-  const sumber = riwayat.getByRole("link", { name: /ANTARA, 1 Januari 2020/ });
-  await expect(sumber).toHaveAttribute("href", /^https:\/\/www\.antaranews\.com\//);
+  const sumber = riwayat.getByRole("link", { name: /BNPB, 3 Januari 2020/ });
+  await expect(sumber).toHaveAttribute("href", /^https:\/\/www\.bnpb\.go\.id\/berita\//);
   await expect(sumber).toHaveAttribute("target", "_blank");
   await expect(sumber).toHaveAttribute("rel", "noopener noreferrer");
 

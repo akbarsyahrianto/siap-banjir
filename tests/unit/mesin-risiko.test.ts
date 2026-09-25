@@ -9,6 +9,7 @@ const risiko = (level: TingkatRisiko, idWilayah = "33.74.02.1002"): RisikoKlien 
   namaWilayah: "Kelurahan Bulu Lor, Kota Semarang",
   namaInduk: "Kec. Semarang Utara, Kota Semarang, Jawa Tengah",
   koordinatPerkiraan: false,
+  simulasi: false,
   level,
   skorRisiko: level === "TINGGI" ? 80 : level === "SEDANG" ? 50 : 10,
   deskripsi: `Risiko ${level}`,

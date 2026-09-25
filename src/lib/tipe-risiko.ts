@@ -19,6 +19,8 @@ export type RisikoKlien = {
   /** true = koordinat pusat kecamatan dipakai (centroid desa tidak tersedia). */
   koordinatPerkiraan: boolean;
   level: TingkatRisiko;
+  /** true = hasil `npm run simulasi` (nilai hujan simulasi), bukan kondisi cuaca sebenarnya. */
+  simulasi: boolean;
   skorRisiko: number;
   deskripsi: string;
   parameter: HasilParameter[];
