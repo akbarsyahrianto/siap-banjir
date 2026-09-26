@@ -191,6 +191,8 @@ Hasil simulasi selalu berlabel **[SIMULASI]** (deskripsi risiko, judul notifikas
 
 > Perangkat yang berlangganan notifikasi untuk wilayah itu akan menerima **push sungguhan** berlabel [SIMULASI]. Script menolak berjalan jika `DATABASE_URL` bukan database lokal (kecuali `--izinkan-remote`).
 
+Langkah demo lengkap (persiapan Firefox, menyalakan dan mematikan simulasi, mengulang demo, pemecahan masalah) ada di [docs/DEMO.md](docs/DEMO.md).
+
 ## Testing
 
 | Perintah | Isi | Kebutuhan |
