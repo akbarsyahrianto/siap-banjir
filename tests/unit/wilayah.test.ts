@@ -45,10 +45,13 @@ describe("tokenPencarian", () => {
 });
 
 describe("kontakDaruratWilayah", () => {
-  it("nomor nasional + BPBD kab/kota setempat", () => {
+  it("nomor nasional + BPBD kab/kota dan provinsi; tanpa sumber resmi → nomor belum tersedia", () => {
     const kontak = kontakDaruratWilayah(tangerang);
     expect(kontak.map((k) => k.telepon)).toEqual(expect.arrayContaining(["112", "117"]));
-    expect(kontak.at(-1)).toEqual({ nama: "BPBD Kota Tangerang", telepon: null });
+    expect(kontak.slice(-2)).toEqual([
+      { nama: "BPBD Kota Tangerang", telepon: null },
+      { nama: "BPBD Provinsi Banten", telepon: null },
+    ]);
   });
 
   it("112 diberi keterangan status layanan kab/kota beserta sumbernya", () => {
@@ -58,7 +61,21 @@ describe("kontakDaruratWilayah", () => {
     expect(k112?.sumber?.keterangan).toMatch(/^data diambil \d+ \w+ \d{4}$/);
   });
 
-  it("kota administrasi DKI Jakarta memakai BPBD Provinsi", () => {
-    expect(kontakDaruratWilayah(jakartaUtara).at(-1)).toEqual({ nama: "BPBD Provinsi Daerah Khusus Ibukota Jakarta", telepon: null });
+  it("kota administrasi DKI Jakarta hanya memakai BPBD Provinsi", () => {
+    const kontak = kontakDaruratWilayah(jakartaUtara);
+    expect(kontak.filter((k) => k.nama.startsWith("BPBD"))).toEqual([
+      { nama: "BPBD Provinsi Daerah Khusus Ibukota Jakarta", telepon: null },
+    ]);
+  });
+
+  it("BPBD Provinsi DIY memakai nomor terverifikasi beserta sumber dan tanggal pemeriksaan", () => {
+    const sleman = [w("34", "Daerah Istimewa Yogyakarta", "PROVINSI"), w("34.04", "Kabupaten Sleman", "KABKOTA")];
+    const [kab, prov] = kontakDaruratWilayah(sleman).slice(-2);
+    expect(kab).toEqual({ nama: "BPBD Kabupaten Sleman", telepon: null });
+    expect(prov).toMatchObject({
+      nama: "BPBD Provinsi Daerah Istimewa Yogyakarta",
+      telepon: "(0274) 555585",
+      sumber: { url: "https://bpbd.jogjaprov.go.id/beranda", keterangan: "diperiksa 27 September 2026" },
+    });
   });
 });

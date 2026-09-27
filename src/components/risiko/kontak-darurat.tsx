@@ -9,7 +9,7 @@ export function KontakDarurat({ kontak }: { kontak: Kontak[] }) {
         <li key={k.nama} className={k.keterangan ? "sm:col-span-2" : undefined}>
           {k.telepon ? (
             <a
-              href={`tel:${k.telepon}`}
+              href={`tel:${k.telepon.replace(/[^\d+]/g, "")}`}
               className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-accent"
             >
               <span className="font-medium">{k.nama}</span>

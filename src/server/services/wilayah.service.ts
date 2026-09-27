@@ -175,22 +175,21 @@ export function kontakDaruratWilayah(leluhur: Pick<Wilayah, "idWilayah" | "namaW
       : k,
   );
 
-  const pemilikBpbd = prov?.idWilayah === "31" ? prov : (kab ?? prov);
-  if (!pemilikBpbd) return nasional;
-  const nama = pemilikBpbd.level === "PROVINSI" ? `BPBD Provinsi ${pemilikBpbd.namaWilayah}` : `BPBD ${pemilikBpbd.namaWilayah}`;
-  const terverifikasi = KONTAK_BPBD[pemilikBpbd.idWilayah];
-  const bpbd: KontakDarurat = terverifikasi
-    ? {
-        nama,
-        telepon: terverifikasi.telepon,
-        sumber: {
-          nama: terverifikasi.sumberNama,
-          url: terverifikasi.sumberUrl,
-          keterangan: `diperiksa ${formatTanggalLokalPanjang(terverifikasi.diperiksaPada)}`,
-        },
-      }
-    : { nama, telepon: null };
-  return [...nasional, bpbd];
+  // BPBD kab/kota lalu BPBD provinsi; DKI Jakarta hanya punya BPBD provinsi.
+  const pemilikBpbd = [...(kab && prov?.idWilayah !== "31" ? [kab] : []), ...(prov ? [prov] : [])];
+  return [...nasional, ...pemilikBpbd.map(kontakBpbd)];
+}
+
+function kontakBpbd(w: Pick<Wilayah, "idWilayah" | "namaWilayah" | "level">): KontakDarurat {
+  const nama = w.level === "PROVINSI" ? `BPBD Provinsi ${w.namaWilayah}` : `BPBD ${w.namaWilayah}`;
+  const k = KONTAK_BPBD[w.idWilayah];
+  if (!k) return { nama, telepon: null };
+  return {
+    nama,
+    telepon: k.telepon,
+    ...(k.keterangan ? { keterangan: k.keterangan } : {}),
+    sumber: { nama: k.sumberNama, url: k.sumberUrl, keterangan: `diperiksa ${formatTanggalLokalPanjang(k.diperiksaPada)}` },
+  };
 }
 
 // ---------- Tulis (hanya seed/import; tidak diekspos) ----------

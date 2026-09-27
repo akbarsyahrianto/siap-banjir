@@ -1,5 +1,6 @@
 /**
- * Periksa bahwa semua tautan sumber informasi (seed + riwayat otomatis) bisa dibuka.
+ * Periksa bahwa semua tautan sumber (informasi, riwayat otomatis, mitigasi) bisa dibuka, dan
+ * bahwa setiap nomor BPBD terverifikasi masih tercantum di halaman sumbernya.
  *
  *   npm run cek:sumber
  *
@@ -8,12 +9,17 @@
  * Tidak menyentuh database.
  */
 import { informasiSeed, rekomendasiSeed } from "../prisma/seed-data";
+import { KONTAK_BPBD } from "../src/data/kontak-bpbd";
 import { SUMBER_DETEKSI } from "../src/lib/sumber-informasi";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0";
 const BATAS_WAKTU_MS = 30_000;
 
-async function cek(url: string): Promise<{ ok: boolean; keterangan: string }> {
+/** Samakan spasi agar "(0274)  555585" di HTML tetap cocok dengan "(0274) 555585". */
+const rapat = (t: string) => t.replace(/&nbsp;|\s+/g, " ");
+
+/** Buka `url`; jika `harusMemuat` diisi, halaman juga wajib memuat teks itu (mis. nomor BPBD). */
+async function cek(url: string, harusMemuat?: string): Promise<{ ok: boolean; keterangan: string }> {
   let keterangan = "";
   for (let percobaan = 1; percobaan <= 2; percobaan++) {
     try {
@@ -22,6 +28,10 @@ async function cek(url: string): Promise<{ ok: boolean; keterangan: string }> {
         redirect: "follow",
         signal: AbortSignal.timeout(BATAS_WAKTU_MS),
       });
+      if (res.ok && harusMemuat) {
+        const ada = rapat(await res.text()).includes(rapat(harusMemuat));
+        return ada ? { ok: true, keterangan: `${res.status}` } : { ok: false, keterangan: "nomor tidak ditemukan" };
+      }
       await res.body?.cancel();
       if (res.ok) return { ok: true, keterangan: `${res.status}` };
       keterangan = `HTTP ${res.status}`;
@@ -33,7 +43,7 @@ async function cek(url: string): Promise<{ ok: boolean; keterangan: string }> {
 }
 
 async function main() {
-  const daftar = [
+  const daftar: { judul: string; url: string; harusMemuat?: string }[] = [
     ...informasiSeed.filter((i) => i.sumberUrl).map((i) => ({ judul: i.judul, url: i.sumberUrl as string })),
     { judul: "Riwayat otomatis", url: SUMBER_DETEKSI.url },
     // Rekomendasi merujuk dokumen yang sama dengan #page berbeda; cukup dicek sekali per dokumen.
@@ -41,8 +51,10 @@ async function main() {
       judul: "Detail Mitigasi",
       url,
     })),
+    // Nomor BPBD harus masih tercantum di situs resmi (D-043).
+    ...Object.entries(KONTAK_BPBD).map(([kode, k]) => ({ judul: `BPBD ${kode}: ${k.telepon}`, url: k.sumberUrl, harusMemuat: k.telepon })),
   ];
-  const hasil = await Promise.all(daftar.map(async (d) => ({ ...d, ...(await cek(d.url)) })));
+  const hasil = await Promise.all(daftar.map(async (d) => ({ ...d, ...(await cek(d.url, d.harusMemuat)) })));
   for (const h of hasil) console.log(`${h.ok ? "✔" : "✘"} ${h.keterangan.padEnd(8)} ${h.judul}\n    ${h.url}`);
   const gagal = hasil.filter((h) => !h.ok).length;
   console.log(gagal ? `\n${gagal} tautan gagal dibuka.` : `\nSemua ${hasil.length} tautan bisa dibuka.`);
