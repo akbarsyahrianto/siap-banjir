@@ -423,3 +423,9 @@ Catatan migrasi: `prisma migrate dev` memberi timestamp UTC, sedangkan dua migra
 - Rekomendasi lama tanpa sumber dihapus, termasuk "Hubungi 112 …": kontak darurat sudah punya bagian sendiri (D-042).
 - Artikel "Nomor Darurat yang Perlu Disimpan" ditambah keterangan bahwa 112 diselenggarakan per kab/kota dan statusnya tampil di Kontak darurat.
 - `npm run cek:sumber` ikut memeriksa dokumen sumber rekomendasi (sekali per dokumen).
+
+## D-045 · Plus Jakarta Sans lewat `next/font`, variabel di `<html>`
+
+Font teks diganti dari Geist ke **Plus Jakarta Sans** (`next/font/google`, font variabel 200–800, `display: swap`, di-host sendiri saat build). Geist Mono tetap dipakai untuk `--font-mono`.
+
+**Bug lama yang ikut diperbaiki:** kelas variabel `next/font` sebelumnya dipasang di `<body>`, padahal Tailwind menerapkan `font-family: var(--font-sans)` di `<html>`. Di `<html>` variabelnya tidak terdefinisi, sehingga seluruh aplikasi selama ini tampil dengan font sistem, dan Geist tidak pernah terpakai. Kelas variabel kini dipasang di `<html>`. Sudah diperiksa di browser: `font-family` di `<html>` = `"Plus Jakarta Sans", "Plus Jakarta Sans Fallback"`, dan fontnya berstatus `loaded`.
