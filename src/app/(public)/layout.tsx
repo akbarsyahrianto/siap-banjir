@@ -17,11 +17,11 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           Lewati ke konten
         </a>
         <SiteHeader />
-        <main id="konten" className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+        <main id="konten" className="mx-auto w-full max-w-5xl flex-1 px-4 pt-3 pb-6">
           {children}
         </main>
         {/* Ruang kosong agar footer tidak tertutup BottomNav di HP. */}
-        <div className="pb-16 md:pb-0">
+        <div className="pb-24 md:pb-0">
           <SiteFooter />
         </div>
         <BottomNav />

@@ -53,36 +53,68 @@
   --color-risk-sedang-foreground: var(--risk-sedang-foreground);
   --color-risk-tinggi: var(--risk-tinggi);
   --color-risk-tinggi-foreground: var(--risk-tinggi-foreground);
+  --color-risk-rendah-tint: var(--risk-rendah-tint);
+  --color-risk-rendah-garis: var(--risk-rendah-garis);
+  --color-risk-rendah-teks: var(--risk-rendah-teks);
+  --color-risk-sedang-tint: var(--risk-sedang-tint);
+  --color-risk-sedang-garis: var(--risk-sedang-garis);
+  --color-risk-sedang-teks: var(--risk-sedang-teks);
+  --color-risk-tinggi-tint: var(--risk-tinggi-tint);
+  --color-risk-tinggi-garis: var(--risk-tinggi-garis);
+  --color-risk-tinggi-teks: var(--risk-tinggi-teks);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-lembut: var(--primary-lembut);
+  --color-darurat: var(--darurat);
+  --color-darurat-foreground: var(--darurat-foreground);
+  --color-darurat-lembut: var(--darurat-lembut);
+  --color-darurat-teks: var(--darurat-teks);
 }
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Biru (air / kepercayaan) = blue-700, kontras dengan putih > 4.5:1. */
-  --primary: oklch(0.488 0.243 264.376);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0.014 254.604);
-  --secondary-foreground: oklch(0.379 0.146 265.522);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.97 0.014 254.604);
-  --accent-foreground: oklch(0.379 0.146 265.522);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.623 0.214 259.815);
-  /* Rendah = hijau, Sedang = amber, Tinggi = merah. */
-  --risk-rendah: oklch(0.527 0.154 150.069);
-  --risk-rendah-foreground: oklch(0.985 0 0);
-  --risk-sedang: oklch(0.828 0.189 84.429);
-  --risk-sedang-foreground: oklch(0.279 0.077 45.635);
-  --risk-tinggi: oklch(0.505 0.213 27.518);
-  --risk-tinggi-foreground: oklch(0.985 0 0);
+  /* Palet desain ulang (kanvas "Siap Banjir — Desain Ulang", D-046). */
+  --background: #f3f5f9;
+  --foreground: #0e1726;
+  --card: #ffffff;
+  --card-foreground: #0e1726;
+  --popover: #ffffff;
+  --popover-foreground: #0e1726;
+  /* Biru (air / kepercayaan), kontras dengan putih 7,6:1. */
+  --primary: #1742c9;
+  --primary-hover: #0f2f99;
+  --primary-foreground: #ffffff;
+  --primary-lembut: #e3eafd;
+  --secondary: #e3eafd;
+  --secondary-foreground: #0f2f99;
+  --muted: #e3e8ef;
+  --muted-foreground: #4a5568;
+  --accent: #e3eafd;
+  --accent-foreground: #0f2f99;
+  --destructive: #b4141c;
+  --border: #d5dce6;
+  --input: #9aa6b8;
+  --ring: #1742c9;
+  /* Tombol & kartu darurat. */
+  --darurat: #b4141c;
+  --darurat-foreground: #ffffff;
+  --darurat-lembut: #fde7e7;
+  --darurat-teks: #7a0a10;
+  /* Rendah = hijau, Sedang = kuning, Tinggi = merah; tint = latar, garis = border, teks = teks di atas tint. */
+  --risk-rendah: #0a6b31;
+  --risk-rendah-foreground: #ffffff;
+  --risk-rendah-tint: #e4f4ea;
+  --risk-rendah-garis: #0a6b31;
+  --risk-rendah-teks: #0a6b31;
+  --risk-sedang: #f5c400;
+  --risk-sedang-foreground: #1b1600;
+  --risk-sedang-tint: #fff6cf;
+  --risk-sedang-garis: #b98c00;
+  --risk-sedang-teks: #5a4700;
+  --risk-tinggi: #b4141c;
+  --risk-tinggi-foreground: #ffffff;
+  --risk-tinggi-tint: #fde7e7;
+  --risk-tinggi-garis: #b4141c;
+  --risk-tinggi-teks: #7a0a10;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -151,5 +183,67 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Ilustrasi air Beranda (D-046): air naik sekali saat tampil, kilau permukaan, tetes hujan. */
+@keyframes sb-naik {
+  from {
+    transform: translateZ(0px);
+  }
+}
+@keyframes sb-tumbuh-h {
+  from {
+    height: 0px;
+  }
+}
+@keyframes sb-tumbuh-w {
+  from {
+    width: 0px;
+  }
+}
+@keyframes sb-kilau {
+  to {
+    background-position: 31.11px 0;
+  }
+}
+@keyframes sb-tetes {
+  from {
+    transform: translate(0px, -24px) rotate(11deg);
+  }
+  to {
+    transform: translate(-52px, 290px) rotate(11deg);
+  }
+}
+.sb-naik {
+  animation: sb-naik 3.2s cubic-bezier(0.22, 0.75, 0.25, 1) 0.3s both;
+}
+.sb-tumbuh-h {
+  animation: sb-tumbuh-h 3.2s cubic-bezier(0.22, 0.75, 0.25, 1) 0.3s both;
+}
+.sb-tumbuh-w {
+  animation: sb-tumbuh-w 3.2s cubic-bezier(0.22, 0.75, 0.25, 1) 0.3s both;
+}
+.sb-kilau {
+  animation: sb-kilau 3s linear infinite;
+}
+.sb-tetes {
+  animation-name: sb-tetes;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-naik,
+  .sb-tumbuh-h,
+  .sb-tumbuh-w,
+  .sb-kilau {
+    animation: none !important;
+  }
+  .sb-tetes {
+    display: none;
   }
 }

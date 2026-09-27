@@ -1,21 +1,23 @@
 import { Suspense } from "react";
-import { GrafikHujan48Jam } from "@/components/cuaca/grafik-hujan-48jam";
-import { KartuCuaca } from "@/components/cuaca/kartu-cuaca";
-import { TombolAktifkanPeringatan } from "@/components/notifikasi/tombol-aktifkan-peringatan";
-import { KartuRingkasanRisiko } from "@/components/risiko/kartu-ringkasan-risiko";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KartuPeringatanDini } from "@/components/beranda/kartu-peringatan-dini";
+import { KartuCuacaRingkas, TautanKontakDarurat, WilayahDipantau } from "@/components/beranda/kartu-ringkas";
+import { PanelLevel } from "@/components/beranda/panel-level";
+import { StatusData } from "@/components/cuaca/status-data";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
-import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
-import { APP_TAGLINE } from "@/lib/constants";
+import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
+import { APP_NAME } from "@/lib/constants";
+import { formatNilaiParameter } from "@/lib/risiko";
 import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
-import { seriHujan48Jam } from "@/server/services/seri-cuaca";
-import { namaTampilan } from "@/server/services/wilayah.service";
 import { muatPemilih } from "@/server/wilayah-terpilih";
 
 type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
 
+/**
+ * Beranda (desain ulang, D-046): wilayah dipantau → level risiko dengan ilustrasi air →
+ * cuaca & peringatan dini → kontak darurat. Tanpa wilayah: pemilih wilayah langsung di sini.
+ */
 export default async function BerandaPage({ searchParams }: Props) {
   const { wilayah } = await searchParams;
   // lihatInformasi(wilayah): pemilih wilayah + info cuaca awal (langkah 1 sequence diagram).
@@ -23,65 +25,58 @@ export default async function BerandaPage({ searchParams }: Props) {
   const terpilih = desa?.wilayah.idWilayah ?? null;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl bg-primary px-5 py-6 text-primary-foreground">
-        <h1 className="text-3xl font-bold tracking-tight">Siap Banjir</h1>
-        <p className="mt-1 text-lg opacity-90">{APP_TAGLINE}.</p>
-      </section>
+    <div className="mx-auto flex max-w-xl flex-col gap-4">
+      <h1 className="sr-only">{APP_NAME}: Beranda</h1>
 
-      <Card>
-        <CardContent>
-          <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
-        </CardContent>
-      </Card>
-
-      {terpilih ? (
-        <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
-          <RingkasanWilayah idWilayah={terpilih} />
-          <AutoRefresh />
-        </Suspense>
+      {terpilih && namaTerpilih ? (
+        <>
+          <WilayahDipantau nama={namaTerpilih} />
+          <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
+            <RingkasanWilayah idWilayah={terpilih} namaWilayah={namaTerpilih} />
+            <AutoRefresh />
+          </Suspense>
+        </>
       ) : (
-        <BelumPilihWilayah />
+        <>
+          <BelumPilihWilayah />
+          <section aria-label="Pilih wilayah" className="rounded-[20px] border bg-card p-4">
+            <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
+          </section>
+        </>
       )}
-
-      <Card>
-        <CardContent className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-lg font-semibold">Dapatkan peringatan dini</p>
-            <p className="text-muted-foreground">Terima notifikasi saat risiko banjir Sedang atau Tinggi.</p>
-          </div>
-          <TombolAktifkanPeringatan wilayah={terpilih && namaTerpilih ? { idWilayah: terpilih, namaWilayah: namaTerpilih } : null} />
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
-async function RingkasanWilayah({ idWilayah }: { idWilayah: string }) {
+async function RingkasanWilayah({ idWilayah, namaWilayah }: { idWilayah: string; namaWilayah: string }) {
   const kondisi = await lihatKondisiWilayah(idWilayah);
   if (!kondisi) return <BelumPilihWilayah />;
   if (!kondisi.cuaca || !kondisi.risiko) return <DataCuacaTidakTersedia />;
 
-  const { wilayah, leluhur, cuaca, risiko } = kondisi;
+  const { cuaca, risiko } = kondisi;
+  const hujan24 = risiko.hasilPerParameter.find((p) => p.parameter === "hujan_24jam");
+  const dataLama = cuaca.sumber === "cadangan" || cuaca.sumber === "hemat-kuota";
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
-        <KartuRingkasanRisiko risiko={risiko} idWilayah={wilayah.idWilayah} />
-        <KartuCuaca
-          dataCuaca={cuaca.dataCuaca}
-          sumber={cuaca.sumber}
-          namaWilayah={namaTampilan(leluhur)}
-          koordinatPerkiraan={wilayah.koordinatPerkiraan}
+    <>
+      <PanelLevel
+        level={risiko.level}
+        deskripsi={risiko.deskripsi}
+        simulasi={risiko.simulasi}
+        waktuData={cuaca.dataCuaca.waktuAmbil}
+        idWilayah={idWilayah}
+      />
+      {dataLama && <StatusData sumber={cuaca.sumber} waktuAmbil={cuaca.dataCuaca.waktuAmbil} />}
+      <div className="grid grid-cols-2 gap-3">
+        <KartuCuacaRingkas
+          suhu={cuaca.dataCuaca.suhu}
+          kodeCuaca={cuaca.dataCuaca.kondisiCuaca}
+          hujan24Jam={hujan24 ? { teks: formatNilaiParameter("hujan_24jam", hujan24.nilai), level: hujan24.level } : null}
         />
+        <KartuPeringatanDini wilayah={{ idWilayah, namaWilayah }} />
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Curah hujan 48 jam</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <GrafikHujan48Jam data={seriHujan48Jam(cuaca.raw)} />
-        </CardContent>
-      </Card>
-    </div>
+      {/* Sementara ke bagian kontak di halaman Risiko; diganti halaman Kontak di commit berikutnya. */}
+      <TautanKontakDarurat href={`/risiko?wilayah=${idWilayah}#kontak-darurat`} tinggi={risiko.level === "TINGGI"} />
+    </>
   );
 }

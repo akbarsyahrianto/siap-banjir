@@ -434,3 +434,24 @@ Catatan migrasi: `prisma migrate dev` memberi timestamp UTC, sedangkan dua migra
 Font teks diganti dari Geist ke **Plus Jakarta Sans** (`next/font/google`, font variabel 200–800, `display: swap`, di-host sendiri saat build). Geist Mono tetap dipakai untuk `--font-mono`.
 
 **Bug lama yang ikut diperbaiki:** kelas variabel `next/font` sebelumnya dipasang di `<body>`, padahal Tailwind menerapkan `font-family: var(--font-sans)` di `<html>`. Di `<html>` variabelnya tidak terdefinisi, sehingga seluruh aplikasi selama ini tampil dengan font sistem, dan Geist tidak pernah terpakai. Kelas variabel kini dipasang di `<html>`. Sudah diperiksa di browser: `font-family` di `<html>` = `"Plus Jakarta Sans", "Plus Jakarta Sans Fallback"`, dan fontnya berstatus `loaded`.
+
+## D-046 · Desain ulang: Beranda dan shell aplikasi
+
+**Sumber desain.** Kanvas "Siap Banjir — Desain Ulang" (artefak Design di aplikasi Claude). Beranda punya tiga board (Risiko Rendah/Sedang/Tinggi), yang ternyata satu komponen dengan parameter `level`. Desain dibaca dari berkas board-nya, dan kanvas tidak diubah.
+
+**Keputusan.**
+- **Token warna mengikuti kanvas** (`globals.css`, mode terang): latar `#F3F5F9`, teks `#0E1726`, biru utama `#1742C9`, garis `#D5DCE6`, merah darurat `#B4141C`. Tiap level punya warna solid, tint, garis, dan teks: Rendah `#0A6B31`, Sedang `#F5C400` dengan teks `#1B1600`, Tinggi `#B4141C`. Blok `.dark` tidak diubah karena tidak ada kode yang mengaktifkannya.
+- **Shell global** (dipakai semua halaman): logo perisai dengan tetes air, tombol **Darurat** merah di header, bottom nav dengan penanda pil untuk menu aktif, dan footer berisi disclaimer + atribusi Open-Meteo. Baris "Darurat? Hubungi 112" dihapus dari footer karena digantikan tombol Darurat.
+- **Beranda:** wilayah dipantau (→ Pengaturan), kartu level (badge + jam data, ilustrasi air 3D, skala tiga level, deskripsi, ajakan ke halaman Risiko), kartu Cuaca terkini (→ Cuaca) dan Peringatan dini (→ Pengaturan), serta kartu Kontak darurat yang merah penuh saat level Tinggi.
+  - **Judul kartu level memakai `deskripsi` asli dari mesin risiko** (mis. "Risiko TINGGI karena curah hujan 24 jam terakhir 60 mm."), bukan teks contoh di kanvas. Kalimat tindakan dan teks tombol per level mengikuti kanvas (`GAYA_LEVEL.ringkasan` / `ajakan`). `pesan` yang dipakai halaman Risiko belum diubah.
+  - "Hujan 24 jam" = nilai parameter `hujan_24jam` dari perhitungan risiko, diwarnai sesuai level parameter itu. Ikon cuaca mengikuti kode cuaca asli.
+  - Risiko hasil simulasi (D-041) diberi kotak "SIMULASI: level ini hasil uji coba…" di kartu level.
+  - Data cadangan/hemat kuota tetap diberi peringatan (`StatusData`) di bawah kartu level.
+  - Kartu Peringatan dini menampilkan status perangkat (Aktif + levelnya, Belum aktif, Nonaktif, Izin ditolak, Tidak tersedia). Kalau statusnya "Belum aktif", kartu langsung membuka dialog izin.
+  - **Tanpa wilayah terpilih** (tidak ada di kanvas): Beranda menampilkan pemilih wilayah seperti sebelumnya, supaya pengguna baru tidak perlu pindah ke Pengaturan dulu.
+  - Grafik 48 jam, kartu cuaca lengkap, dan tombol peringatan lama dihapus dari Beranda, sesuai kanvas. Grafik ada di halaman Cuaca. `KartuRingkasanRisiko` dan `TombolAktifkanPeringatan` dihapus karena tidak dipakai lagi.
+- **Ilustrasi air** di-port langsung dari kanvas (CSS 3D transform, tanpa library): tinggi air 4/10/20 px dan 0/14/26 tetes hujan untuk Rendah/Sedang/Tinggi. Diberi keterangan "Ilustrasi level risiko, bukan ketinggian air sebenarnya". Semua animasi dimatikan saat `prefers-reduced-motion`.
+- **Aksesibilitas:** `h1` tersembunyi "Siap Banjir: Beranda", skala level berupa `<ol>` dengan `aria-current="step"` dan teks "Saat ini" (tidak hanya warna), ilustrasi diberi `role="img"` + label, dan fokus keyboard ditandai outline biru 3 px.
+- **Sementara:** tombol Darurat dan kartu Kontak darurat mengarah ke `/risiko#kontak-darurat`. Keduanya akan diarahkan ke halaman Kontak ketika board "Nomor Darurat" diimplementasikan.
+
+**Diuji:** e2e alur utama disesuaikan (wilayah dipantau → Pengaturan, ilustrasi, skala, hujan 24 jam, kontak). Ada tes baru untuk Beranda risiko tinggi (badge, label simulasi, ajakan penyelamatan, kartu kontak merah → bagian kontak). Assertion dibatasi ke `#konten` karena selama streaming isi Suspense sempat ada di template tersembunyi di akhir `<body>`.

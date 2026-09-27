@@ -1,19 +1,11 @@
 import { cn } from "@/lib/utils";
 
-/** Logo Siap Banjir: perisai dengan tetes air dan tanda peringatan. */
+/** Logo Siap Banjir: perisai dengan tetes air (desain ulang, D-046). */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={cn("size-8", className)}>
-      <path
-        d="M16 2 4 6.5v8.2c0 7.3 5 13.3 12 15.3 7-2 12-8 12-15.3V6.5L16 2Z"
-        className="fill-primary"
-      />
-      <path
-        d="M16 7.5c-2.9 3.9-5.5 7.3-5.5 10.3a5.5 5.5 0 0 0 11 0c0-3-2.6-6.4-5.5-10.3Z"
-        className="fill-primary-foreground"
-      />
-      <rect x="15" y="12.5" width="2" height="5.5" rx="1" className="fill-primary" />
-      <circle cx="16" cy="20.5" r="1.2" className="fill-primary" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={cn("size-[30px]", className)}>
+      <path d="M12 2 4 5v6.5c0 5 3.4 9.1 8 10.5 4.6-1.4 8-5.5 8-10.5V5l-8-3z" className="fill-primary" />
+      <path d="M12 7s3.2 3.4 3.2 5.8a3.2 3.2 0 0 1-6.4 0C8.8 10.4 12 7 12 7z" className="fill-primary-foreground" />
     </svg>
   );
 }

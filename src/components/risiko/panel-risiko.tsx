@@ -25,18 +25,20 @@ import { KontakDarurat } from "./kontak-darurat";
 import { PenangananTabs } from "./penanganan-tabs";
 
 function Bagian({
+  id,
   judul,
   ikon: Ikon,
   children,
   className,
 }: {
+  id?: string;
   judul: string;
   ikon: typeof Activity;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <Card className={className}>
+    <Card id={id} className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <Ikon className="size-5 text-primary" aria-hidden="true" />
@@ -170,7 +172,7 @@ export function PanelRisiko({
         </Card>
       </section>
 
-      <Bagian judul="Kontak darurat" ikon={Phone}>
+      <Bagian id="kontak-darurat" judul="Kontak darurat" ikon={Phone}>
         <KontakDarurat kontak={kontak} />
       </Bagian>
     </div>
