@@ -153,19 +153,50 @@ export const persiapanSeed: PersiapanDiniInput[] = [
   { idWilayah: KODE.dayeuhkolot, levelRisiko: "SEDANG", urutan: 0, isiPersiapan: "Pantau tinggi muka air Sungai Citarum dan informasi dari aparat desa/kelurahan." },
 ];
 
+/**
+ * Buku Saku BNPB, bab Banjir: Prabencana hal. 33–35, Saat Bencana hal. 36–37, Pascabencana hal. 38–39
+ * (DECISIONS D-044). Nomor halaman = nomor cetak di buku; di file PDF halamannya +2.
+ */
+export const BUKU_SAKU_BNPB = {
+  nama: "BNPB, Buku Saku Tanggap Tangkas Tangguh Menghadapi Bencana",
+  url: "https://www.bnpb.go.id/storage/app/media/Buku%20BNPB/Buku%20Saku%20Bencana%20BNPB.pdf",
+} as const;
+
+export function sumberBukuSaku(halaman: string) {
+  const pertama = Number.parseInt(halaman, 10);
+  return { sumberNama: `${BUKU_SAKU_BNPB.nama}, hal. ${halaman}`, sumberUrl: `${BUKU_SAKU_BNPB.url}#page=${pertama + 2}` };
+}
+
+/**
+ * Detail Mitigasi dari Buku Saku BNPB (parafrase dekat; tidak menambah hal yang tidak disebut buku).
+ * Level risiko = potensi banjir: RENDAH/SEDANG → prabencana, TINGGI → siaga evakuasi + bagian
+ * "Jika banjir terjadi". Langkah pascabencana ada di Informasi (lihat informasiSeed).
+ */
 export const rekomendasiSeed: RekomendasiInput[] = [
-  // RENDAH
-  { levelRisiko: "RENDAH", urutan: 1, isiRekomendasi: "Beraktivitas seperti biasa sambil tetap memantau perkembangan cuaca." },
-  { levelRisiko: "RENDAH", urutan: 2, isiRekomendasi: "Jangan membuang sampah ke sungai atau saluran air." },
-  // SEDANG
-  { levelRisiko: "SEDANG", urutan: 1, isiRekomendasi: "Hindari bantaran sungai, jalan underpass, dan kawasan yang biasa tergenang." },
-  { levelRisiko: "SEDANG", urutan: 2, isiRekomendasi: "Tunda perjalanan yang tidak mendesak saat hujan lebat." },
-  { levelRisiko: "SEDANG", urutan: 3, isiRekomendasi: "Ikuti pembaruan peringatan dini dari BMKG dan BPBD setempat." },
-  // TINGGI
-  { levelRisiko: "TINGGI", urutan: 1, isiRekomendasi: "Segera mengungsi ke tempat yang lebih tinggi bila diminta petugas atau air terus naik." },
-  { levelRisiko: "TINGGI", urutan: 2, isiRekomendasi: "Jangan berjalan atau berkendara menembus arus banjir; arus setinggi lutut dapat menghanyutkan orang." },
-  { levelRisiko: "TINGGI", urutan: 3, isiRekomendasi: "Jauhi tiang dan kabel listrik yang terendam air." },
-  { levelRisiko: "TINGGI", urutan: 4, isiRekomendasi: "Hubungi 112 jika membutuhkan pertolongan darurat." },
+  // RENDAH: kesiapsiagaan prabencana
+  { levelRisiko: "RENDAH", urutan: 1, isiRekomendasi: "Ketahui apakah tempat tinggal Anda berada di zona rawan banjir.", ...sumberBukuSaku("33") },
+  { levelRisiko: "RENDAH", urutan: 2, isiRekomendasi: "Kenali saluran dan jalur yang sering dilalui air banjir serta dampaknya bagi rumah Anda.", ...sumberBukuSaku("33") },
+  { levelRisiko: "RENDAH", urutan: 3, isiRekomendasi: "Pahami istilah peringatan banjir, seperti Siaga I sampai Siaga IV, dan langkah yang harus dilakukan pada tiap tingkat.", ...sumberBukuSaku("33") },
+  { levelRisiko: "RENDAH", urutan: 4, isiRekomendasi: "Ketahui cara mematikan air, listrik, dan gas di rumah.", ...sumberBukuSaku("34") },
+  { levelRisiko: "RENDAH", urutan: 5, isiRekomendasi: "Simpan dokumen penting di tempat yang aman. Buat catatan dan foto harta benda Anda.", ...sumberBukuSaku("34–35") },
+  // SEDANG: persiapan evakuasi (prabencana) + pantau informasi
+  { levelRisiko: "SEDANG", urutan: 1, isiRekomendasi: "Siapkan evakuasi: pahami rute evakuasi dan lokasi daerah yang lebih tinggi.", ...sumberBukuSaku("34") },
+  { levelRisiko: "SEDANG", urutan: 2, isiRekomendasi: "Bicarakan ancaman banjir dengan keluarga dan sepakati tempat bertemu jika terpencar.", ...sumberBukuSaku("34") },
+  { levelRisiko: "SEDANG", urutan: 3, isiRekomendasi: "Siapkan bekal untuk hidup mandiri sekurangnya tiga hari: tas siaga bencana, makanan, dan air minum.", ...sumberBukuSaku("34") },
+  { levelRisiko: "SEDANG", urutan: 4, isiRekomendasi: "Ketahui kebutuhan khusus anggota keluarga dan tetangga bila banjir terjadi.", ...sumberBukuSaku("34") },
+  { levelRisiko: "SEDANG", urutan: 5, isiRekomendasi: "Simak informasi banjir dari berbagai media. Informasi resmi di daerah biasanya berasal dari BPBD.", ...sumberBukuSaku("33, 36") },
+  // TINGGI: siaga evakuasi
+  { levelRisiko: "TINGGI", urutan: 1, isiRekomendasi: "Simak terus informasi banjir dari berbagai media untuk meningkatkan kesiapsiagaan.", ...sumberBukuSaku("36") },
+  { levelRisiko: "TINGGI", urutan: 2, isiRekomendasi: "Bersiap evakuasi dengan mengamankan rumah. Jika masih ada waktu, pindahkan perabot ke tempat yang aman dari banjir dan letakkan barang berharga di bagian rumah yang lebih tinggi.", ...sumberBukuSaku("36") },
+  { levelRisiko: "TINGGI", urutan: 3, isiRekomendasi: "Matikan jaringan listrik bila ada instruksi dari pihak berwenang dan cabut peralatan yang tersambung listrik. Jangan menyentuh peralatan listrik saat berdiri di air.", ...sumberBukuSaku("36") },
+  { levelRisiko: "TINGGI", urutan: 4, isiRekomendasi: "Bersihkan dan siapkan penampungan air untuk berjaga-jaga jika kehabisan air bersih.", ...sumberBukuSaku("37") },
+  { levelRisiko: "TINGGI", urutan: 5, isiRekomendasi: "Waspadai saluran air dan jalur yang bisa dilalui arus deras. Banjir bandang kerap datang tanpa peringatan, bahkan saat hujan biasa.", ...sumberBukuSaku("36–37") },
+  // TINGGI: jika banjir terjadi (panduan saat bencana)
+  { levelRisiko: "TINGGI", bagian: "JIKA_BANJIR", urutan: 1, isiRekomendasi: "Segera evakuasi ke tempat yang lebih tinggi.", ...sumberBukuSaku("36") },
+  { levelRisiko: "TINGGI", bagian: "JIKA_BANJIR", urutan: 2, isiRekomendasi: "Jangan berjalan di arus air. Beberapa langkah saja di arus air dapat membuat Anda jatuh.", ...sumberBukuSaku("37") },
+  { levelRisiko: "TINGGI", bagian: "JIKA_BANJIR", urutan: 3, isiRekomendasi: "Jika terpaksa berjalan di air, pilih pijakan yang tidak bergerak dan gunakan tongkat untuk memeriksa pijakan.", ...sumberBukuSaku("37") },
+  { levelRisiko: "TINGGI", bagian: "JIKA_BANJIR", urutan: 4, isiRekomendasi: "Jangan mengemudikan mobil di wilayah banjir. Jika air mulai naik, tinggalkan mobil dan pergi ke tempat yang lebih tinggi.", ...sumberBukuSaku("37") },
+  { levelRisiko: "TINGGI", bagian: "JIKA_BANJIR", urutan: 5, isiRekomendasi: "Waspadai arus bawah, saluran air, kubangan, dan tempat lain yang tergenang air.", ...sumberBukuSaku("36") },
 ];
 
 export const informasiSeed: InformasiInput[] = [
@@ -196,7 +227,16 @@ export const informasiSeed: InformasiInput[] = [
     tanggal: "2026-01-08",
     judul: "Nomor Darurat yang Perlu Disimpan",
     isi:
-      "Simpan nomor berikut di ponsel Anda:\n- 112: Layanan darurat terpadu\n- 117: Call Center BNPB\n- 119: Layanan kesehatan / ambulans\n- 113: Pemadam kebakaran dan penyelamatan\n\nCari juga nomor BPBD kabupaten/kota Anda melalui situs resmi pemerintah daerah.",
+      "Simpan nomor berikut di ponsel Anda:\n- 112: Layanan darurat terpadu\n- 117: Call Center BNPB\n- 119: Layanan kesehatan / ambulans\n- 113: Pemadam kebakaran dan penyelamatan\n\nLayanan 112 diselenggarakan per kabupaten/kota dan belum tersedia di semua daerah. Status layanan 112 di wilayah Anda (menurut Portal 112 Komdigi) tampil di bagian Kontak darurat halaman Risiko.\n\nCari juga nomor BPBD kabupaten/kota Anda melalui situs resmi pemerintah daerah.",
+  },
+  {
+    // Panduan pascabencana: selalu bisa dibuka di Informasi, tidak bergantung level risiko (D-044).
+    kategori: "UMUM",
+    tanggal: "2026-09-27",
+    judul: "Setelah Banjir Surut: Langkah Aman Menurut BNPB",
+    isi:
+      "Langkah berikut dari Buku Saku BNPB untuk masa setelah banjir (pascabencana).\n\nKeselamatan:\n- Hindari air banjir karena mungkin tercemar zat berbahaya dan ada ancaman tersengat listrik.\n- Waspadai instalasi listrik.\n- Hindari air yang bergerak.\n- Hindari area yang airnya baru saja surut karena jalan bisa keropos dan ambles.\n- Hindari lokasi yang masih terkena bencana, kecuali jika pihak berwenang membutuhkan sukarelawan.\n- Kembali ke rumah sesuai perintah pihak berwenang.\n- Tetap di luar gedung atau rumah yang masih dikelilingi air.\n- Hati-hati saat memasuki gedung karena ada ancaman kerusakan yang tidak terlihat, seperti pada fondasi.\n\nKesehatan dan kebersihan:\n- Cuci tangan dengan sabun dan air bersih jika Anda terkena air banjir.\n- Buang makanan yang terkontaminasi air banjir.\n- Dengarkan berita atau informasi tentang kondisi air, serta tempat mendapatkan bantuan hunian, pakaian, dan makanan.\n- Dapatkan perawatan kesehatan di fasilitas kesehatan terdekat.\n- Bersihkan tempat tinggal dan lingkungan rumah dari sisa kotoran setelah banjir.\n- Lakukan Pemberantasan Sarang Nyamuk (PSN).\n- Ikut serta dalam kaporitisasi sumur gali serta perbaikan jamban dan Saluran Pembuangan Air Limbah (SPAL).",
+    ...sumberBukuSaku("38–39"),
   },
   {
     kategori: "UMUM",

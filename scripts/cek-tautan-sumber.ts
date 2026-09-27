@@ -7,7 +7,7 @@
  * mencoba ulang sekali untuk gangguan jaringan sesaat. Keluar dengan kode 1 jika ada yang gagal.
  * Tidak menyentuh database.
  */
-import { informasiSeed } from "../prisma/seed-data";
+import { informasiSeed, rekomendasiSeed } from "../prisma/seed-data";
 import { SUMBER_DETEKSI } from "../src/lib/sumber-informasi";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0";
@@ -36,6 +36,11 @@ async function main() {
   const daftar = [
     ...informasiSeed.filter((i) => i.sumberUrl).map((i) => ({ judul: i.judul, url: i.sumberUrl as string })),
     { judul: "Riwayat otomatis", url: SUMBER_DETEKSI.url },
+    // Rekomendasi merujuk dokumen yang sama dengan #page berbeda; cukup dicek sekali per dokumen.
+    ...[...new Set(rekomendasiSeed.flatMap((r) => (r.sumberUrl ? [r.sumberUrl.split("#")[0] as string] : [])))].map((url) => ({
+      judul: "Detail Mitigasi",
+      url,
+    })),
   ];
   const hasil = await Promise.all(daftar.map(async (d) => ({ ...d, ...(await cek(d.url)) })));
   for (const h of hasil) console.log(`${h.ok ? "✔" : "✘"} ${h.keterangan.padEnd(8)} ${h.judul}\n    ${h.url}`);

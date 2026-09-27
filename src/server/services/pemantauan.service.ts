@@ -121,7 +121,13 @@ export async function lihatPenanganan(idWilayah: string, level: TingkatRisiko): 
   return {
     level,
     persiapan: persiapan.map(({ idPersiapan, isiPersiapan }) => ({ idPersiapan, isiPersiapan })),
-    rekomendasi: rekomendasi.map(({ idRekomendasi, isiRekomendasi }) => ({ idRekomendasi, isiRekomendasi })),
+    rekomendasi: rekomendasi.map(({ idRekomendasi, isiRekomendasi, bagian, sumberNama, sumberUrl }) => ({
+      idRekomendasi,
+      isiRekomendasi,
+      bagian,
+      sumberNama,
+      sumberUrl,
+    })),
   };
 }
 

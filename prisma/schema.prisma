@@ -43,6 +43,13 @@ enum KategoriInformasi {
   RIWAYAT_KEJADIAN
 }
 
+// Kelompok rekomendasi di Detail Mitigasi (DECISIONS D-044). JIKA_BANJIR hanya untuk level TINGGI:
+// level risiko adalah potensi banjir, jadi langkah saat banjir ditampilkan terpisah.
+enum BagianRekomendasi {
+  SIAGA
+  JIKA_BANJIR
+}
+
 // Parameter turunan dari data Open-Meteo yang dibandingkan dengan AmbangRisiko.
 enum ParameterRisiko {
   hujan_1jam
@@ -269,12 +276,16 @@ model PersiapanDini {
 }
 
 model Rekomendasi {
-  idRekomendasi  String        @id @default(cuid()) @map("id_rekomendasi")
-  idWilayah      String?       @map("id_wilayah")
-  levelRisiko    TingkatRisiko @map("level_risiko")
-  isiRekomendasi String        @map("isi_rekomendasi")
+  idRekomendasi  String            @id @default(cuid()) @map("id_rekomendasi")
+  idWilayah      String?           @map("id_wilayah")
+  levelRisiko    TingkatRisiko     @map("level_risiko")
+  isiRekomendasi String            @map("isi_rekomendasi")
   urutan         Int
-  tanggal        DateTime      @default(now())
+  bagian         BagianRekomendasi @default(SIAGA)
+  /// Rujukan asli termasuk halaman, mis. "BNPB, Buku Saku ..., hal. 36" (D-044).
+  sumberNama     String?           @map("sumber_nama")
+  sumberUrl      String?           @map("sumber_url")
+  tanggal        DateTime          @default(now())
 
   wilayah Wilayah? @relation(fields: [idWilayah], references: [idWilayah], onDelete: Cascade)
 

@@ -14,6 +14,7 @@ import {
   ambangRisikoInputSchema,
   informasiInputSchema,
   persiapanDiniInputSchema,
+  rekomendasiDasarSchema,
   rekomendasiInputSchema,
   type AmbangRisikoInput,
   type InformasiInput,
@@ -151,7 +152,7 @@ export async function tambahRekomendasi(input: RekomendasiInput) {
 }
 
 export async function ubahRekomendasi(idRekomendasi: string, input: Partial<RekomendasiInput>) {
-  const data = rekomendasiInputSchema.partial().parse(input);
+  const data = rekomendasiDasarSchema.partial().parse(input);
   return db.rekomendasi.update({ where: { idRekomendasi }, data });
 }
 

@@ -406,3 +406,20 @@ Catatan migrasi: `prisma migrate dev` memberi timestamp UTC, sedangkan dua migra
 **Konteks.** D-007 tidak mengisi nomor BPBD. Kebutuhan baru: nomor boleh diisi, tetapi hanya jika ada sumber resmi.
 
 **Keputusan.** `src/data/kontak-bpbd.ts` (`KONTAK_BPBD`, kunci = kode kab/kota atau provinsi pemilik BPBD) menyimpan `telepon`, `sumberNama`, `sumberUrl`, dan `diperiksaPada`. Tes mewajibkan URL `https` dengan domain `*.go.id` dan tanggal pemeriksaan. Nomor yang ada ditampilkan bersama tautan sumber dan tanggal pemeriksaannya. Selain itu ditampilkan "Nomor belum tersedia". Daftar ini **sengaja masih kosong**. Tabel "BPBD Provinsi Se-Indonesia" di Buku Saku BNPB (cetakan 2019/2020, hal. 83–91) adalah sumber resmi, tetapi datanya berusia beberapa tahun dan hasil ekstraksi teksnya tercampur antarbaris, sehingga belum dipakai sebelum diputuskan dan diperiksa per baris.
+
+## D-044 · Detail Mitigasi dari Buku Saku BNPB, dengan halaman sumber (menyimpang dari UML)
+
+**Konteks.** Isi Detail Mitigasi (rekomendasi) sebelumnya ditulis sendiri tanpa sumber. Isinya harus berasal dari panduan resmi BNPB dan mencantumkan halaman sumbernya.
+
+**Sumber yang diperiksa.**
+- *Pengenalan Karakteristik Bencana dan Upaya Mitigasinya di Indonesia* (BAKORNAS PB, edisi II 2007, `bnpb.go.id/.../pubs/470.pdf`) **tidak dipakai**. Bab banjirnya (hal. 17–25) berisi mitigasi kelembagaan (POKJA, SATLAK, tanggul, pengerukan), bukan langkah untuk warga. Bagian yang menyangkut warga hanya "Peranserta Masyarakat" (hal. 24–25), dan lembaga yang disebut sudah tidak ada sejak BNPB berdiri pada 2008.
+- **Dipakai:** *Buku Saku Tanggap Tangkas Tangguh Menghadapi Bencana* (BNPB, ISBN 978-602-5693-05-2), [PDF di www.bnpb.go.id](https://www.bnpb.go.id/storage/app/media/Buku%20BNPB/Buku%20Saku%20Bencana%20BNPB.pdf). Bab Banjir dibagi Prabencana (hal. 33–35), Saat Bencana (hal. 36–37), dan Pascabencana (hal. 38–39). Catatan edisi: halaman impresum mencantumkan cetakan keempat Maret 2019, tetapi isinya menyebut peristiwa Juli 2020 (Satgas COVID-19), jadi file ini revisi yang lebih baru tanpa impresum yang diperbarui. Edisi 2012 (`pubs/478.pdf`) tidak dipakai karena lebih lama.
+
+**Keputusan.**
+- `Rekomendasi` mendapat kolom `bagian` (`SIAGA` | `JIKA_BANJIR`, default `SIAGA`), `sumberNama`, dan `sumberUrl` (migrasi `20260927120000_sumber_rekomendasi`). Validator hanya menerima URL `https` dan menolak `JIKA_BANJIR` di luar level TINGGI.
+- **Level risiko adalah potensi banjir, bukan banjir yang sedang terjadi.** Pemetaan: RENDAH → kesiapsiagaan prabencana (hal. 33–35); SEDANG → persiapan evakuasi prabencana dan memantau informasi (hal. 33–34, 36); TINGGI → siaga evakuasi (hal. 36–37), ditambah bagian terpisah **"Jika banjir terjadi"** dari panduan saat bencana (hal. 36–37).
+- **Pascabencana** (hal. 38–39) menjadi artikel Informasi UMUM "Setelah Banjir Surut: Langkah Aman Menurut BNPB", sehingga selalu bisa dibuka tanpa bergantung level. Bagian "Jika banjir terjadi" menautkan ke halaman Informasi.
+- Setiap butir adalah parafrase dekat dari buku dan tidak menambah hal yang tidak disebut buku. `sumberNama` diakhiri halaman cetak ("…, hal. 36"). `sumberUrl` memakai `#page=` ke halaman PDF, yaitu halaman cetak + 2 (diuji). UI menampilkan tautan halaman per butir dan nama dokumen sekali di bawah daftar.
+- Rekomendasi lama tanpa sumber dihapus, termasuk "Hubungi 112 …": kontak darurat sudah punya bagian sendiri (D-042).
+- Artikel "Nomor Darurat yang Perlu Disimpan" ditambah keterangan bahwa 112 diselenggarakan per kab/kota dan statusnya tampil di Kontak darurat.
+- `npm run cek:sumber` ikut memeriksa dokumen sumber rekomendasi (sekali per dokumen).

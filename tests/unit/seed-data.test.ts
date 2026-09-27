@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import { bacaDataWilayah } from "../../prisma/data-wilayah";
 import {
   ambangSeed,
+  BUKU_SAKU_BNPB,
   informasiSeed,
   persiapanSeed,
   profilWilayahSeed,
   rekomendasiSeed,
+  sumberBukuSaku,
 } from "../../prisma/seed-data";
 import { indukKode, kodeValid, levelKode } from "@/lib/kode-wilayah";
 import {
@@ -129,5 +131,43 @@ describe("seed konten", () => {
     expect(informasiInputSchema.safeParse({ ...dasar, sumberUrl: "http://contoh.go.id/a" }).success).toBe(false);
     expect(informasiInputSchema.safeParse({ ...dasar, sumberUrl: "javascript:alert(1)" }).success).toBe(false);
     expect(informasiInputSchema.safeParse({ ...dasar, sumberUrl: "https://contoh.go.id/a" }).success).toBe(true);
+  });
+});
+
+describe("seed Detail Mitigasi (Buku Saku BNPB, D-044)", () => {
+  it("setiap rekomendasi global merujuk Buku Saku BNPB beserta halamannya", () => {
+    for (const r of rekomendasiSeed.filter((x) => x.idWilayah == null)) {
+      expect(r.sumberNama?.startsWith(`${BUKU_SAKU_BNPB.nama}, hal. `), r.isiRekomendasi).toBe(true);
+      expect(r.sumberNama, r.isiRekomendasi).toMatch(/, hal\. \d+(–\d+)?(, \d+)?$/);
+      expect(r.sumberUrl, r.isiRekomendasi).toMatch(/^https:\/\/www\.bnpb\.go\.id\/.+#page=\d+$/);
+    }
+  });
+
+  it("#page menunjuk halaman PDF = halaman cetak + 2", () => {
+    expect(sumberBukuSaku("36")).toEqual({
+      sumberNama: `${BUKU_SAKU_BNPB.nama}, hal. 36`,
+      sumberUrl: `${BUKU_SAKU_BNPB.url}#page=38`,
+    });
+    expect(sumberBukuSaku("38–39").sumberUrl).toBe(`${BUKU_SAKU_BNPB.url}#page=40`);
+  });
+
+  it("bagian 'Jika banjir terjadi' hanya ada di level TINGGI", () => {
+    const jikaBanjir = rekomendasiSeed.filter((r) => r.bagian === "JIKA_BANJIR");
+    expect(jikaBanjir.length).toBeGreaterThan(0);
+    expect(new Set(jikaBanjir.map((r) => r.levelRisiko))).toEqual(new Set(["TINGGI"]));
+    expect(rekomendasiSeed.some((r) => r.levelRisiko === "TINGGI" && r.bagian !== "JIKA_BANJIR")).toBe(true);
+  });
+
+  it("validator menolak JIKA_BANJIR di luar level TINGGI dan sumber non-https", () => {
+    const dasar = { levelRisiko: "SEDANG", isiRekomendasi: "x", urutan: 1 } as const;
+    expect(rekomendasiInputSchema.safeParse({ ...dasar, bagian: "JIKA_BANJIR" }).success).toBe(false);
+    expect(rekomendasiInputSchema.safeParse({ ...dasar, levelRisiko: "TINGGI", bagian: "JIKA_BANJIR" }).success).toBe(true);
+    expect(rekomendasiInputSchema.safeParse({ ...dasar, sumberUrl: "http://www.bnpb.go.id/a.pdf" }).success).toBe(false);
+  });
+
+  it("panduan pascabencana tersedia di Informasi dengan sumber BNPB", () => {
+    const pasca = informasiSeed.find((i) => i.judul.startsWith("Setelah Banjir Surut"));
+    expect(pasca?.kategori).toBe("UMUM");
+    expect(pasca?.sumberNama).toBe(`${BUKU_SAKU_BNPB.nama}, hal. 38–39`);
   });
 });

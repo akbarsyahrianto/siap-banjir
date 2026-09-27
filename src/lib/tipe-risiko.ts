@@ -29,8 +29,16 @@ export type RisikoKlien = {
   waktuAmbilData: string;
 };
 
+export type RekomendasiKlien = {
+  idRekomendasi: string;
+  isiRekomendasi: string;
+  bagian: "SIAGA" | "JIKA_BANJIR";
+  sumberNama: string | null;
+  sumberUrl: string | null;
+};
+
 export type PenangananKlien = {
   level: TingkatRisiko;
   persiapan: { idPersiapan: string; isiPersiapan: string }[];
-  rekomendasi: { idRekomendasi: string; isiRekomendasi: string }[];
+  rekomendasi: RekomendasiKlien[];
 };

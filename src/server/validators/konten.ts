@@ -64,12 +64,21 @@ export const persiapanDiniInputSchema = z.object({
   urutan: z.number().int().min(0),
 });
 
-export const rekomendasiInputSchema = z.object({
+export const rekomendasiDasarSchema = z.object({
   idWilayah: idWilayahSchema.nullish(),
   levelRisiko: tingkatRisikoSchema,
   isiRekomendasi: z.string().min(1).max(500),
   urutan: z.number().int().min(0),
+  bagian: z.enum(["SIAGA", "JIKA_BANJIR"]).optional(),
+  sumberNama: z.string().min(1).max(200).nullish(),
+  sumberUrl: z.url({ protocol: /^https$/ }).max(500).nullish(),
 });
+
+// Level risiko = potensi banjir; langkah "jika banjir terjadi" hanya relevan di level TINGGI (D-044).
+export const rekomendasiInputSchema = rekomendasiDasarSchema.refine(
+  (r) => r.bagian !== "JIKA_BANJIR" || r.levelRisiko === "TINGGI",
+  { message: "bagian JIKA_BANJIR hanya untuk level TINGGI", path: ["bagian"] },
+);
 
 export type WilayahInput = z.input<typeof wilayahInputSchema>;
 export type AmbangRisikoInput = z.input<typeof ambangRisikoInputSchema>;
