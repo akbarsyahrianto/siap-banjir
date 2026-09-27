@@ -3,7 +3,11 @@
  * Unit yang dipantau (cuaca, risiko, langganan) adalah desa/kelurahan.
  */
 import { Prisma, type TingkatWilayah, type Wilayah } from "@prisma/client";
+import { KONTAK_BPBD } from "@/data/kontak-bpbd";
+import { formatTanggalLokalPanjang } from "@/lib/format";
 import { titikGrid } from "@/lib/grid";
+import type { KontakDarurat } from "@/lib/kontak-darurat";
+import { keteranganLayanan112, statusLayanan112, SUMBER_LAYANAN_112 } from "@/lib/layanan-112";
 import { jarakKm } from "@/lib/geo";
 import { indukKode, jenisWilayah, leluhurKode, levelKode } from "@/lib/kode-wilayah";
 import { db } from "@/server/db";
@@ -156,15 +160,37 @@ const KONTAK_NASIONAL = [
 ];
 
 /**
- * Nomor darurat nasional + BPBD setempat (nama saja; nomor BPBD tidak diisi, lihat D-007).
+ * Nomor darurat nasional + BPBD setempat.
+ * - 112 diberi keterangan status layanan di kab/kota itu (Portal 112 Komdigi, D-042).
+ * - Nomor BPBD hanya dari KONTAK_BPBD yang bersumber resmi; selain itu null (D-007, D-043).
  * Kota/kabupaten administrasi DKI Jakarta tidak punya BPBD sendiri → BPBD Provinsi.
  */
-export function kontakDaruratWilayah(leluhur: Pick<Wilayah, "idWilayah" | "namaWilayah" | "level">[]) {
+export function kontakDaruratWilayah(leluhur: Pick<Wilayah, "idWilayah" | "namaWilayah" | "level">[]): KontakDarurat[] {
   const prov = leluhur.find((w) => w.level === "PROVINSI");
   const kab = leluhur.find((w) => w.level === "KABKOTA");
-  const namaBpbd =
-    prov?.idWilayah === "31" ? `BPBD Provinsi ${prov.namaWilayah}` : kab ? `BPBD ${kab.namaWilayah}` : prov ? `BPBD Provinsi ${prov.namaWilayah}` : null;
-  return [...KONTAK_NASIONAL, ...(namaBpbd ? [{ nama: namaBpbd, telepon: null }] : [])];
+
+  const nasional: KontakDarurat[] = KONTAK_NASIONAL.map((k) =>
+    k.telepon === "112" && kab
+      ? { ...k, keterangan: keteranganLayanan112(kab.namaWilayah, statusLayanan112(kab.idWilayah)), sumber: SUMBER_LAYANAN_112 }
+      : k,
+  );
+
+  const pemilikBpbd = prov?.idWilayah === "31" ? prov : (kab ?? prov);
+  if (!pemilikBpbd) return nasional;
+  const nama = pemilikBpbd.level === "PROVINSI" ? `BPBD Provinsi ${pemilikBpbd.namaWilayah}` : `BPBD ${pemilikBpbd.namaWilayah}`;
+  const terverifikasi = KONTAK_BPBD[pemilikBpbd.idWilayah];
+  const bpbd: KontakDarurat = terverifikasi
+    ? {
+        nama,
+        telepon: terverifikasi.telepon,
+        sumber: {
+          nama: terverifikasi.sumberNama,
+          url: terverifikasi.sumberUrl,
+          keterangan: `diperiksa ${formatTanggalLokalPanjang(terverifikasi.diperiksaPada)}`,
+        },
+      }
+    : { nama, telepon: null };
+  return [...nasional, bpbd];
 }
 
 // ---------- Tulis (hanya seed/import; tidak diekspos) ----------

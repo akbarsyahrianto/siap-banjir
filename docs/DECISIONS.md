@@ -63,6 +63,8 @@ Ditambahkan seperlunya untuk memenuhi kebutuhan di prompt:
 
 ## D-007 · Nomor BPBD tidak diisi
 
+> **Diperbarui D-043:** nomor BPBD boleh diisi jika bersumber resmi terverifikasi.
+
 Nomor telepon BPBD per daerah berbeda-beda dan sering berubah. Supaya tidak mengarang data, seed hanya mengisi **nama** BPBD dengan `telepon: null`, ditambah nomor darurat nasional (112, 117 BNPB, 119, 113). Jika telepon null, UI mengarahkan pengguna ke 112 atau situs resmi BPBD. Nomor BPBD bisa ditambahkan lewat seed setelah diverifikasi.
 
 ## D-008 · Riwayat kejadian di seed
@@ -384,3 +386,23 @@ Catatan migrasi: `prisma migrate dev` memberi timestamp UTC, sedangkan dua migra
 **Pembersihan.** Simulasi Sariharjo (`34.04.12.2001`) cara lama dipulihkan: ambang `simulasi-34.04.12.2001`, riwayat "Risiko banjir TINGGI terdeteksi di Kabupaten Sleman" (satu-satunya riwayat otomatis di database), dan dua data cuaca sel `-7.7,110.4` sejak simulasi dihapus.
 
 **Diuji:** unit (`terapkanSimulasi`, judul/isi/tag notifikasi) dan integrasi (simulasi tingkat kecamatan diwariskan ke desa, ambang tidak berubah, push berlabel, riwayat tidak bertambah, pulihkan kembali ke risiko asli, anti-spam terpisah).
+
+## D-042 · Status layanan 112 per kab/kota dari Portal 112 Komdigi
+
+**Konteks.** Kontak darurat selalu menampilkan 112, padahal layanan 112 diselenggarakan per kab/kota dan belum semua daerah memilikinya.
+
+**Keputusan.**
+- **Sumber:** peta "Penyelenggaraan Layanan Panggilan Darurat 112" di [layanan112.komdigi.go.id](https://layanan112.komdigi.go.id/). `npm run data:112` (`scripts/impor-layanan-112.ts`) membaca `/get/list_server` (kode kab/kota di peta) dan `/get/detail_server/{kode}` (status, tanggal). Portal menolak klien non-browser (HTTP 403), jadi skrip membuka portal lewat Chromium Playwright dan mengirim permintaan satu per satu dengan jeda 300 ms. Hasilnya di-commit ke `src/data/layanan-112.json` (termasuk `diambilPada`), dengan laporan di `prisma/data/laporan-impor-layanan-112.md`.
+- **Arti status.** Portal tidak memberi label di data. Label diambil dari legenda peta (Sudah Launching, Uji Coba, Verifikasi, Dalam Pengajuan, Belum Permohonan). Status 1 = "Sudah Launching" dipastikan dari kode JS portal (`if(value.status == '1')` → "Sudah Launching {tgl_launching}"). Status 3–5 cocok dengan `/get/detail_status_launching/{id}`. Status 2 disebut "Buka Akses" oleh endpoint itu, dan mengikuti legenda dipakai label "Uji Coba". **Hanya status 1 yang dianggap sudah punya layanan 112.**
+- **Tanggal:** tanggal launching hanya disimpan untuk status 1. Arti kolom tanggal untuk status lain tidak dijelaskan portal. Portal tidak mencantumkan "data per", jadi yang ditampilkan adalah tanggal pengambilan data.
+- **Pencocokan kode.** Kode portal (`3209`) diubah ke format Kemendagri (`32.09`), lalu namanya dicocokkan (tanpa kata "Administrasi" yang dipakai Kemendagri untuk DKI Jakarta). 11 nama hanya beda ejaan. Kabupaten Toba Samosir berganti nama menjadi Toba (daftar `GANTI_NAMA` di skrip). Kabupaten Raja Ampat (`9205` di portal) kini `96.03` setelah pemekaran Papua Barat Daya, dan dipakai karena satu-satunya kab/kota bernama sama. Per 27 September 2026: 240 kab/kota di peta, semuanya cocok; 145 Sudah Launching, 64 Uji Coba, 9 Verifikasi, 21 Dalam Pengajuan.
+- **Tidak disimpan:** nama/kontak PIC, nomor permohonan, dan data lain di detail portal. Yang disimpan hanya kode, nama di portal, status, dan tanggal launching.
+- **Tampilan.** Nomor 112 tetap tampil sebagai nomor nasional, dengan keterangan untuk kab/kota wilayah terpilih: "sudah diluncurkan sejak {tanggal}", "masih berstatus {status}", atau "belum tercatat memiliki layanan 112". Dua keterangan terakhir ditambah "Jika tidak tersambung, hubungi nomor darurat lain di bawah". Aplikasi tidak mengklaim 112 pasti tidak bisa dipakai di daerah itu. Sumber dan tanggal pengambilan ditampilkan sebagai tautan.
+
+**Diuji:** semua kode di data ada di daftar kab/kota Kemendagri, tidak ganda, tanggal launching wajib untuk status 1 dan kosong untuk status lain, serta ketiga variasi keterangan.
+
+## D-043 · Nomor BPBD hanya dari sumber resmi terverifikasi
+
+**Konteks.** D-007 tidak mengisi nomor BPBD. Kebutuhan baru: nomor boleh diisi, tetapi hanya jika ada sumber resmi.
+
+**Keputusan.** `src/data/kontak-bpbd.ts` (`KONTAK_BPBD`, kunci = kode kab/kota atau provinsi pemilik BPBD) menyimpan `telepon`, `sumberNama`, `sumberUrl`, dan `diperiksaPada`. Tes mewajibkan URL `https` dengan domain `*.go.id` dan tanggal pemeriksaan. Nomor yang ada ditampilkan bersama tautan sumber dan tanggal pemeriksaannya. Selain itu ditampilkan "Nomor belum tersedia". Daftar ini **sengaja masih kosong**. Tabel "BPBD Provinsi Se-Indonesia" di Buku Saku BNPB (cetakan 2019/2020, hal. 83–91) adalah sumber resmi, tetapi datanya berusia beberapa tahun dan hasil ekstraksi teksnya tercampur antarbaris, sehingga belum dipakai sebelum diputuskan dan diperiksa per baris.

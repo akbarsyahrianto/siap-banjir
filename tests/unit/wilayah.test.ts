@@ -51,6 +51,13 @@ describe("kontakDaruratWilayah", () => {
     expect(kontak.at(-1)).toEqual({ nama: "BPBD Kota Tangerang", telepon: null });
   });
 
+  it("112 diberi keterangan status layanan kab/kota beserta sumbernya", () => {
+    const k112 = kontakDaruratWilayah(tangerang).find((k) => k.telepon === "112");
+    expect(k112?.keterangan).toContain("Layanan 112 Kota Tangerang sudah diluncurkan");
+    expect(k112?.sumber?.url).toBe("https://layanan112.komdigi.go.id/");
+    expect(k112?.sumber?.keterangan).toMatch(/^data diambil \d+ \w+ \d{4}$/);
+  });
+
   it("kota administrasi DKI Jakarta memakai BPBD Provinsi", () => {
     expect(kontakDaruratWilayah(jakartaUtara).at(-1)).toEqual({ nama: "BPBD Provinsi Daerah Khusus Ibukota Jakarta", telepon: null });
   });

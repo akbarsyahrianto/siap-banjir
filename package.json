@@ -23,7 +23,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "data:112": "tsx scripts/impor-layanan-112.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

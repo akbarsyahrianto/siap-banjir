@@ -38,6 +38,13 @@ export function formatTanggalLokal(tanggal: string) {
   );
 }
 
+/** Tanggal "2026-09-27" (tanpa jam/zona) → "27 September 2026". */
+export function formatTanggalLokalPanjang(tanggal: string) {
+  const [y, m, d] = tanggal.split("-").map(Number);
+  const date = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1, 12));
+  return new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" }).format(date);
+}
+
 export function formatAngka(n: number, digit = 1) {
   return n.toLocaleString("id-ID", { maximumFractionDigits: digit });
 }

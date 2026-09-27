@@ -10,6 +10,7 @@ import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRiskState } from "@/hooks/useRiskState";
+import type { KontakDarurat as KontakDaruratItem } from "@/lib/kontak-darurat";
 import { LABEL_STATE, type TabPenanganan } from "@/lib/mesin-risiko";
 import { LABEL_LEVEL } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
@@ -56,7 +57,7 @@ export function PanelRisiko({
   risiko: RisikoKlien;
   grafik: TitikGrafikJam[];
   penanganan: PenangananKlien;
-  kontak: { nama: string; telepon: string | null }[];
+  kontak: KontakDaruratItem[];
 }) {
   const { ktx, kirim, grafik, penanganan, muatUlang, grafikSelesaiRender } = useRiskState({
     idWilayah: risiko.idWilayah,
