@@ -19,6 +19,9 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Keluaran Playwright (trace viewer berisi JS hasil minify).
+      "playwright-report/**",
+      "test-results/**",
     ],
   },
 ];
