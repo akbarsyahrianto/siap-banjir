@@ -72,8 +72,8 @@ export function PanelRisiko({
   const data = s.data ?? risiko;
   const diPenanganan = s.nama === "penanganan";
   const dataLama = data.sumberData === "cadangan" || data.sumberData === "hemat-kuota";
-  // D-024: grafik = jalur 2 state Bahaya (PermintaanGrafik → MenyiapkanGrafik → SelesaiRender).
-  // Tetap tampil di Detail Penanganan (hasil join dari Bahaya); tidak ada di Pemantauan dan Final.
+  // D-048: grafik (jalur 2 state Bahaya, D-024) tampil di Bahaya dan Detail Penanganan saja,
+  // tidak di Pemantauan dan Final.
   const tampilGrafik = s.nama === "bahaya" || diPenanganan;
 
   // Entry Detail Penanganan: arahkan pengguna ke checklist.

@@ -178,6 +178,8 @@ Setiap `LevelRisiko` baru bernilai TINGGI disimpan sebagai `Informasi` kategori 
 
 ## D-024 · State machine sebagai reducer (tanpa XState)
 
+> **Dilengkapi D-048:** kapan grafik 48 jam (jalur 2) tampil di halaman Risiko.
+
 State machine UI ada di `src/lib/mesin-risiko.ts` sebagai reducer murni. Unit test mencakup semua transisi, termasuk join jalur paralel. Efeknya dijalankan hook `useRiskState`. Pemetaan ke UML:
 
 | UML | Implementasi |
@@ -468,7 +470,28 @@ Font teks diganti dari Geist ke **Plus Jakarta Sans** (`next/font/google`, font 
 - **"Apa arti setiap level?"** (`<details>` terbuka) dengan teks dari board (`GAYA_LEVEL.arti`). Ditambah chevron sebagai penanda bisa dilipat.
 - **Parameter pemicu:** nilai + pil level (Rendah = ikon centang). Tanda "Pemicu" dan "Memakai ambang khusus wilayah" dipertahankan.
 - **Penanganan:** tab segmented (tetap `role="tab"`). Checklist memakai checkbox native 22 px dan bilah progres hijau, seperti board. Detail Mitigasi memakai daftar bernomor dari board. Di board, baris kedua tiap butir berisi status checklist, tetapi rekomendasi (BNPB, D-044) bukan butir checklist yang sama. Karena itu baris kedua diisi **tautan halaman sumber**, dan kalimat board "Tandai yang sudah dilakukan di tab Checklist Siaga" tidak dipakai.
-- **Grafik curah hujan 48 jam tidak ada di board.** Grafik tetap mengikuti D-024 (jalur 2 state Bahaya: PermintaanGrafik → MenyiapkanGrafik → SelesaiRender), dan tidak ada keputusan lebih baru yang mengubahnya. D-046 hanya menghapus grafik dari Beranda. Syarat tampil diikat ke **state machine**, bukan ke level: grafik tampil di state `bahaya` dan `penanganan`, dan tidak tampil di `pemantauan` dan `selesai`. `penanganan` ikut dihitung karena hanya dicapai lewat join dari Bahaya (atau deep link notifikasi push). Tanpa itu, grafik akan hilang dua frame setelah tergambar. Board (level Rendah = Pemantauan) jadi cocok dengan kondisi ini.
+- **Grafik curah hujan 48 jam tidak ada di board.** Kapan grafik tampil di halaman Risiko diatur D-048.
 - **Sementara:** board menampilkan kartu merah "Lihat nomor darurat" yang menuju halaman Kontak. Halaman itu belum ada, jadi bagian `#kontak-darurat` masih berisi daftar kontak lengkap (D-042/D-043) dengan gaya kartu baru. Bagian ini akan diganti tautan saat board "Nomor Darurat" diimplementasikan.
 
 **Diuji:** e2e alur utama disesuaikan (judul, baris wilayah + "Ubah wilayah", bilah skor, arti level). Tes state machine kini memeriksa grafik tampil di Detail Penanganan dan hilang setelah peringatan ditutup (Final).
+
+## D-048 · Grafik 48 jam di halaman Risiko hanya saat Bahaya dan Detail Penanganan (tafsiran di luar D-024)
+
+**Konteks.** D-024 menetapkan grafik curah hujan 48 jam sebagai jalur 2 state Bahaya (PermintaanGrafik → MenyiapkanGrafik → SelesaiRender), tetapi tidak mengatur kapan grafik *ditampilkan*. Sebelum desain ulang, grafik selalu tampil. Board Risiko di kanvas desain ulang (D-047) tidak memuat grafik. D-046 hanya menghapus grafik dari Beranda.
+
+**Keputusan.** Grafik di halaman Risiko ditampilkan berdasarkan **state machine**, bukan level risiko:
+
+| State | Grafik |
+|---|---|
+| `pemantauan` | tidak tampil |
+| `bahaya` | tampil (jalur 2 berjalan: grafik tergambar → `GRAFIK_SELESAI`) |
+| `penanganan` | tetap tampil |
+| `selesai` (normal atau ditutup) | tidak tampil |
+
+**Alasan / konsekuensi.**
+- Ini tafsiran, bukan isi D-024. Di UML, grafik diminta saat masuk Bahaya, jadi di Pemantauan grafik belum diminta. Hal ini sekaligus cocok dengan board, yang digambar untuk level Rendah (state Pemantauan).
+- `penanganan` ikut dihitung karena state itu hanya dicapai lewat join dari Bahaya (atau deep link notifikasi push, yang mewakili jalur push). Kalau hanya `bahaya`, grafik hilang dua frame setelah tergambar, tepat saat join.
+- Syarat "level ≥ Sedang" sengaja **tidak** dipakai. Syarat itu akan menampilkan grafik juga di Final saat peringatan ditutup dengan level masih Sedang/Tinggi, padahal episode Bahaya sudah selesai.
+- Grafik tetap tersedia kapan saja di halaman Cuaca.
+
+**Diuji:** e2e state machine: grafik tampil di Detail Penanganan dan hilang setelah peringatan ditutup (Final).

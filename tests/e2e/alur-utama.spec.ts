@@ -132,7 +132,7 @@ test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
     await expect(page.getByText("Detail penanganan", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Penanganan \(risiko tinggi\)/ })).toBeFocused();
     await expect(page.getByRole("button", { name: "Aktifkan notifikasi push untuk wilayah ini" })).toBeVisible();
-    // D-024: grafik 48 jam adalah jalur 2 state Bahaya dan tetap ada di Detail Penanganan.
+    // D-048: grafik 48 jam tampil di Bahaya dan tetap ada di Detail Penanganan.
     const judulGrafik = page.getByRole("heading", { name: "Curah hujan 48 jam" });
     await expect(judulGrafik).toBeVisible();
 
