@@ -6,6 +6,7 @@ import { Disclaimer } from "@/components/risiko/disclaimer";
 import { PanelRisiko } from "@/components/risiko/panel-risiko";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
+import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { keRisikoKlien, lihatKondisiWilayah, lihatPenanganan } from "@/server/services/pemantauan.service";
 import { seriHujan48Jam } from "@/server/services/seri-cuaca";
@@ -49,12 +50,13 @@ export default async function RisikoPage({ searchParams }: Props) {
       {terpilih ? (
         <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
           <DetailRisiko idWilayah={terpilih} />
+          <TandaKontenWilayah idWilayah={terpilih} />
         </Suspense>
       ) : (
         <>
           <BelumPilihWilayah />
           <section aria-label="Pilih wilayah" className="rounded-[20px] border bg-card p-4">
-            <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
+            <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} tungguKonten />
           </section>
         </>
       )}

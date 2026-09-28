@@ -495,3 +495,19 @@ Font teks diganti dari Geist ke **Plus Jakarta Sans** (`next/font/google`, font 
 - Grafik tetap tersedia kapan saja di halaman Cuaca.
 
 **Diuji:** e2e state machine: grafik tampil di Detail Penanganan dan hilang setelah peringatan ditutup (Final).
+
+## D-049 · Dialog izin notifikasi dibuka setelah isi wilayah tampil
+
+**Konteks.** Tes e2e "Gunakan lokasi saya" (halaman Cuaca) gagal sesekali. Setelah pengguna memilih wilayah, `PilihWilayah` menjalankan `router.replace()` lalu langsung memanggil `setelahPilihWilayah()`, yang membuka dialog izin begitu status push diketahui. Pengukuran dengan browser yang meniru pengguna baru (izin notifikasi "default", empat lokasi termasuk sel grid yang belum ada di cache) menunjukkan dialog **selalu** terbuka 100–180 ms setelah klik, sedangkan isi cuaca baru tampil setelah 0,9–2,9 detik. Pengguna asli jadi ditanya soal notifikasi sebelum melihat hasil pilihannya.
+
+Urutannya juga tidak deterministik. Dialog Radix bersifat modal dan hanya memberi `aria-hidden` pada elemen yang sudah ada saat dialog dibuka:
+- Jika status push lambat (registrasi service worker pertama), isi tampil lebih dulu. Dialog lalu menyembunyikannya dari teknologi bantu, dan tes yang mencari heading lewat role gagal.
+- Jika dialog lebih dulu, isi yang datang belakangan tidak disembunyikan. Pembaca layar jadi bisa menjangkau isi di balik dialog modal.
+
+**Keputusan.**
+- `NotifikasiProvider` menyimpan tindak lanjut pilihan wilayah sebagai tertunda. Dialog dibuka setelah status push diketahui **dan**, jika diminta (`tungguKonten`), isi halaman untuk wilayah itu sudah tampil. Sinkronisasi wilayah untuk perangkat yang sudah berlangganan tetap langsung.
+- `TandaKontenWilayah` diletakkan di dalam `<Suspense>` yang sama dengan isi wilayah di Beranda, Risiko, dan Cuaca. Suspense menampilkan semua anaknya bersamaan, jadi penanda ini ter-mount tepat saat isi tampil, apa pun cabangnya (data ada, data cuaca tidak tersedia, …), lalu melapor ke provider.
+- `PilihWilayah` mendapat prop `tungguKonten`. Nilainya `true` di Beranda, Risiko, dan Cuaca. Di Pengaturan tidak ada isi wilayah yang di-stream, jadi dialog tetap langsung.
+- Tidak ada jeda waktu tambahan: dialog muncul tepat setelah isi tampil, dan isi terlihat di balik overlay.
+
+**Diuji:** tes "Gunakan lokasi saya" kini menunggu dialog, memastikan prakiraan harian sudah ada di DOM saat dialog muncul, menutup dialog ("Nanti saja"), lalu memeriksa heading.

@@ -11,8 +11,13 @@ type WilayahDialog = { idWilayah: string; namaWilayah: string };
 type NilaiKonteks = ReturnType<typeof usePushSubscription> & {
   /** Buka dialog izin kustom (sebelum izin browser). */
   bukaDialogIzin: (wilayah: WilayahDialog) => void;
-  /** Dipanggil setelah aturLokasi(wilayah): tawarkan izin atau sinkronkan wilayah langganan. */
-  setelahPilihWilayah: (wilayah: WilayahDialog) => void;
+  /**
+   * Dipanggil setelah aturLokasi(wilayah): tawarkan izin atau sinkronkan wilayah langganan.
+   * `tungguKonten`: buka dialog izin setelah isi halaman untuk wilayah itu tampil (D-049).
+   */
+  setelahPilihWilayah: (wilayah: WilayahDialog, opsi?: { tungguKonten?: boolean }) => void;
+  /** Dipanggil TandaKontenWilayah: isi halaman untuk wilayah ini sudah tampil / sudah dilepas. */
+  kontenTampil: (idWilayah: string | null) => void;
 };
 
 const Konteks = createContext<NilaiKonteks | null>(null);
@@ -35,29 +40,36 @@ export function NotifikasiProvider({ children }: { children: React.ReactNode }) 
 
   const bukaDialogIzin = useCallback((wilayah: WilayahDialog) => setDialog(wilayah), []);
 
-  // Wilayah dipilih sebelum status push selesai dimuat → proses setelah status diketahui.
-  const [tertunda, setTertunda] = useState<WilayahDialog | null>(null);
+  // Wilayah yang isinya sedang tampil di halaman (dilaporkan TandaKontenWilayah).
+  const [konten, setKonten] = useState<string | null>(null);
+  const kontenTampil = useCallback((idWilayah: string | null) => setKonten(idWilayah), []);
+
+  // Tindak lanjut pilihan wilayah, diproses setelah status push diketahui dan (jika diminta)
+  // isi halaman untuk wilayah itu tampil. Dialog izin tidak menutupi halaman yang masih memuat.
+  const [tertunda, setTertunda] = useState<{ wilayah: WilayahDialog; tungguKonten: boolean } | null>(null);
 
   const setelahPilihWilayah = useCallback(
-    (wilayah: WilayahDialog) => {
-      if (status === "memuat") {
-        setTertunda(wilayah);
-      } else if (status === "aktif") {
-        perbarui({ idWilayah: wilayah.idWilayah })
-          .then(() => toast.success(`Peringatan kini untuk ${wilayah.namaWilayah}.`))
-          .catch((err: unknown) => toast.error(pesanGalat(err)));
-      } else if (status === "belum-aktif" && !sudahDitanya()) {
-        setDialog(wilayah);
-      }
-    },
-    [status, perbarui],
+    (wilayah: WilayahDialog, opsi?: { tungguKonten?: boolean }) =>
+      setTertunda({ wilayah, tungguKonten: opsi?.tungguKonten ?? false }),
+    [],
   );
 
   useEffect(() => {
     if (!tertunda || status === "memuat") return;
+    const { wilayah, tungguKonten } = tertunda;
+    if (status === "aktif") {
+      setTertunda(null);
+      perbarui({ idWilayah: wilayah.idWilayah })
+        .then(() => toast.success(`Peringatan kini untuk ${wilayah.namaWilayah}.`))
+        .catch((err: unknown) => toast.error(pesanGalat(err)));
+      return;
+    }
+    if (status === "belum-aktif" && !sudahDitanya()) {
+      if (tungguKonten && konten !== wilayah.idWilayah) return;
+      setDialog(wilayah);
+    }
     setTertunda(null);
-    setelahPilihWilayah(tertunda);
-  }, [tertunda, status, setelahPilihWilayah]);
+  }, [tertunda, status, konten, perbarui]);
 
   // [izin notifikasi] → daftarkanPerangkat() → aktifkan(); [else] → lanjut tanpa notifikasi.
   const izinkan = useCallback(async () => {
@@ -82,7 +94,7 @@ export function NotifikasiProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   return (
-    <Konteks.Provider value={{ ...push, bukaDialogIzin, setelahPilihWilayah }}>
+    <Konteks.Provider value={{ ...push, bukaDialogIzin, setelahPilihWilayah, kontenTampil }}>
       {children}
       <DialogIzinNotifikasi
         terbuka={dialog !== null}

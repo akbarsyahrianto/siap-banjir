@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
+import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { formatAngka, formatTanggalLokal } from "@/lib/format";
 import { kategoriHujanHarian } from "@/lib/weather-code";
@@ -30,13 +31,14 @@ export default async function CuacaPage({ searchParams }: Props) {
       <PageHeader title="Prakiraan Cuaca" description="Prakiraan 3 hari per jam dan harian." />
       <Card>
         <CardContent>
-          <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
+          <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} tungguKonten />
         </CardContent>
       </Card>
       {terpilih ? (
         <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
           <Prakiraan idWilayah={terpilih} />
           <AutoRefresh />
+          <TandaKontenWilayah idWilayah={terpilih} />
         </Suspense>
       ) : (
         <BelumPilihWilayah />

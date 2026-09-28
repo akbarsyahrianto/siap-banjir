@@ -168,7 +168,16 @@ function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) 
  * aturLokasi(wilayah): pilih desa/kelurahan lewat pencarian, pilihan bertingkat
  * (Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan), atau lokasi GPS.
  */
-export function PilihWilayah({ data, namaTerpilih }: { data: DataPemilih; namaTerpilih: string | null }) {
+export function PilihWilayah({
+  data,
+  namaTerpilih,
+  tungguKonten = false,
+}: {
+  data: DataPemilih;
+  namaTerpilih: string | null;
+  /** Halaman menampilkan isi wilayah (dengan TandaKontenWilayah): tawarkan izin setelah isi tampil. */
+  tungguKonten?: boolean;
+}) {
   const { pilihWilayah: simpanPilihan } = useWilayah();
   const { setelahPilihWilayah } = useNotifikasi();
   const id = useId();
@@ -191,7 +200,7 @@ export function PilihWilayah({ data, namaTerpilih }: { data: DataPemilih; namaTe
   // aturLokasi(wilayah) → simpan preferensi → popup izin notifikasi / sinkron langganan.
   function pilihDesa(idWilayah: string, namaWilayah: string) {
     simpanPilihan(idWilayah);
-    setelahPilihWilayah({ idWilayah, namaWilayah });
+    setelahPilihWilayah({ idWilayah, namaWilayah }, { tungguKonten });
   }
 
   async function ubah(tingkat: Tingkat, kode: string) {

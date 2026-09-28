@@ -6,6 +6,7 @@ import { StatusData } from "@/components/cuaca/status-data";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
+import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { APP_NAME } from "@/lib/constants";
 import { formatNilaiParameter } from "@/lib/risiko";
@@ -34,13 +35,14 @@ export default async function BerandaPage({ searchParams }: Props) {
           <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
             <RingkasanWilayah idWilayah={terpilih} namaWilayah={namaTerpilih} />
             <AutoRefresh />
+            <TandaKontenWilayah idWilayah={terpilih} />
           </Suspense>
         </>
       ) : (
         <>
           <BelumPilihWilayah />
           <section aria-label="Pilih wilayah" className="rounded-[20px] border bg-card p-4">
-            <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} />
+            <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} tungguKonten />
           </section>
         </>
       )}

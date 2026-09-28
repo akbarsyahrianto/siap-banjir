@@ -100,6 +100,11 @@ test("Gunakan lokasi saya memilih desa/kelurahan terdekat", async ({ page, conte
   // Pesan hasil GPS tetap tampil setelah halaman dirender ulang untuk wilayah itu.
   await expect(page.getByText(/Desa\/kelurahan terdekat: (Kelurahan|Desa) .+, Kota Semarang \(±/)).toBeVisible();
   await expect(page.getByLabel("Kabupaten/Kota", { exact: true })).toHaveValue("33.74");
+  // D-049: dialog izin baru dibuka setelah isi wilayah tampil, jadi prakiraan sudah ada saat dialog muncul.
+  const dialog = page.getByRole("dialog", { name: "Aktifkan peringatan banjir?" });
+  await expect(dialog).toBeVisible();
+  expect(await page.locator("#judul-harian").count()).toBe(1);
+  await dialog.getByRole("button", { name: "Nanti saja" }).click();
   await expect(page.getByRole("heading", { name: "Prakiraan harian" })).toBeVisible();
 });
 
