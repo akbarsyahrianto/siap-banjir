@@ -49,13 +49,17 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
     await expect(page.getByText("Data cuaca: Open-Meteo.com").first()).toBeVisible();
   });
 
-  await test.step("Detail risiko: gauge, penanganan, checklist tersimpan", async () => {
+  await test.step("Detail risiko: skor, arti level, penanganan, checklist tersimpan", async () => {
     // Teks tombol mengikuti level (rendah/sedang/tinggi).
     await page.getByRole("link", { name: /^Lihat (persiapan & rekomendasi|langkah siaga|langkah penyelamatan)$/ }).click();
     await expect(page).toHaveURL(new RegExp(`/risiko\\?wilayah=${DESA_UJI.replaceAll(".", "\\.")}`));
-    await expect(page.getByText("Kec. Semarang Utara, Kota Semarang, Jawa Tengah")).toBeVisible();
+    const konten = page.locator("#konten");
+    await expect(konten.getByRole("heading", { name: "Risiko Banjir", level: 1 })).toBeVisible();
+    await expect(konten.getByText("Kelurahan Bulu Lor, Kota Semarang", { exact: true })).toBeVisible();
+    await expect(konten.getByRole("link", { name: "Ubah wilayah" })).toHaveAttribute("href", "/pengaturan");
     await expect(page.getByRole("img", { name: /Skor risiko \d+ dari 100/ })).toBeVisible();
     await expect(page.getByText(/bukan peringatan resmi/).first()).toBeVisible();
+    await expect(page.getByText("Ada parameter yang melewati ambang Tinggi. Ikuti arahan evakuasi.")).toBeVisible();
 
     await expect(page.getByRole("tab", { name: "Checklist Siaga" })).toHaveAttribute("aria-selected", "true");
     const pertama = page.getByRole("tabpanel").getByRole("checkbox").first();
@@ -128,10 +132,15 @@ test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
     await expect(page.getByText("Detail penanganan", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Penanganan \(risiko tinggi\)/ })).toBeFocused();
     await expect(page.getByRole("button", { name: "Aktifkan notifikasi push untuk wilayah ini" })).toBeVisible();
+    // D-024: grafik 48 jam adalah jalur 2 state Bahaya dan tetap ada di Detail Penanganan.
+    const judulGrafik = page.getByRole("heading", { name: "Curah hujan 48 jam" });
+    await expect(judulGrafik).toBeVisible();
 
     await page.getByRole("button", { name: "Tutup peringatan" }).click();
     await expect(page.getByText("Peringatan ditutup")).toBeVisible();
     await expect(page.getByText("Selesai", { exact: true })).toBeVisible();
+    // Final: episode Bahaya selesai, grafik tidak ditampilkan lagi.
+    await expect(judulGrafik).toHaveCount(0);
   });
 
   test("Beranda risiko tinggi: badge, label simulasi, ajakan penyelamatan, kontak darurat", async ({ page }) => {

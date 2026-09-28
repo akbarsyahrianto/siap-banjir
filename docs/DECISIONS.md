@@ -455,3 +455,20 @@ Font teks diganti dari Geist ke **Plus Jakarta Sans** (`next/font/google`, font 
 - **Sementara:** tombol Darurat dan kartu Kontak darurat mengarah ke `/risiko#kontak-darurat`. Keduanya akan diarahkan ke halaman Kontak ketika board "Nomor Darurat" diimplementasikan.
 
 **Diuji:** e2e alur utama disesuaikan (wilayah dipantau → Pengaturan, ilustrasi, skala, hujan 24 jam, kontak). Ada tes baru untuk Beranda risiko tinggi (badge, label simulasi, ajakan penyelamatan, kartu kontak merah → bagian kontak). Assertion dibatasi ke `#konten` karena selama streaming isi Suspense sempat ada di template tersembunyi di akhir `<body>`.
+
+## D-047 · Desain ulang: halaman Risiko
+
+**Sumber desain.** Board "Risiko" di kanvas "Siap Banjir — Desain Ulang" (satu board, digambar untuk level Rendah). Kanvas tidak diubah.
+
+**Keputusan.**
+- **Header:** judul "Risiko Banjir" (`h1`, sebelumnya "Detail Risiko Banjir"), subjudul, dan baris wilayah dengan tautan "Ubah" ke Pengaturan. Pemilih wilayah hanya tampil jika belum ada wilayah terpilih, sama seperti Beranda (D-046). Nama kecamatan/induk tidak lagi ditampilkan, sesuai board.
+- **Disclaimer** kuning versi ringkas ("Estimasi dari data cuaca, bukan peringatan resmi…"). Kalimat lengkap tetap ada di footer setiap halaman.
+- **Status pemantauan** berupa pil (label state machine) dengan tombol "Perbarui" bergaris.
+- **Kartu level:** badge, `deskripsi` asli mesin risiko sebagai judul (seperti Beranda, bukan teks contoh board), `pesan` per level, **bilah skor linear 0–100** menggantikan gauge setengah lingkaran (`GaugeRisiko` dan `BadgeRisiko` dihapus), lalu "Diperbarui HH:MM WIB · Data cuaca berlaku untuk area ±11 km…". Kotak SIMULASI (D-041) dan peringatan data cadangan/hemat kuota tetap ada.
+- **"Apa arti setiap level?"** (`<details>` terbuka) dengan teks dari board (`GAYA_LEVEL.arti`). Ditambah chevron sebagai penanda bisa dilipat.
+- **Parameter pemicu:** nilai + pil level (Rendah = ikon centang). Tanda "Pemicu" dan "Memakai ambang khusus wilayah" dipertahankan.
+- **Penanganan:** tab segmented (tetap `role="tab"`). Checklist memakai checkbox native 22 px dan bilah progres hijau, seperti board. Detail Mitigasi memakai daftar bernomor dari board. Di board, baris kedua tiap butir berisi status checklist, tetapi rekomendasi (BNPB, D-044) bukan butir checklist yang sama. Karena itu baris kedua diisi **tautan halaman sumber**, dan kalimat board "Tandai yang sudah dilakukan di tab Checklist Siaga" tidak dipakai.
+- **Grafik curah hujan 48 jam tidak ada di board.** Grafik tetap mengikuti D-024 (jalur 2 state Bahaya: PermintaanGrafik → MenyiapkanGrafik → SelesaiRender), dan tidak ada keputusan lebih baru yang mengubahnya. D-046 hanya menghapus grafik dari Beranda. Syarat tampil diikat ke **state machine**, bukan ke level: grafik tampil di state `bahaya` dan `penanganan`, dan tidak tampil di `pemantauan` dan `selesai`. `penanganan` ikut dihitung karena hanya dicapai lewat join dari Bahaya (atau deep link notifikasi push). Tanpa itu, grafik akan hilang dua frame setelah tergambar. Board (level Rendah = Pemantauan) jadi cocok dengan kondisi ini.
+- **Sementara:** board menampilkan kartu merah "Lihat nomor darurat" yang menuju halaman Kontak. Halaman itu belum ada, jadi bagian `#kontak-darurat` masih berisi daftar kontak lengkap (D-042/D-043) dengan gaya kartu baru. Bagian ini akan diganti tautan saat board "Nomor Darurat" diimplementasikan.
+
+**Diuji:** e2e alur utama disesuaikan (judul, baris wilayah + "Ubah wilayah", bilah skor, arti level). Tes state machine kini memeriksa grafik tampil di Detail Penanganan dan hilang setelah peringatan ditutup (Final).

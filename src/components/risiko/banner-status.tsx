@@ -36,11 +36,11 @@ export function BannerStatus({
   if (state.nama === "selesai") {
     const normal = state.alasan === "normal";
     return (
-      <div role="status" className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center">
+      <div role="status" className="flex flex-col gap-3 rounded-[18px] border bg-card p-4 sm:flex-row sm:items-center">
         <ShieldCheck className={cn("size-8 shrink-0", normal ? "text-risk-rendah" : "text-muted-foreground")} aria-hidden="true" />
         <div className="flex-1">
-          <p className="font-semibold">{normal ? "Kondisi kembali normal" : "Peringatan ditutup"}</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[16px] font-extrabold">{normal ? "Kondisi kembali normal" : "Peringatan ditutup"}</p>
+          <p className="text-[14px] leading-normal text-muted-foreground">
             {normal
               ? "Risiko banjir sudah di bawah ambang. Tetap pantau informasi cuaca."
               : "Wilayah tetap dipantau. Peringatan muncul lagi jika level risiko naik."}
@@ -58,17 +58,17 @@ export function BannerStatus({
   const kanal = state.kanal;
 
   return (
-    <div role="alert" className={cn("rounded-xl border-2 p-4", gaya.lembut)}>
+    <div role="alert" className={cn("rounded-[18px] border-2 p-4", gaya.lembut)}>
       <div className="flex items-start gap-3">
         <Ikon className={cn("mt-0.5 size-8 shrink-0", gaya.teks)} aria-hidden="true" />
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-lg font-bold">
+          <p className="text-[18px] leading-[1.35] font-extrabold">
             {state.nama === "bahaya" ? "Bahaya potensi banjir terdeteksi" : "Ikuti langkah penanganan di bawah"}
           </p>
-          <p>{state.data.deskripsi}</p>
+          <p className="text-[15px] leading-normal">{state.data.deskripsi}</p>
 
           {state.nama === "bahaya" ? (
-            <ul className="space-y-1 text-sm" aria-label="Proses peringatan">
+            <ul className="space-y-1 text-[14px]" aria-label="Proses peringatan">
               <Langkah selesai={state.jalurPush === "notifikasi-terkirim"}>
                 {state.jalurPush !== "notifikasi-terkirim"
                   ? "Mengirim peringatan…"

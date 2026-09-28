@@ -1,15 +1,14 @@
 "use client";
 
-import { ClipboardCheck, ListChecks } from "lucide-react";
 import type { TabPenanganan } from "@/lib/mesin-risiko";
 import type { PenangananKlien } from "@/lib/tipe-risiko";
 import { cn } from "@/lib/utils";
 import { ChecklistPersiapan } from "./checklist-persiapan";
 import { DaftarRekomendasi } from "./daftar-rekomendasi";
 
-const TAB: { id: TabPenanganan; label: string; ikon: typeof ListChecks }[] = [
-  { id: "checklist", label: "Checklist Siaga", ikon: ListChecks },
-  { id: "mitigasi", label: "Detail Mitigasi", ikon: ClipboardCheck },
+const TAB: { id: TabPenanganan; label: string }[] = [
+  { id: "checklist", label: "Checklist Siaga" },
+  { id: "mitigasi", label: "Detail Mitigasi" },
 ];
 
 /** Sub-state Detail Penanganan: Checklist Siaga (persiapan dini) | Detail Mitigasi (rekomendasi). */
@@ -25,9 +24,9 @@ export function PenangananTabs({
   onPilihTab: (tab: TabPenanganan) => void;
 }) {
   return (
-    <div className="space-y-4">
-      <div role="tablist" aria-label="Detail penanganan" className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-        {TAB.map(({ id, label, ikon: Ikon }) => (
+    <div className="flex flex-col gap-3.5">
+      <div role="tablist" aria-label="Detail penanganan" className="grid grid-cols-2 gap-1 rounded-[14px] bg-[#eef1f6] p-1">
+        {TAB.map(({ id, label }) => (
           <button
             key={id}
             type="button"
@@ -37,11 +36,12 @@ export function PenangananTabs({
             aria-controls={`panel-${id}`}
             onClick={() => onPilihTab(id)}
             className={cn(
-              "flex min-h-11 items-center justify-center gap-2 rounded-md px-3 font-medium transition-colors",
-              tab === id ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+              "min-h-11 rounded-[11px] px-2 text-[14px] font-bold transition-colors",
+              tab === id
+                ? "bg-card text-foreground shadow-[0_1px_3px_rgba(14,23,38,0.18)]"
+                : "text-[#3e4a5c] hover:text-foreground",
             )}
           >
-            <Ikon className="size-4" aria-hidden="true" />
             {label}
           </button>
         ))}
@@ -53,7 +53,7 @@ export function PenangananTabs({
         </div>
       ) : (
         <div role="tabpanel" id="panel-mitigasi" aria-labelledby="tab-mitigasi">
-          <DaftarRekomendasi items={penanganan.rekomendasi} />
+          <DaftarRekomendasi level={penanganan.level} items={penanganan.rekomendasi} />
         </div>
       )}
     </div>

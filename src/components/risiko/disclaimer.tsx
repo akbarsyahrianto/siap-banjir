@@ -1,14 +1,14 @@
 import { TriangleAlert } from "lucide-react";
-import { DISCLAIMER } from "@/lib/constants";
 
+/** Versi ringkas di halaman Risiko; kalimat lengkap (DISCLAIMER) ada di footer setiap halaman. */
 export function Disclaimer() {
   return (
-    <div
+    <p
       role="note"
-      className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+      className="flex items-start gap-2.5 rounded-[14px] border border-[#d9b300] bg-risk-sedang-tint px-3.5 py-3 text-[13px] leading-normal text-[#4a3b00]"
     >
-      <TriangleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-      <p>{DISCLAIMER}</p>
-    </div>
+      <TriangleAlert className="mt-px size-[18px] shrink-0" strokeWidth={2.2} aria-hidden="true" />
+      <span>Estimasi dari data cuaca, bukan peringatan resmi. Ikuti arahan BMKG, BPBD, dan pemerintah setempat.</span>
+    </p>
   );
 }

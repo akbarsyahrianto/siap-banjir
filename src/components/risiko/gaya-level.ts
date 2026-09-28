@@ -9,6 +9,8 @@ type GayaLevel = {
   teks: string;
   warna: string;
   pesan: string;
+  /** Halaman Risiko, "Apa arti setiap level?" (kanvas desain ulang). */
+  arti: string;
   /** Beranda (desain ulang, D-046): kalimat tindakan, teks tombol ke halaman Risiko, ilustrasi air. */
   ringkasan: string;
   ajakan: string;
@@ -25,6 +27,7 @@ export const GAYA_LEVEL: Record<TingkatRisiko, GayaLevel> = {
     teks: "text-risk-rendah-teks",
     warna: "var(--risk-rendah)",
     pesan: "Kondisi normal. Tetap pantau informasi cuaca.",
+    arti: "Tidak ada parameter yang melewati ambang Sedang.",
     ringkasan: "Kondisi normal. Tetap pantau informasi cuaca.",
     ajakan: "Lihat persiapan & rekomendasi",
     ilustrasi: { tinggiAir: 4, jumlahTetes: 0, langit: "#e4f0fa" },
@@ -37,6 +40,7 @@ export const GAYA_LEVEL: Record<TingkatRisiko, GayaLevel> = {
     teks: "text-risk-sedang-teks",
     warna: "var(--risk-sedang)",
     pesan: "Waspada. Siapkan persiapan dini dan pantau perkembangan.",
+    arti: "Ada parameter yang melewati ambang Sedang. Mulai bersiap.",
     ringkasan: "Siapkan tas siaga, simpan dokumen penting di wadah kedap air, dan pantau informasi resmi BMKG dan BPBD.",
     ajakan: "Lihat langkah siaga",
     ilustrasi: { tinggiAir: 10, jumlahTetes: 14, langit: "#e1e8f0" },
@@ -49,6 +53,7 @@ export const GAYA_LEVEL: Record<TingkatRisiko, GayaLevel> = {
     teks: "text-risk-tinggi-teks",
     warna: "var(--risk-tinggi)",
     pesan: "Bahaya potensi banjir. Siap mengungsi dan ikuti arahan petugas.",
+    arti: "Ada parameter yang melewati ambang Tinggi. Ikuti arahan evakuasi.",
     ringkasan: "Bersiaplah pindah ke tempat yang lebih tinggi. Ikuti arahan BPBD dan pemerintah setempat.",
     ajakan: "Lihat langkah penyelamatan",
     ilustrasi: { tinggiAir: 20, jumlahTetes: 26, langit: "#d6dde7" },

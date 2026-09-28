@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
 
 type Item = { idPersiapan: string; isiPersiapan: string };
 
@@ -36,47 +35,47 @@ export function ChecklistPersiapan({ items, kunci }: { items: Item[]; kunci: str
     });
   }
 
-  if (items.length === 0) return <p className="text-muted-foreground">Belum ada daftar persiapan.</p>;
+  if (items.length === 0) return <p className="text-[15px] text-muted-foreground">Belum ada daftar persiapan.</p>;
 
   const selesai = items.filter((i) => dicentang.has(i.idPersiapan)).length;
 
   return (
-    <div className="space-y-3">
-      <div>
-        <div className="mb-1 flex justify-between text-sm font-medium">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex justify-between text-[13px] font-bold text-[#2d3748]">
           <span>Progres persiapan</span>
-          <span>
+          <span className="tabular-nums">
             {selesai}/{items.length}
           </span>
         </div>
         <div
-          className="h-2.5 overflow-hidden rounded-full bg-muted"
+          className="h-2 overflow-hidden rounded-full bg-[#e4e9f0]"
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={items.length}
           aria-valuenow={selesai}
           aria-label="Progres persiapan"
         >
-          <div className="h-full bg-primary transition-all" style={{ width: `${(selesai / items.length) * 100}%` }} />
+          <div className="h-full rounded-full bg-risk-rendah transition-all" style={{ width: `${(selesai / items.length) * 100}%` }} />
         </div>
       </div>
-      <ul className="space-y-2">
+      <ul className="flex flex-col gap-3">
         {items.map((item) => {
           const id = `${idDasar}-${item.idPersiapan}`;
-          const centang = dicentang.has(item.idPersiapan);
           return (
             <li key={item.idPersiapan}>
               <label
                 htmlFor={id}
-                className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-accent/50"
+                className="flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3 text-[15px] leading-[1.45] text-[#1f2937] hover:bg-[#f7f9fc]"
               >
-                <Checkbox
+                <input
+                  type="checkbox"
                   id={id}
-                  checked={centang}
-                  onCheckedChange={(v) => ubah(item.idPersiapan, v === true)}
-                  className="mt-0.5 size-5"
+                  checked={dicentang.has(item.idPersiapan)}
+                  onChange={(e) => ubah(item.idPersiapan, e.target.checked)}
+                  className="m-0 size-[22px] shrink-0 accent-risk-rendah"
                 />
-                <span className={centang ? "text-muted-foreground line-through" : undefined}>{item.isiPersiapan}</span>
+                <span>{item.isiPersiapan}</span>
               </label>
             </li>
           );

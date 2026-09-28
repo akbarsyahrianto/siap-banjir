@@ -4,27 +4,27 @@ import type { KontakDarurat as Kontak } from "@/lib/kontak-darurat";
 
 export function KontakDarurat({ kontak }: { kontak: Kontak[] }) {
   return (
-    <ul className="grid gap-2 sm:grid-cols-2">
+    <ul className="flex flex-col gap-2.5">
       {kontak.map((k) => (
-        <li key={k.nama} className={k.keterangan ? "sm:col-span-2" : undefined}>
+        <li key={k.nama}>
           {k.telepon ? (
             <a
               href={`tel:${k.telepon.replace(/[^\d+]/g, "")}`}
-              className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-accent"
+              className="flex min-h-14 items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-card-foreground hover:bg-[#f7f9fc]"
             >
-              <span className="font-medium">{k.nama}</span>
-              <span className="flex items-center gap-1.5 text-lg font-bold text-primary">
-                <Phone className="size-4" aria-hidden="true" />
+              <span className="text-[15px] font-bold">{k.nama}</span>
+              <span className="flex items-center gap-1.5 text-[18px] font-extrabold text-darurat tabular-nums">
+                <Phone className="size-4" strokeWidth={2.2} aria-hidden="true" />
                 {k.telepon}
               </span>
             </a>
           ) : (
-            <div className="rounded-lg border p-3">
-              <p className="font-medium">{k.nama}</p>
-              <p className="text-sm text-muted-foreground">Nomor belum tersedia.</p>
+            <div className="flex min-h-14 flex-col justify-center rounded-xl border px-3.5 py-2.5">
+              <p className="text-[15px] font-bold">{k.nama}</p>
+              <p className="text-[13px] text-muted-foreground">Nomor belum tersedia.</p>
             </div>
           )}
-          {k.keterangan && <p className="mt-1.5 px-1 text-sm">{k.keterangan}</p>}
+          {k.keterangan && <p className="mt-1.5 px-1 text-[14px] leading-normal">{k.keterangan}</p>}
           {k.sumber && (
             <TautanSumber
               nama={`${k.sumber.nama}, ${k.sumber.keterangan}`}

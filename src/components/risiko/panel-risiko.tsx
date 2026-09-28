@@ -1,52 +1,49 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, CloudRain, LoaderCircle, Phone, RefreshCw, ShieldAlert } from "lucide-react";
+import { ChevronDown, LoaderCircle, RefreshCw } from "lucide-react";
 import { AtribusiOpenMeteo } from "@/components/cuaca/atribusi-open-meteo";
-import { CatatanLokasi } from "@/components/cuaca/catatan-lokasi";
 import { GrafikHujan48Jam } from "@/components/cuaca/grafik-hujan-48jam";
 import { StatusData } from "@/components/cuaca/status-data";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRiskState } from "@/hooks/useRiskState";
 import type { KontakDarurat as KontakDaruratItem } from "@/lib/kontak-darurat";
 import { LABEL_STATE, type TabPenanganan } from "@/lib/mesin-risiko";
-import { LABEL_LEVEL } from "@/lib/risiko";
+import { LABEL_LEVEL, URUTAN_LEVEL } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
 import { cn } from "@/lib/utils";
 import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
-import { BadgeRisiko } from "./badge-risiko";
 import { BannerStatus } from "./banner-status";
 import { DaftarParameter } from "./daftar-parameter";
-import { GaugeRisiko } from "./gauge-risiko";
 import { GAYA_LEVEL } from "./gaya-level";
+import { KartuLevelRisiko } from "./kartu-level-risiko";
 import { KontakDarurat } from "./kontak-darurat";
 import { PenangananTabs } from "./penanganan-tabs";
 
-function Bagian({
-  id,
-  judul,
-  ikon: Ikon,
-  children,
-  className,
-}: {
-  id?: string;
-  judul: string;
-  ikon: typeof Activity;
-  children: React.ReactNode;
-  className?: string;
-}) {
+/** Kartu putih halaman Risiko (kanvas desain ulang). */
+const KARTU = "flex flex-col rounded-[18px] border bg-card p-4 text-card-foreground";
+const JUDUL_KARTU = "text-[18px] font-extrabold";
+
+const LEVEL = Object.keys(URUTAN_LEVEL) as (keyof typeof URUTAN_LEVEL)[];
+
+function ArtiLevel() {
   return (
-    <Card id={id} className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <Ikon className="size-5 text-primary" aria-hidden="true" />
-          {judul}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+    <details open className="group rounded-[18px] border bg-card px-4 pt-1 pb-4">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 text-[16px] font-extrabold [&::-webkit-details-marker]:hidden">
+        Apa arti setiap level?
+        <ChevronDown className="size-5 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <dl className="flex flex-col gap-2.5">
+        {LEVEL.map((l) => (
+          <div key={l} className="flex items-start gap-3">
+            <dt className={cn("w-[76px] shrink-0 rounded-lg py-[5px] text-center text-[13px] font-extrabold", GAYA_LEVEL[l].solid)}>
+              {LABEL_LEVEL[l]}
+            </dt>
+            <dd className="text-[14px] leading-normal text-[#1f2937]">{GAYA_LEVEL[l].arti}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
   );
 }
 
@@ -73,8 +70,11 @@ export function PanelRisiko({
 
   const s = ktx.state;
   const data = s.data ?? risiko;
-  const gaya = GAYA_LEVEL[data.level];
   const diPenanganan = s.nama === "penanganan";
+  const dataLama = data.sumberData === "cadangan" || data.sumberData === "hemat-kuota";
+  // D-024: grafik = jalur 2 state Bahaya (PermintaanGrafik → MenyiapkanGrafik → SelesaiRender).
+  // Tetap tampil di Detail Penanganan (hasil join dari Bahaya); tidak ada di Pemantauan dan Final.
+  const tampilGrafik = s.nama === "bahaya" || diPenanganan;
 
   // Entry Detail Penanganan: arahkan pengguna ke checklist.
   useEffect(() => {
@@ -85,19 +85,30 @@ export function PanelRisiko({
   }, [diPenanganan]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <p className="flex items-center gap-2">
-          <span className="text-muted-foreground">Status pemantauan:</span>
-          <span className="rounded-full bg-muted px-2.5 py-0.5 font-medium">{LABEL_STATE[s.nama]}</span>
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <p className="inline-flex flex-wrap items-center gap-2 text-[14px] text-[#3e4a5c]">
+          Status pemantauan
+          <span className="rounded-full bg-primary-lembut px-2.5 py-1 text-[13px] font-bold text-primary-hover">
+            {LABEL_STATE[s.nama]}
+          </span>
         </p>
-        <Button variant="ghost" size="sm" onClick={() => void muatUlang()} disabled={ktx.memuat}>
-          {ktx.memuat ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <RefreshCw aria-hidden="true" />}
+        <button
+          type="button"
+          onClick={() => void muatUlang()}
+          disabled={ktx.memuat}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl border border-[#c6cfdc] bg-card px-3.5 text-[14px] font-bold text-foreground hover:bg-[#f7f9fc] disabled:opacity-60"
+        >
+          {ktx.memuat ? (
+            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <RefreshCw className="size-4" strokeWidth={2.2} aria-hidden="true" />
+          )}
           Perbarui
-        </Button>
+        </button>
       </div>
       {ktx.galat ? (
-        <p role="status" className="text-sm text-destructive">
+        <p role="status" className="text-[14px] text-destructive">
           Gagal memperbarui: {ktx.galat}. Menampilkan data terakhir.
         </p>
       ) : null}
@@ -109,72 +120,54 @@ export function PanelRisiko({
         onAktifkanNotifikasi={() => bukaDialogIzin({ idWilayah: data.idWilayah, namaWilayah: data.namaWilayah })}
       />
 
-      <Card className={cn("border-2", gaya.lembut)}>
-        <CardContent className="grid items-center gap-6 md:grid-cols-2">
-          <div className="space-y-3">
-            <div>
-              <p className="font-medium">{data.namaWilayah}</p>
-              <p className="text-sm text-muted-foreground">{data.namaInduk}</p>
-            </div>
-            <BadgeRisiko level={data.level} />
-            <p className="text-lg font-semibold">{data.deskripsi}</p>
-            <p>{gaya.pesan}</p>
-            <div className="space-y-1">
-              <StatusData sumber={data.sumberData} waktuAmbil={new Date(data.waktuAmbilData)} />
-              <CatatanLokasi koordinatPerkiraan={data.koordinatPerkiraan} />
-            </div>
-          </div>
-          <GaugeRisiko skor={data.skorRisiko} level={data.level} />
-        </CardContent>
-      </Card>
+      <KartuLevelRisiko data={data} />
+      {dataLama && <StatusData sumber={data.sumberData} waktuAmbil={new Date(data.waktuAmbilData)} />}
 
-      <Bagian judul="Curah hujan 48 jam" ikon={CloudRain}>
-        <GrafikHujan48Jam
-          data={grafik}
-          onSelesaiRender={s.nama === "bahaya" && s.jalurGrafik === "menyiapkan-grafik" ? grafikSelesaiRender : undefined}
-        />
-        <div className="mt-3">
-          <AtribusiOpenMeteo />
-        </div>
-      </Bagian>
+      <ArtiLevel />
 
-      <Bagian judul="Parameter pemicu" ikon={Activity}>
+      <section aria-labelledby="judul-param" className={cn(KARTU, "gap-1")}>
+        <h2 id="judul-param" className={cn(JUDUL_KARTU, "mb-2")}>
+          Parameter pemicu
+        </h2>
         <DaftarParameter hasil={data.parameter} />
-      </Bagian>
+      </section>
+
+      {tampilGrafik && (
+        <section aria-labelledby="judul-grafik" className={cn(KARTU, "gap-3")}>
+          <h2 id="judul-grafik" className={JUDUL_KARTU}>
+            Curah hujan 48 jam
+          </h2>
+          <GrafikHujan48Jam
+            data={grafik}
+            onSelesaiRender={s.nama === "bahaya" && s.jalurGrafik === "menyiapkan-grafik" ? grafikSelesaiRender : undefined}
+          />
+          <AtribusiOpenMeteo />
+        </section>
+      )}
 
       <section
         id="penanganan"
         aria-labelledby="judul-penanganan"
-        className={cn("scroll-mt-20 rounded-xl", diPenanganan && "ring-2 ring-primary ring-offset-4 ring-offset-background")}
+        className={cn(KARTU, "gap-3.5", diPenanganan && "ring-2 ring-primary ring-offset-4 ring-offset-background")}
       >
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <h2
-                id="judul-penanganan"
-                ref={refPenanganan}
-                tabIndex={-1}
-                className="flex items-center gap-2 text-xl outline-none"
-              >
-                <ShieldAlert className="size-5 text-primary" aria-hidden="true" />
-                Penanganan (risiko {LABEL_LEVEL[penanganan.level].toLowerCase()})
-              </h2>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PenangananTabs
-              idWilayah={data.idWilayah}
-              penanganan={penanganan}
-              tab={diPenanganan ? s.tab : tabLokal}
-              onPilihTab={(tab) => (diPenanganan ? kirim({ type: "PILIH_TAB", tab }) : setTabLokal(tab))}
-            />
-          </CardContent>
-        </Card>
+        <h2 id="judul-penanganan" ref={refPenanganan} tabIndex={-1} className={cn(JUDUL_KARTU, "outline-none")}>
+          Penanganan (risiko {LABEL_LEVEL[penanganan.level].toLowerCase()})
+        </h2>
+        <PenangananTabs
+          idWilayah={data.idWilayah}
+          penanganan={penanganan}
+          tab={diPenanganan ? s.tab : tabLokal}
+          onPilihTab={(tab) => (diPenanganan ? kirim({ type: "PILIH_TAB", tab }) : setTabLokal(tab))}
+        />
       </section>
 
-      <Bagian id="kontak-darurat" judul="Kontak darurat" ikon={Phone}>
+      <section id="kontak-darurat" aria-labelledby="judul-kontak" className={cn(KARTU, "gap-3")}>
+        <h2 id="judul-kontak" className={JUDUL_KARTU}>
+          Kontak darurat
+        </h2>
+        {/* Sementara daftar lengkap di sini; diganti tautan ke halaman Kontak saat board "Nomor Darurat" diimplementasikan. */}
         <KontakDarurat kontak={kontak} />
-      </Bagian>
-    </div>
+      </section>
+    </>
   );
 }
