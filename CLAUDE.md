@@ -29,7 +29,11 @@ Sumber desain: kanvas **"Siap Banjir — Desain Ulang"** — https://claude.ai/a
 - **Satu halaman satu commit**, tiap commit disertai entri DECISIONS dan penyesuaian e2e.
 - Board berisi teks contoh. Data asli (deskripsi mesin risiko, rekomendasi BNPB, kontak resmi) tetap dipakai; jangan menyalin angka/teks contoh dari board.
 
-Status: Beranda + shell global (D-046) dan Risiko (D-047) selesai. Berikutnya: Kontak (halaman baru; tombol Darurat dan kartu kontak Beranda sementara mengarah ke `/risiko#kontak-darurat`, yang sementara masih berisi daftar kontak lengkap), Cuaca, Informasi, Pengaturan.
+Status: Beranda + shell global (D-046) dan Risiko (D-047, D-048) selesai. Berikutnya: Kontak, Cuaca, Informasi, Pengaturan.
+
+**Wajib saat membuat halaman Kontak (board `Kontak*`, "Nomor Darurat"):**
+- Bagian `#kontak-darurat` di halaman Risiko ([panel-risiko.tsx](src/components/risiko/panel-risiko.tsx)) masih berisi daftar kontak lengkap. Ganti menjadi **kartu merah "Lihat nomor darurat"** sesuai board `Risiko` (latar `#B4141C`, ikon telepon dalam lingkaran putih, subteks "Untuk {wilayah}", chevron), yang menuju halaman Kontak.
+- Arahkan tombol Darurat di header dan kartu kontak Beranda (keduanya sekarang ke `/risiko#kontak-darurat`) ke halaman Kontak.
 
 ## Perintah
 
