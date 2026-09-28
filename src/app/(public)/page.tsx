@@ -77,8 +77,7 @@ async function RingkasanWilayah({ idWilayah, namaWilayah }: { idWilayah: string;
         />
         <KartuPeringatanDini wilayah={{ idWilayah, namaWilayah }} />
       </div>
-      {/* Sementara ke bagian kontak di halaman Risiko; diganti halaman Kontak di commit berikutnya. */}
-      <TautanKontakDarurat href={`/risiko?wilayah=${idWilayah}#kontak-darurat`} tinggi={risiko.level === "TINGGI"} />
+      <TautanKontakDarurat href={`/kontak?wilayah=${idWilayah}`} tinggi={risiko.level === "TINGGI"} />
     </>
   );
 }

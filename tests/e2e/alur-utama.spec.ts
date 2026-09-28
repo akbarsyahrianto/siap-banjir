@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { DESA_UJI, identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
+import { DESA_TANPA_112, DESA_UJI, identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
 
 test.beforeEach(async ({ context, page }, testInfo) => {
   await context.grantPermissions(["notifications", "geolocation"]);
@@ -45,7 +45,8 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
     await expect(page.getByRole("img", { name: /Ilustrasi 3D: air naik sampai tanda level (Rendah|Sedang|Tinggi)/ })).toBeVisible();
     await expect(page.getByRole("list", { name: "Skala level risiko" }).locator('[aria-current="step"]')).toHaveCount(1);
     await expect(page.getByRole("link", { name: /Cuaca terkini/ })).toContainText(/Hujan 24 jam: [\d,]+ mm/);
-    await expect(page.getByRole("link", { name: /Kontak darurat/ })).toHaveAttribute("href", /#kontak-darurat$/);
+    await expect(page.getByRole("link", { name: /Kontak darurat/ })).toHaveAttribute("href", `/kontak?wilayah=${DESA_UJI}`);
+    await expect(page.getByRole("banner").getByRole("link", { name: "Darurat" })).toHaveAttribute("href", "/kontak");
     await expect(page.getByText("Data cuaca: Open-Meteo.com").first()).toBeVisible();
   });
 
@@ -70,8 +71,11 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
 
     await page.getByRole("tab", { name: "Detail Mitigasi" }).click();
     await expect(page.getByRole("tabpanel").getByRole("listitem").first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /Layanan Darurat\s*112/ })).toHaveAttribute("href", "tel:112");
-    await expect(page.getByText("BPBD Kota Semarang")).toBeVisible();
+    // Kartu merah ke halaman Nomor Darurat (board Risiko, D-050).
+    await expect(page.getByRole("link", { name: /Lihat nomor darurat\s*Untuk Kelurahan Bulu Lor, Kota Semarang/ })).toHaveAttribute(
+      "href",
+      `/kontak?wilayah=${DESA_UJI}`,
+    );
   });
 
   await test.step("Pengaturan: level minimum & nonaktifkan notifikasi", async () => {
@@ -163,13 +167,64 @@ test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
     const kontak = konten.getByRole("link", { name: /Kontak darurat/ });
     await expect(kontak).toHaveCSS("background-color", "rgb(180, 20, 28)");
     await kontak.click();
-    await expect(page.locator("#kontak-darurat")).toBeInViewport();
+    await expect(page).toHaveURL(`/kontak?wilayah=${WILAYAH_SIMULASI}`);
+    await expect(page.getByRole("heading", { name: "Nomor Darurat", level: 1 })).toBeVisible();
   });
 
   test("deep link notifikasi #penanganan langsung ke Detail Penanganan", async ({ page }) => {
     await page.goto(`/risiko?wilayah=${WILAYAH_SIMULASI}#penanganan`);
     await expect(page.getByText("Detail penanganan", { exact: true })).toBeVisible();
     await expect(page.getByText("Ikuti langkah penanganan di bawah")).toBeVisible();
+  });
+});
+
+test.describe("Nomor Darurat (D-050)", () => {
+  test("112 utama; konfirmasi sebelum menelepon; BPBD tanpa nomor resmi", async ({ page }, testInfo) => {
+    await page.goto(`/kontak?wilayah=${DESA_UJI}`);
+    const konten = page.locator("#konten");
+    await expect(konten.getByRole("heading", { name: "Nomor Darurat", level: 1 })).toBeVisible();
+    await expect(konten.getByText("Kelurahan Bulu Lor, Kota Semarang", { exact: true })).toBeVisible();
+    await expect(konten.getByText(/Layanan 112 Kota Semarang sudah diluncurkan sejak/)).toBeVisible();
+    await expect(konten.getByRole("note")).toHaveCount(0);
+    // Board: header situs tidak tampil di HP (ada tombol Kembali).
+    if (testInfo.project.name === "mobile") await expect(page.getByRole("banner")).toBeHidden();
+
+    const utama = konten.getByRole("button", { name: /^112\s*Layanan darurat terpadu$/ });
+    await utama.click();
+    const konfirmasi = konten.getByRole("alertdialog", { name: "Telepon 112?" });
+    await expect(konfirmasi.getByRole("button", { name: "Batal" })).toBeFocused();
+    await expect(konfirmasi.getByRole("link", { name: "Ya, telepon" })).toHaveAttribute("href", "tel:112");
+    await page.keyboard.press("Escape");
+    await expect(konfirmasi).toHaveCount(0);
+    await expect(utama).toBeFocused();
+
+    const lainnya = konten.getByRole("region", { name: "Nomor lainnya" });
+    await expect(lainnya.getByRole("listitem").first()).toContainText("BPBD Kota Semarang");
+    await expect(lainnya.getByRole("listitem").first()).toContainText("Nomor belum tersedia");
+    await lainnya.getByRole("button", { name: /Call Center BNPB.*117/ }).click();
+    await expect(konten.getByRole("alertdialog", { name: "Telepon 117?" }).getByRole("link", { name: "Ya, telepon" })).toHaveAttribute(
+      "href",
+      "tel:117",
+    );
+  });
+
+  test("wilayah tanpa 112: catatan status, BPBD Provinsi DIY utama, 112 tetap ada", async ({ page }) => {
+    await page.goto(`/kontak?wilayah=${DESA_TANPA_112}`);
+    const konten = page.locator("#konten");
+    await expect(konten.getByRole("note")).toContainText("Layanan 112 Kabupaten Kulon Progo belum tercatat diluncurkan.");
+    await konten.getByRole("button", { name: /^\(0274\) 555585\s*BPBD Provinsi Daerah Istimewa Yogyakarta$/ }).click();
+    await expect(konten.getByRole("link", { name: "Ya, telepon" })).toHaveAttribute("href", "tel:0274555585");
+    await expect(konten.getByRole("link", { name: /Situs resmi BPBD DIY/ })).toHaveAttribute("href", "https://bpbd.jogjaprov.go.id/beranda");
+    const lainnya = konten.getByRole("region", { name: "Nomor lainnya" });
+    await expect(lainnya.getByRole("button", { name: /Layanan darurat terpadu.*112/ })).toBeVisible();
+  });
+
+  test("tanpa wilayah: nomor nasional dan ajakan memilih wilayah", async ({ page }) => {
+    await page.goto("/kontak");
+    const konten = page.locator("#konten");
+    await expect(konten.getByText(/Wilayah belum dipilih/)).toBeVisible();
+    await expect(konten.getByRole("button", { name: /^112\s*Layanan darurat terpadu$/ })).toBeVisible();
+    await expect(konten.getByRole("region", { name: "Nomor lainnya" }).getByRole("listitem")).toHaveCount(3);
   });
 });
 
@@ -194,6 +249,7 @@ test("tidak ada scroll horizontal (mobile-first)", async ({ page }) => {
     `/cuaca?wilayah=${DESA_UJI}`,
     "/informasi",
     "/pengaturan",
+    `/kontak?wilayah=${DESA_TANPA_112}`,
   ]) {
     await page.goto(url);
     await page.waitForLoadState("networkidle");

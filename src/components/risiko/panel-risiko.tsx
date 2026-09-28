@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LoaderCircle, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronRight, LoaderCircle, Phone, RefreshCw } from "lucide-react";
 import { AtribusiOpenMeteo } from "@/components/cuaca/atribusi-open-meteo";
 import { GrafikHujan48Jam } from "@/components/cuaca/grafik-hujan-48jam";
 import { StatusData } from "@/components/cuaca/status-data";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
 import { useRiskState } from "@/hooks/useRiskState";
-import type { KontakDarurat as KontakDaruratItem } from "@/lib/kontak-darurat";
 import { LABEL_STATE, type TabPenanganan } from "@/lib/mesin-risiko";
 import { LABEL_LEVEL, URUTAN_LEVEL } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
@@ -17,7 +17,6 @@ import { BannerStatus } from "./banner-status";
 import { DaftarParameter } from "./daftar-parameter";
 import { GAYA_LEVEL } from "./gaya-level";
 import { KartuLevelRisiko } from "./kartu-level-risiko";
-import { KontakDarurat } from "./kontak-darurat";
 import { PenangananTabs } from "./penanganan-tabs";
 
 /** Kartu putih halaman Risiko (kanvas desain ulang). */
@@ -51,12 +50,10 @@ export function PanelRisiko({
   risiko,
   grafik: grafikAwal,
   penanganan: penangananAwal,
-  kontak,
 }: {
   risiko: RisikoKlien;
   grafik: TitikGrafikJam[];
   penanganan: PenangananKlien;
-  kontak: KontakDaruratItem[];
 }) {
   const { ktx, kirim, grafik, penanganan, muatUlang, grafikSelesaiRender } = useRiskState({
     idWilayah: risiko.idWilayah,
@@ -165,8 +162,19 @@ export function PanelRisiko({
         <h2 id="judul-kontak" className={JUDUL_KARTU}>
           Kontak darurat
         </h2>
-        {/* Sementara daftar lengkap di sini; diganti tautan ke halaman Kontak saat board "Nomor Darurat" diimplementasikan. */}
-        <KontakDarurat kontak={kontak} />
+        <Link
+          href={`/kontak?wilayah=${data.idWilayah}`}
+          className="flex min-h-[72px] items-center gap-3 rounded-[14px] bg-darurat px-4 py-3 text-darurat-foreground hover:opacity-95"
+        >
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-darurat">
+            <Phone className="size-[22px]" strokeWidth={2.2} aria-hidden="true" />
+          </span>
+          <span className="flex flex-col gap-0.5">
+            <span className="text-[17px] font-extrabold">Lihat nomor darurat</span>
+            <span className="text-[13px] font-semibold">Untuk {data.namaWilayah}</span>
+          </span>
+          <ChevronRight className="ml-auto size-[22px] shrink-0" strokeWidth={2.2} aria-hidden="true" />
+        </Link>
       </section>
     </>
   );

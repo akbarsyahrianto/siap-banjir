@@ -10,7 +10,6 @@ import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { keRisikoKlien, lihatKondisiWilayah, lihatPenanganan } from "@/server/services/pemantauan.service";
 import { seriHujan48Jam } from "@/server/services/seri-cuaca";
-import { kontakDaruratWilayah } from "@/server/services/wilayah.service";
 import { muatPemilih } from "@/server/wilayah-terpilih";
 
 export const metadata: Metadata = { title: "Risiko Banjir" };
@@ -80,7 +79,6 @@ async function DetailRisiko({ idWilayah }: { idWilayah: string }) {
       risiko={risiko}
       grafik={seriHujan48Jam(kondisi.cuaca.raw)}
       penanganan={penanganan}
-      kontak={kontakDaruratWilayah(kondisi.leluhur)}
     />
   );
 }

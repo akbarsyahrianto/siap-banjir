@@ -6,6 +6,9 @@ export const WILAYAH_SIMULASI = "33.75.03.1009";
 /** Kelurahan Bulu Lor, Kec. Semarang Utara, Kota Semarang. */
 export const DESA_UJI = "33.74.02.1002";
 
+/** Desa Jangkaran, Kulon Progo: kab/kota tidak tercatat di Portal 112; BPBD Provinsi DIY bernomor resmi. */
+export const DESA_TANPA_112 = "34.01.01.2001";
+
 /** Token perangkat & endpoint push tetap per project, agar bisa dibersihkan di teardown. */
 export function identitasUji(testInfo: TestInfo) {
   const akhiran = testInfo.project.name === "mobile" ? "e2e1" : "e2e2";

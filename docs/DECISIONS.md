@@ -439,6 +439,8 @@ Font teks diganti dari Geist ke **Plus Jakarta Sans** (`next/font/google`, font 
 
 ## D-046 · Desain ulang: Beranda dan shell aplikasi
 
+> **Sebagian diganti D-050:** tombol Darurat dan kartu kontak Beranda kini ke halaman Nomor Darurat (`/kontak`).
+
 **Sumber desain.** Kanvas "Siap Banjir — Desain Ulang" (artefak Design di aplikasi Claude). Beranda punya tiga board (Risiko Rendah/Sedang/Tinggi), yang ternyata satu komponen dengan parameter `level`. Desain dibaca dari berkas board-nya, dan kanvas tidak diubah.
 
 **Keputusan.**
@@ -459,6 +461,8 @@ Font teks diganti dari Geist ke **Plus Jakarta Sans** (`next/font/google`, font 
 **Diuji:** e2e alur utama disesuaikan (wilayah dipantau → Pengaturan, ilustrasi, skala, hujan 24 jam, kontak). Ada tes baru untuk Beranda risiko tinggi (badge, label simulasi, ajakan penyelamatan, kartu kontak merah → bagian kontak). Assertion dibatasi ke `#konten` karena selama streaming isi Suspense sempat ada di template tersembunyi di akhir `<body>`.
 
 ## D-047 · Desain ulang: halaman Risiko
+
+> **Sebagian diganti D-050:** bagian kontak darurat kini kartu merah ke halaman Nomor Darurat (`/kontak`).
 
 **Sumber desain.** Board "Risiko" di kanvas "Siap Banjir — Desain Ulang" (satu board, digambar untuk level Rendah). Kanvas tidak diubah.
 
@@ -511,3 +515,27 @@ Urutannya juga tidak deterministik. Dialog Radix bersifat modal dan hanya member
 - Tidak ada jeda waktu tambahan: dialog muncul tepat setelah isi tampil, dan isi terlihat di balik overlay.
 
 **Diuji:** tes "Gunakan lokasi saya" kini menunggu dialog, memastikan prakiraan harian sudah ada di DOM saat dialog muncul, menutup dialog ("Nanti saja"), lalu memeriksa heading.
+
+## D-050 · Desain ulang: halaman Nomor Darurat (`/kontak`)
+
+**Sumber desain.** Board "Nomor Darurat" di kanvas desain ulang: varian *ada 112*, *tanpa 112*, dan *konfirmasi panggilan* (satu komponen dengan dua parameter). Kanvas tidak diubah.
+
+**Keputusan.**
+- **Halaman baru `/kontak`** (`?wilayah=` atau cookie wilayah): tombol Kembali, judul "Nomor Darurat", nama wilayah, lalu "Ketuk nomor, lalu konfirmasi untuk menelepon.", kartu merah besar untuk nomor utama, dan bagian "Nomor lainnya". Tanpa wilayah terpilih, halaman tetap berfungsi dengan nomor nasional dan ajakan memilih wilayah di Pengaturan.
+- **Konfirmasi dua langkah** sesuai board: ketuk nomor → panel `role="alertdialog"` di tempat ("Batal" besar, "Telepon {nomor}?", tautan `tel:` "Ya, telepon"). Fokus pindah ke "Batal" (pilihan paling aman), Escape membatalkan, dan fokus kembali ke tombol nomor. Hanya satu panel yang terbuka pada satu waktu.
+- **Urutan nomor** (`susunNomorDarurat`, diuji unit):
+  - 112 sudah diluncurkan di kab/kota (atau wilayah belum dipilih): 112 jadi utama, lalu BPBD kab/kota, BPBD provinsi, 117, 119, 113.
+  - 112 belum diluncurkan: BPBD pertama yang nomornya terverifikasi (kab/kota, lalu provinsi) jadi utama, seperti board. Jika tidak ada BPBD bernomor (hampir semua wilayah saat ini, D-043), **112 tetap utama**. Nomor yang tidak ada tidak mungkin dijadikan utama, dan 112 adalah nomor nasional.
+- **Penyimpangan dari board, mengikuti D-042/D-043:**
+  - Catatan board "Layanan 112 belum tersedia di wilayah ini." diganti "Layanan 112 {kab/kota} belum tercatat diluncurkan." dengan keterangan status dari Portal 112 ("masih berstatus …" / "belum tercatat memiliki layanan 112. Jika tidak tersambung, hubungi nomor darurat lain di bawah."). Aplikasi tidak mengklaim 112 pasti tidak bisa dipakai.
+  - Pada varian tanpa 112, board menghapus 112 dari daftar. Di sini **112 tetap ada** di "Nomor lainnya" sebagai nomor nasional.
+  - Board hanya menampilkan satu BPBD dengan nomor contoh. Di sini ditampilkan **BPBD kab/kota dan BPBD provinsi** (DKI: provinsi saja). Yang belum punya nomor resmi tampil "Nomor belum tersedia" dan tidak bisa diketuk.
+  - **Sumber** (Portal 112 Komdigi + tanggal pengambilan, situs resmi BPBD + tanggal pemeriksaan) dan keterangan (mis. WhatsApp BPBD DIY) tampil di bawah nomornya. Board tidak memuatnya, tetapi konten keselamatan wajib bersumber.
+  - Teks konfirmasi board "Panggilan akan langsung tersambung." diganti "Ponsel akan membuka panggilan ke nomor ini.", karena `tel:` di banyak ponsel membuka dialer atau meminta konfirmasi, tidak langsung tersambung.
+- **Nama & deskripsi** nomor nasional mengikuti board (Layanan darurat terpadu, Call Center BNPB, Ambulans, Pemadam Kebakaran). Deskripsi 112 = "Nomor darurat nasional", karena di board nama dan deskripsinya sama.
+- **Shell:** header situs disembunyikan di layar HP saat di `/kontak` (board tanpa header, ada tombol Kembali). Di desktop header tetap tampil karena menjadi satu-satunya navigasi. Tombol Darurat header kini ke `/kontak` (dengan `aria-current` di halaman itu). Kartu kontak Beranda ke `/kontak?wilayah=…`.
+- **Halaman Risiko:** bagian `#kontak-darurat` kini kartu merah "Lihat nomor darurat · Untuk {wilayah}" sesuai board Risiko (mengganti daftar sementara dari D-047). Komponen `KontakDarurat` lama dihapus.
+- **Kembali:** `router.back()` jika ada riwayat, selain itu ke Beranda (board menautkan ke Beranda).
+- **Offline:** tidak ada perubahan service worker. `/kontak` ikut tersimpan setelah pernah dibuka (network-first, D-027), dan halaman `/offline` sudah memuat 112/117/119.
+
+**Diuji:** unit `nomorDaruratWilayah` (ada 112, tanpa 112 + BPBD bernomor, tanpa 112 tanpa BPBD bernomor, tanpa wilayah). E2E: konfirmasi 112 (fokus Batal, `tel:112`, Escape mengembalikan fokus), BPBD tanpa nomor, 117; varian tanpa 112 (Desa Jangkaran, Kulon Progo: catatan, BPBD Provinsi DIY utama dengan sumber, 112 tetap ada); tanpa wilayah; kartu merah Risiko; tombol Darurat; kartu kontak Beranda Tinggi → `/kontak`; tanpa scroll horizontal.

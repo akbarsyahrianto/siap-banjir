@@ -8,14 +8,20 @@ import { cn } from "@/lib/utils";
 import { LogoMark } from "./logo";
 import { NAV_ITEMS, isNavActive } from "./nav-items";
 
-/** Tujuan tombol Darurat. Sementara bagian kontak di halaman Risiko, sampai halaman Kontak dibuat. */
-export const HREF_DARURAT = "/risiko#kontak-darurat";
+/** Tujuan tombol Darurat: halaman Nomor Darurat (D-050). */
+export const HREF_DARURAT = "/kontak";
 
 export function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+    <header
+      className={cn(
+        "sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85",
+        // Board Nomor Darurat tanpa header di HP (ada tombol Kembali); di desktop header = satu-satunya navigasi.
+        pathname === HREF_DARURAT && "max-md:hidden",
+      )}
+    >
       <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 py-2.5">
         <Link href="/" className="flex items-center gap-2 rounded-md text-[19px] font-extrabold tracking-[-0.01em]">
           <LogoMark />
@@ -47,6 +53,7 @@ export function SiteHeader() {
 
         <Link
           href={HREF_DARURAT}
+          aria-current={pathname === HREF_DARURAT ? "page" : undefined}
           className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-darurat px-4 text-[15px] font-extrabold text-darurat-foreground hover:opacity-90"
         >
           <Phone className="size-[18px]" strokeWidth={2.2} aria-hidden="true" />

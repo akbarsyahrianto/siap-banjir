@@ -6,7 +6,7 @@ import { Prisma, type TingkatWilayah, type Wilayah } from "@prisma/client";
 import { KONTAK_BPBD } from "@/data/kontak-bpbd";
 import { formatTanggalLokalPanjang } from "@/lib/format";
 import { titikGrid } from "@/lib/grid";
-import type { KontakDarurat } from "@/lib/kontak-darurat";
+import { susunNomorDarurat, type KontakDarurat, type NomorDarurat } from "@/lib/kontak-darurat";
 import { keteranganLayanan112, statusLayanan112, SUMBER_LAYANAN_112 } from "@/lib/layanan-112";
 import { jarakKm } from "@/lib/geo";
 import { indukKode, jenisWilayah, leluhurKode, levelKode } from "@/lib/kode-wilayah";
@@ -152,12 +152,15 @@ export type DataPemilih = Awaited<ReturnType<typeof dataPemilih>>;
 
 // ---------- Kontak darurat ----------
 
-const KONTAK_NASIONAL = [
-  { nama: "Layanan Darurat", telepon: "112" },
-  { nama: "Call Center BNPB", telepon: "117" },
-  { nama: "Ambulans / Layanan Kesehatan", telepon: "119" },
-  { nama: "Pemadam Kebakaran & Penyelamatan", telepon: "113" },
+/** Nama & deskripsi mengikuti board "Nomor Darurat" kanvas desain ulang (D-050). */
+const KONTAK_NASIONAL: KontakDarurat[] = [
+  { id: "112", nama: "Layanan darurat terpadu", deskripsi: "Nomor darurat nasional", telepon: "112" },
+  { id: "117", nama: "Call Center BNPB", deskripsi: "Badan Nasional Penanggulangan Bencana", telepon: "117" },
+  { id: "119", nama: "Ambulans", deskripsi: "Layanan kesehatan", telepon: "119" },
+  { id: "113", nama: "Pemadam Kebakaran", deskripsi: "Kebakaran & penyelamatan", telepon: "113" },
 ];
+
+type LeluhurKontak = Pick<Wilayah, "idWilayah" | "namaWilayah" | "level">[];
 
 /**
  * Nomor darurat nasional + BPBD setempat.
@@ -165,12 +168,12 @@ const KONTAK_NASIONAL = [
  * - Nomor BPBD hanya dari KONTAK_BPBD yang bersumber resmi; selain itu null (D-007, D-043).
  * Kota/kabupaten administrasi DKI Jakarta tidak punya BPBD sendiri → BPBD Provinsi.
  */
-export function kontakDaruratWilayah(leluhur: Pick<Wilayah, "idWilayah" | "namaWilayah" | "level">[]): KontakDarurat[] {
+export function kontakDaruratWilayah(leluhur: LeluhurKontak): KontakDarurat[] {
   const prov = leluhur.find((w) => w.level === "PROVINSI");
   const kab = leluhur.find((w) => w.level === "KABKOTA");
 
   const nasional: KontakDarurat[] = KONTAK_NASIONAL.map((k) =>
-    k.telepon === "112" && kab
+    k.id === "112" && kab
       ? { ...k, keterangan: keteranganLayanan112(kab.namaWilayah, statusLayanan112(kab.idWilayah)), sumber: SUMBER_LAYANAN_112 }
       : k,
   );
@@ -180,12 +183,26 @@ export function kontakDaruratWilayah(leluhur: Pick<Wilayah, "idWilayah" | "namaW
   return [...nasional, ...pemilikBpbd.map(kontakBpbd)];
 }
 
+/** Halaman Nomor Darurat: kontak wilayah disusun menjadi nomor utama + lainnya (D-050). */
+export function nomorDaruratWilayah(leluhur: LeluhurKontak): NomorDarurat {
+  const kab = leluhur.find((w) => w.level === "KABKOTA");
+  return susunNomorDarurat(
+    kontakDaruratWilayah(leluhur),
+    kab ? { tersedia: statusLayanan112(kab.idWilayah).tersedia, namaKabKota: kab.namaWilayah } : null,
+  );
+}
+
 function kontakBpbd(w: Pick<Wilayah, "idWilayah" | "namaWilayah" | "level">): KontakDarurat {
-  const nama = w.level === "PROVINSI" ? `BPBD Provinsi ${w.namaWilayah}` : `BPBD ${w.namaWilayah}`;
+  const provinsi = w.level === "PROVINSI";
+  const dasar = {
+    id: provinsi ? "bpbd-provinsi" : "bpbd-kabkota",
+    nama: provinsi ? `BPBD Provinsi ${w.namaWilayah}` : `BPBD ${w.namaWilayah}`,
+    deskripsi: "Badan Penanggulangan Bencana Daerah",
+  };
   const k = KONTAK_BPBD[w.idWilayah];
-  if (!k) return { nama, telepon: null };
+  if (!k) return { ...dasar, telepon: null };
   return {
-    nama,
+    ...dasar,
     telepon: k.telepon,
     ...(k.keterangan ? { keterangan: k.keterangan } : {}),
     sumber: { nama: k.sumberNama, url: k.sumberUrl, keterangan: `diperiksa ${formatTanggalLokalPanjang(k.diperiksaPada)}` },
