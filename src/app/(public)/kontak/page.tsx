@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Info, MapPin } from "lucide-react";
 import { DaftarNomorDarurat } from "@/components/kontak/daftar-nomor-darurat";
 import { TautanKembali } from "@/components/kontak/tautan-kembali";
+import { SUMBER_NOMOR_NASIONAL } from "@/data/nomor-nasional";
+import { formatTanggalLokalPanjang } from "@/lib/format";
 import { lihatDesa, namaTampilan, nomorDaruratWilayah } from "@/server/services/wilayah.service";
 import { idWilayahTerpilih } from "@/server/wilayah-terpilih";
 
@@ -56,6 +58,28 @@ export default async function KontakPage({ searchParams }: Props) {
       )}
 
       <DaftarNomorDarurat nomor={nomor} />
+
+      <section aria-labelledby="judul-sumber-nasional" className="flex flex-col gap-1.5 text-[13px] leading-normal text-[#3e4a5c]">
+        <h2 id="judul-sumber-nasional" className="font-bold text-[#2d3748]">
+          Sumber nomor darurat nasional
+        </h2>
+        <ul className="flex flex-col gap-1">
+          {SUMBER_NOMOR_NASIONAL.map((s) => (
+            <li key={s.url}>
+              <a
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-primary underline underline-offset-2 hover:no-underline"
+              >
+                {s.nama}
+                <span className="sr-only"> (membuka tab baru)</span>
+              </a>{" "}
+              ({s.nomor.join(", ")}), diperiksa {formatTanggalLokalPanjang(s.diperiksaPada)}.
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

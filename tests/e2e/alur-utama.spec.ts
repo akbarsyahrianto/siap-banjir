@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { DESA_TANPA_112, DESA_UJI, identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
+import { DESA_TANPA_112, DESA_TANPA_112_TANPA_BPBD, DESA_UJI, identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
 
 test.beforeEach(async ({ context, page }, testInfo) => {
   await context.grantPermissions(["notifications", "geolocation"]);
@@ -201,6 +201,16 @@ test.describe("Nomor Darurat (D-050)", () => {
     const lainnya = konten.getByRole("region", { name: "Nomor lainnya" });
     await expect(lainnya.getByRole("listitem").first()).toContainText("BPBD Kota Semarang");
     await expect(lainnya.getByRole("listitem").first()).toContainText("Nomor belum tersedia");
+    // D-051: Basarnas 115 dan Kepolisian 110, masing-masing bersumber resmi.
+    await expect(lainnya.getByRole("button", { name: /^Basarnas.*115$/ })).toBeVisible();
+    await expect(lainnya.getByRole("button", { name: /^Kepolisian.*110$/ })).toBeVisible();
+    const sumber = konten.getByRole("region", { name: "Sumber nomor darurat nasional" });
+    await expect(sumber.getByRole("link", { name: /Kabasarnas: Darurat SAR, Hubungi 115!/ })).toHaveAttribute(
+      "href",
+      "https://basarnas.go.id/berita/kabasarnas-darurat-sar-hubungi-115",
+    );
+    await expect(sumber.getByRole("link", { name: /Kontak Darurat", hal\. 82/ })).toHaveAttribute("href", /#page=84$/);
+    await expect(konten.getByRole("region", { name: "Hubungi juga nomor darurat nasional" })).toHaveCount(0);
     await lainnya.getByRole("button", { name: /Call Center BNPB.*117/ }).click();
     await expect(konten.getByRole("alertdialog", { name: "Telepon 117?" }).getByRole("link", { name: "Ya, telepon" })).toHaveAttribute(
       "href",
@@ -219,12 +229,30 @@ test.describe("Nomor Darurat (D-050)", () => {
     await expect(lainnya.getByRole("button", { name: /Layanan darurat terpadu.*112/ })).toBeVisible();
   });
 
+  test("112 belum diluncurkan tanpa BPBD bernomor: 112 didampingi nomor nasional di atas (D-051)", async ({ page }) => {
+    await page.goto(`/kontak?wilayah=${DESA_TANPA_112_TANPA_BPBD}`);
+    const konten = page.locator("#konten");
+    await expect(konten.getByRole("note")).toContainText('Layanan 112 di Kabupaten Nias masih berstatus "Uji Coba".');
+    await expect(konten.getByRole("button", { name: /^112\s*Layanan darurat terpadu$/ })).toBeVisible();
+    const pendamping = konten.getByRole("region", { name: "Hubungi juga nomor darurat nasional" });
+    await expect(pendamping.getByRole("button")).toHaveCount(5);
+    await pendamping.getByRole("button", { name: /^115\s*Basarnas/ }).click();
+    await expect(pendamping.getByRole("alertdialog", { name: "Telepon 115?" }).getByRole("link", { name: "Ya, telepon" })).toHaveAttribute(
+      "href",
+      "tel:115",
+    );
+    const lainnya = konten.getByRole("region", { name: "Nomor lainnya" });
+    await expect(lainnya.getByRole("listitem")).toHaveCount(2);
+    await expect(lainnya.getByRole("listitem").first()).toContainText("BPBD Kabupaten Nias");
+    await expect(lainnya.getByRole("listitem").first()).toContainText("Nomor belum tersedia");
+  });
+
   test("tanpa wilayah: nomor nasional dan ajakan memilih wilayah", async ({ page }) => {
     await page.goto("/kontak");
     const konten = page.locator("#konten");
     await expect(konten.getByText(/Wilayah belum dipilih/)).toBeVisible();
     await expect(konten.getByRole("button", { name: /^112\s*Layanan darurat terpadu$/ })).toBeVisible();
-    await expect(konten.getByRole("region", { name: "Nomor lainnya" }).getByRole("listitem")).toHaveCount(3);
+    await expect(konten.getByRole("region", { name: "Nomor lainnya" }).getByRole("listitem")).toHaveCount(5);
   });
 });
 

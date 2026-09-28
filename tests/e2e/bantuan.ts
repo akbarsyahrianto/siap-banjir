@@ -9,6 +9,9 @@ export const DESA_UJI = "33.74.02.1002";
 /** Desa Jangkaran, Kulon Progo: kab/kota tidak tercatat di Portal 112; BPBD Provinsi DIY bernomor resmi. */
 export const DESA_TANPA_112 = "34.01.01.2001";
 
+/** Desa Ononamolo I Bot, Kabupaten Nias: layanan 112 berstatus "Uji Coba"; tidak ada nomor BPBD resmi. */
+export const DESA_TANPA_112_TANPA_BPBD = "12.04.05.2001";
+
 /** Token perangkat & endpoint push tetap per project, agar bisa dibersihkan di teardown. */
 export function identitasUji(testInfo: TestInfo) {
   const akhiran = testInfo.project.name === "mobile" ? "e2e1" : "e2e2";

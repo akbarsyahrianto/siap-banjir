@@ -97,7 +97,7 @@ export function DaftarNomorDarurat({ nomor }: { nomor: NomorDarurat }) {
     else pemicu.current.delete(id);
   };
 
-  const { utama, lainnya } = nomor;
+  const { utama, pendamping, lainnya } = nomor;
 
   return (
     <>
@@ -130,52 +130,88 @@ export function DaftarNomorDarurat({ nomor }: { nomor: NomorDarurat }) {
         <Catatan kontak={utama} />
       </div>
 
-      <section aria-labelledby="judul-nomor-lain" className="flex flex-col gap-2.5">
-        <h2 id="judul-nomor-lain" className="mt-1 text-[16px] font-extrabold text-[#2d3748]">
-          Nomor lainnya
-        </h2>
-        <ul className="flex flex-col gap-2.5">
-          {lainnya.map((k) => (
-            <li key={k.id}>
-              {!k.telepon ? (
-                <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border bg-card px-4 py-3">
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-[16px] font-bold">{k.nama}</span>
-                    <span className="text-[13px] text-muted-foreground">{k.deskripsi}</span>
-                  </span>
-                  <span className="ml-auto shrink-0 text-right text-[13px] font-semibold text-muted-foreground">
-                    Nomor belum tersedia
-                  </span>
-                </div>
-              ) : terbuka === k.id ? (
-                <Konfirmasi kontak={k} besar={false} onBatal={() => batal(k.id)} />
+      {pendamping.length > 0 && (
+        // D-051: 112 belum diluncurkan dan tidak ada BPBD bernomor → nomor nasional ikut di atas.
+        <section aria-labelledby="judul-pendamping" className="-mt-1 flex flex-col gap-2.5">
+          <h2 id="judul-pendamping" className="text-[16px] font-extrabold text-[#2d3748]">
+            Hubungi juga nomor darurat nasional
+          </h2>
+          <ul className="grid grid-cols-2 gap-2.5">
+            {pendamping.map((k) =>
+              terbuka === k.id ? (
+                <li key={k.id} className="col-span-2">
+                  <Konfirmasi kontak={k} besar={false} onBatal={() => batal(k.id)} />
+                </li>
               ) : (
-                <button
-                  ref={daftarkan(k.id)}
-                  type="button"
-                  onClick={() => setTerbuka(k.id)}
-                  className="flex min-h-[72px] w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left text-card-foreground hover:bg-[#f7f9fc]"
-                >
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-[16px] font-bold">{k.nama}</span>
-                    <span className="text-[13px] text-muted-foreground">{k.deskripsi}</span>
-                  </span>
-                  <span
-                    className={cn(
-                      "ml-auto inline-flex shrink-0 items-center gap-1.5 font-extrabold text-primary tabular-nums",
-                      nomorPanjang(k.telepon) ? "text-[17px]" : "text-[22px]",
-                    )}
+                <li key={k.id}>
+                  <button
+                    ref={daftarkan(k.id)}
+                    type="button"
+                    onClick={() => setTerbuka(k.id)}
+                    className="flex min-h-[88px] w-full flex-col items-start justify-center gap-1 rounded-2xl border-2 border-darurat bg-card px-3.5 py-3 text-left text-card-foreground hover:bg-darurat-lembut"
                   >
-                    <Phone className="size-5" strokeWidth={2.2} aria-hidden="true" />
-                    {k.telepon}
-                  </span>
-                </button>
-              )}
-              <Catatan kontak={k} />
-            </li>
-          ))}
-        </ul>
-      </section>
+                    <span className="inline-flex items-center gap-1.5 text-[26px] leading-none font-extrabold text-darurat tabular-nums">
+                      <Phone className="size-5" strokeWidth={2.2} aria-hidden="true" />
+                      {k.telepon}
+                    </span>
+                    <span className="text-[14px] leading-tight font-bold">{k.nama}</span>
+                    <span className="text-[12px] leading-tight text-muted-foreground">{k.deskripsi}</span>
+                  </button>
+                </li>
+              ),
+            )}
+          </ul>
+        </section>
+      )}
+
+      {lainnya.length > 0 && (
+        <section aria-labelledby="judul-nomor-lain" className="flex flex-col gap-2.5">
+          <h2 id="judul-nomor-lain" className="mt-1 text-[16px] font-extrabold text-[#2d3748]">
+            Nomor lainnya
+          </h2>
+          <ul className="flex flex-col gap-2.5">
+            {lainnya.map((k) => (
+              <li key={k.id}>
+                {!k.telepon ? (
+                  <div className="flex min-h-[72px] items-center gap-3 rounded-2xl border bg-card px-4 py-3">
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-[16px] font-bold">{k.nama}</span>
+                      <span className="text-[13px] text-muted-foreground">{k.deskripsi}</span>
+                    </span>
+                    <span className="ml-auto shrink-0 text-right text-[13px] font-semibold text-muted-foreground">
+                      Nomor belum tersedia
+                    </span>
+                  </div>
+                ) : terbuka === k.id ? (
+                  <Konfirmasi kontak={k} besar={false} onBatal={() => batal(k.id)} />
+                ) : (
+                  <button
+                    ref={daftarkan(k.id)}
+                    type="button"
+                    onClick={() => setTerbuka(k.id)}
+                    className="flex min-h-[72px] w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left text-card-foreground hover:bg-[#f7f9fc]"
+                  >
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-[16px] font-bold">{k.nama}</span>
+                      <span className="text-[13px] text-muted-foreground">{k.deskripsi}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        "ml-auto inline-flex shrink-0 items-center gap-1.5 font-extrabold text-primary tabular-nums",
+                        nomorPanjang(k.telepon) ? "text-[17px]" : "text-[22px]",
+                      )}
+                    >
+                      <Phone className="size-5" strokeWidth={2.2} aria-hidden="true" />
+                      {k.telepon}
+                    </span>
+                  </button>
+                )}
+                <Catatan kontak={k} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

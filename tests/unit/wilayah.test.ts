@@ -1,6 +1,8 @@
 import type { TingkatWilayah } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import data112 from "@/data/layanan-112.json";
+import { NOMOR_NASIONAL, SUMBER_NOMOR_NASIONAL } from "@/data/nomor-nasional";
+import { ISI_PERSIAPAN_CATAT_NOMOR, isiPersiapanCatatNomor } from "@/lib/kontak-darurat";
 import { kontakDaruratWilayah, namaInduk, namaTampilan, nomorDaruratWilayah, tokenPencarian } from "@/server/services/wilayah.service";
 
 const w = (idWilayah: string, namaWilayah: string, level: TingkatWilayah) => ({ idWilayah, namaWilayah, level });
@@ -81,22 +83,30 @@ describe("kontakDaruratWilayah", () => {
   });
 });
 
-describe("nomorDaruratWilayah (D-050)", () => {
+describe("nomorDaruratWilayah (D-050, D-051)", () => {
   const diy = w("34", "Daerah Istimewa Yogyakarta", "PROVINSI");
   const id = (k: { id: string }) => k.id;
+  const NASIONAL_LAIN = ["115", "117", "110", "119", "113"];
+  const tanpa112TanpaBpbd = data112.daftar.find((e) => e.status !== 1 && !e.idWilayah.startsWith("34."))!;
+  const wilayahTanpa112 = [
+    w(tanpa112TanpaBpbd.idWilayah.slice(0, 2), "Provinsi X", "PROVINSI"),
+    w(tanpa112TanpaBpbd.idWilayah, "Kab X", "KABKOTA"),
+  ];
 
-  it("112 sudah diluncurkan → 112 utama, lalu BPBD, 117, 119, 113; tanpa catatan", () => {
+  it("112 sudah diluncurkan → 112 utama, lalu BPBD dan nomor nasional (115 lebih dulu); tanpa pendamping", () => {
     const n = nomorDaruratWilayah(tangerang);
     expect(n.utama.id).toBe("112");
     expect(n.utama.keterangan).toContain("sudah diluncurkan");
-    expect(n.lainnya.map(id)).toEqual(["bpbd-kabkota", "bpbd-provinsi", "117", "119", "113"]);
+    expect(n.pendamping).toEqual([]);
+    expect(n.lainnya.map(id)).toEqual(["bpbd-kabkota", "bpbd-provinsi", ...NASIONAL_LAIN]);
     expect(n.catatan112).toBeNull();
   });
 
   it("112 belum diluncurkan + BPBD bernomor → BPBD utama; 112 tetap di daftar, keterangannya jadi catatan", () => {
     const n = nomorDaruratWilayah([diy, w("34.01", "Kabupaten Kulon Progo", "KABKOTA")]);
     expect(n.utama).toMatchObject({ id: "bpbd-provinsi", telepon: "(0274) 555585" });
-    expect(n.lainnya.map(id)).toEqual(["112", "bpbd-kabkota", "117", "119", "113"]);
+    expect(n.pendamping).toEqual([]);
+    expect(n.lainnya.map(id)).toEqual(["112", "bpbd-kabkota", ...NASIONAL_LAIN]);
     expect(n.lainnya[0]!.keterangan).toBeUndefined();
     expect(n.lainnya[0]!.sumber?.url).toBe("https://layanan112.komdigi.go.id/");
     expect(n.catatan112?.judul).toBe("Layanan 112 Kabupaten Kulon Progo belum tercatat diluncurkan.");
@@ -104,18 +114,59 @@ describe("nomorDaruratWilayah (D-050)", () => {
     expect(n.catatan112?.isi).not.toMatch(/tidak (bisa|dapat) (dipakai|digunakan)/);
   });
 
-  it("112 belum diluncurkan tanpa BPBD bernomor → 112 tetap utama dengan catatan", () => {
-    const kab = data112.daftar.find((e) => e.status !== 1 && !e.idWilayah.startsWith("34."))!;
-    const n = nomorDaruratWilayah([w(kab.idWilayah.slice(0, 2), "Provinsi X", "PROVINSI"), w(kab.idWilayah, "Kab X", "KABKOTA")]);
+  it("112 belum diluncurkan tanpa BPBD bernomor → 112 utama didampingi semua nomor nasional di atas", () => {
+    const n = nomorDaruratWilayah(wilayahTanpa112);
     expect(n.utama.id).toBe("112");
-    expect(n.lainnya.map(id)).toEqual(["bpbd-kabkota", "bpbd-provinsi", "117", "119", "113"]);
-    expect(n.catatan112?.isi).toContain(`berstatus "${kab.statusLabel}"`);
+    expect(n.pendamping.map(id)).toEqual(NASIONAL_LAIN);
+    expect(n.lainnya.map(id)).toEqual(["bpbd-kabkota", "bpbd-provinsi"]);
+    expect(n.catatan112?.isi).toContain(`berstatus "${tanpa112TanpaBpbd.statusLabel}"`);
   });
 
   it("tanpa wilayah → hanya nomor nasional, 112 utama", () => {
     const n = nomorDaruratWilayah([]);
     expect(n.utama.id).toBe("112");
-    expect(n.lainnya.map(id)).toEqual(["117", "119", "113"]);
+    expect(n.pendamping).toEqual([]);
+    expect(n.lainnya.map(id)).toEqual(NASIONAL_LAIN);
     expect(n.catatan112).toBeNull();
+  });
+
+  describe("isi butir Checklist Siaga 'Catat nomor darurat' (D-051)", () => {
+    it("112 sudah diluncurkan atau tanpa wilayah → teks asli", () => {
+      expect(isiPersiapanCatatNomor(nomorDaruratWilayah(tangerang))).toBe(ISI_PERSIAPAN_CATAT_NOMOR);
+      expect(isiPersiapanCatatNomor(nomorDaruratWilayah([]))).toBe(ISI_PERSIAPAN_CATAT_NOMOR);
+    });
+
+    it("112 belum diluncurkan + BPBD bernomor → BPBD lebih dulu, 112 tetap disebut beserta statusnya", () => {
+      expect(isiPersiapanCatatNomor(nomorDaruratWilayah([diy, w("34.01", "Kabupaten Kulon Progo", "KABKOTA")]))).toBe(
+        "Catat nomor darurat di ponsel: BPBD Provinsi Daerah Istimewa Yogyakarta (0274) 555585, Basarnas 115, " +
+          "Call Center BNPB 117, Kepolisian 110, Ambulans 119, Pemadam Kebakaran 113, " +
+          "dan 112 (layanan 112 Kabupaten Kulon Progo belum tercatat diluncurkan).",
+      );
+    });
+
+    it("112 belum diluncurkan tanpa BPBD bernomor → nomor nasional, BPBD tanpa nomor tidak disebut", () => {
+      const isi = isiPersiapanCatatNomor(nomorDaruratWilayah(wilayahTanpa112));
+      expect(isi).toBe(
+        "Catat nomor darurat di ponsel: Basarnas 115, Call Center BNPB 117, Kepolisian 110, Ambulans 119, " +
+          "Pemadam Kebakaran 113, dan 112 (layanan 112 Kab X belum tercatat diluncurkan).",
+      );
+    });
+  });
+});
+
+describe("sumber nomor darurat nasional (D-051)", () => {
+  it("setiap nomor nasional tercantum di minimal satu sumber resmi *.go.id yang bertanggal", () => {
+    for (const k of NOMOR_NASIONAL) {
+      expect(SUMBER_NOMOR_NASIONAL.some((s) => s.nomor.includes(k.telepon)), k.telepon).toBe(true);
+    }
+    for (const s of SUMBER_NOMOR_NASIONAL) {
+      expect(new URL(s.url).protocol).toBe("https:");
+      expect(new URL(s.url).hostname).toMatch(/(^|\.)go\.id$/);
+      expect(s.diperiksaPada).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it("Buku Saku hal. 82 → halaman PDF 84", () => {
+    expect(SUMBER_NOMOR_NASIONAL[0]!.url).toMatch(/#page=84$/);
   });
 });

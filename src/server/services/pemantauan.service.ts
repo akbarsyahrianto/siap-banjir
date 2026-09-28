@@ -10,6 +10,7 @@
 import type { DataCuaca, LevelRisiko, TingkatRisiko, Wilayah } from "@prisma/client";
 import { after } from "next/server";
 import { titikDariKunci } from "@/lib/grid";
+import { ISI_PERSIAPAN_CATAT_NOMOR, isiPersiapanCatatNomor } from "@/lib/kontak-darurat";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
 import { db } from "@/server/db";
 import type { OpenMeteoResponse } from "@/server/integrations/open-meteo";
@@ -18,7 +19,7 @@ import { prosesPeringatan, type RingkasanPeringatan } from "@/server/services/no
 import { evaluasiDanSimpanRisiko, simulasiAktif } from "@/server/services/risk.service";
 import { simpanRiwayatRisikoTinggi, type HasilRiwayat } from "@/server/services/riwayat.service";
 import { lihatDataCuaca, type HasilDataCuaca } from "@/server/services/weather.service";
-import { lihatDesa, namaInduk, namaTampilan } from "@/server/services/wilayah.service";
+import { lihatDesa, lihatWilayahLengkap, namaInduk, namaTampilan, nomorDaruratWilayah } from "@/server/services/wilayah.service";
 import { daftarHasilParameterSchema } from "@/server/validators/risiko";
 
 /** Langkah 4: data cuaca sel grid (cache 30 menit, pengaman kuota). */
@@ -115,7 +116,7 @@ export function keRisikoKlien(kondisi: KondisiWilayah): RisikoKlien | null {
 /** Level → Persiapan Dini → Rekomendasi (alur bertingkat use case). */
 export async function lihatPenanganan(idWilayah: string, level: TingkatRisiko): Promise<PenangananKlien> {
   const [persiapan, rekomendasi] = await Promise.all([
-    lihatPersiapan(level, idWilayah),
+    lihatPersiapanWilayah(level, idWilayah),
     lihatRekomendasi(level, idWilayah),
   ]);
   return {
@@ -129,6 +130,17 @@ export async function lihatPenanganan(idWilayah: string, level: TingkatRisiko): 
       sumberUrl,
     })),
   };
+}
+
+/**
+ * lihatPersiapan() untuk satu desa, dengan butir "Catat nomor darurat 112 …" disesuaikan status
+ * layanan 112 kab/kota-nya (D-051). Dipakai halaman Risiko dan GET /api/persiapan.
+ */
+export async function lihatPersiapanWilayah(level: TingkatRisiko, idWilayah: string) {
+  const [persiapan, lengkap] = await Promise.all([lihatPersiapan(level, idWilayah), lihatWilayahLengkap(idWilayah)]);
+  if (!lengkap || !persiapan.some((p) => p.isiPersiapan === ISI_PERSIAPAN_CATAT_NOMOR)) return persiapan;
+  const isi = isiPersiapanCatatNomor(nomorDaruratWilayah(lengkap.leluhur));
+  return persiapan.map((p) => (p.isiPersiapan === ISI_PERSIAPAN_CATAT_NOMOR ? { ...p, isiPersiapan: isi } : p));
 }
 
 export type { HasilDataCuaca };

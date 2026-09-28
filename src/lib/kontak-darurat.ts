@@ -12,11 +12,13 @@ export type KontakDarurat = {
 };
 
 /** Catatan saat layanan 112 kab/kota belum diluncurkan (D-042): tidak mengklaim 112 pasti tidak bisa dipakai. */
-export type Catatan112 = { judul: string; isi: string };
+export type Catatan112 = { judul: string; isi: string; namaKabKota: string };
 
 export type NomorDarurat = {
   /** Nomor yang ditonjolkan (kartu merah besar). */
   utama: KontakDarurat;
+  /** Nomor nasional yang ditampilkan di atas bersama 112 (D-051); kosong jika tidak perlu. */
+  pendamping: KontakDarurat[];
   lainnya: KontakDarurat[];
   catatan112: Catatan112 | null;
 };
@@ -25,10 +27,11 @@ export type NomorDarurat = {
 export const hrefTelepon = (telepon: string) => `tel:${telepon.replace(/[^\d+]/g, "")}`;
 
 /**
- * Urutan halaman Nomor Darurat (D-050):
- * - 112 sudah diluncurkan di kab/kota (atau wilayah belum dipilih) → 112 utama, lalu BPBD, 117, 119, 113.
- * - 112 belum diluncurkan → BPBD pertama yang nomornya terverifikasi jadi utama (kab/kota, lalu provinsi);
- *   jika tidak ada, 112 tetap utama. 112 selalu tetap ada di daftar sebagai nomor nasional.
+ * Urutan halaman Nomor Darurat (D-050, D-051):
+ * - 112 sudah diluncurkan di kab/kota (atau wilayah belum dipilih) → 112 utama, lalu BPBD dan nomor nasional lain.
+ * - 112 belum diluncurkan + ada BPBD bernomor terverifikasi → BPBD itu utama; 112 tetap di daftar.
+ * - 112 belum diluncurkan tanpa BPBD bernomor → 112 utama didampingi semua nomor nasional lain di atas,
+ *   karena sumber resmi tidak menjelaskan ke mana 112 tersambung di wilayah seperti itu.
  */
 export function susunNomorDarurat(
   kontak: KontakDarurat[],
@@ -40,22 +43,40 @@ export function susunNomorDarurat(
   const nasionalLain = kontak.filter((k) => k.id !== "112" && !k.id.startsWith("bpbd-"));
 
   if (!layanan112 || layanan112.tersedia) {
-    return { utama: k112, lainnya: [...bpbd, ...nasionalLain], catatan112: null };
+    return { utama: k112, pendamping: [], lainnya: [...bpbd, ...nasionalLain], catatan112: null };
   }
 
   // Keterangan status 112 dipindah ke catatan di atas, agar tidak ditulis dua kali.
   const catatan112 = {
     judul: `Layanan 112 ${layanan112.namaKabKota} belum tercatat diluncurkan.`,
     isi: k112.keterangan ?? "Jika 112 tidak tersambung, hubungi nomor darurat lain di bawah.",
+    namaKabKota: layanan112.namaKabKota,
   };
   const k112TanpaKeterangan: KontakDarurat = { ...k112, keterangan: undefined };
   const bpbdUtama = bpbd.find((k) => k.telepon !== null);
   if (!bpbdUtama) {
-    return { utama: k112TanpaKeterangan, lainnya: [...bpbd, ...nasionalLain], catatan112 };
+    return { utama: k112TanpaKeterangan, pendamping: nasionalLain, lainnya: bpbd, catatan112 };
   }
   return {
     utama: bpbdUtama,
+    pendamping: [],
     lainnya: [k112TanpaKeterangan, ...bpbd.filter((k) => k !== bpbdUtama), ...nasionalLain],
     catatan112,
   };
+}
+
+/** Butir Checklist Siaga (seed RENDAH) yang isinya disesuaikan status 112 wilayah (D-051). */
+export const ISI_PERSIAPAN_CATAT_NOMOR = "Catat nomor darurat 112 dan kontak BPBD setempat di ponsel.";
+
+/**
+ * Isi butir "Catat nomor darurat" untuk wilayah ini. 112 sudah diluncurkan (atau tanpa wilayah) →
+ * teks asli; selain itu daftar nomor yang bisa dihubungi, 112 tetap disebut beserta statusnya.
+ */
+export function isiPersiapanCatatNomor(nomor: NomorDarurat): string {
+  if (!nomor.catatan112) return ISI_PERSIAPAN_CATAT_NOMOR;
+  const bisaDitelepon = [nomor.utama, ...nomor.pendamping, ...nomor.lainnya].filter(
+    (k): k is KontakDarurat & { telepon: string } => k.telepon !== null && k.id !== "112",
+  );
+  const daftar = bisaDitelepon.map((k) => `${k.nama} ${k.telepon}`).join(", ");
+  return `Catat nomor darurat di ponsel: ${daftar}, dan 112 (layanan 112 ${nomor.catatan112.namaKabKota} belum tercatat diluncurkan).`;
 }

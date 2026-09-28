@@ -11,6 +11,8 @@ import type {
   PersiapanDiniInput,
   RekomendasiInput,
 } from "../src/server/validators/konten";
+import { BUKU_SAKU_BNPB, sumberBukuSaku } from "../src/data/buku-saku-bnpb";
+import { ISI_PERSIAPAN_CATAT_NOMOR } from "../src/lib/kontak-darurat";
 
 /** Kode Kemendagri wilayah yang dirujuk konten seed. */
 export const KODE = {
@@ -133,7 +135,8 @@ export const persiapanSeed: PersiapanDiniInput[] = [
   // RENDAH
   { levelRisiko: "RENDAH", urutan: 1, isiPersiapan: "Bersihkan selokan dan saluran air di sekitar rumah dari sampah." },
   { levelRisiko: "RENDAH", urutan: 2, isiPersiapan: "Simpan dokumen penting (KTP, KK, ijazah, sertifikat) dalam map atau plastik kedap air." },
-  { levelRisiko: "RENDAH", urutan: 3, isiPersiapan: "Catat nomor darurat 112 dan kontak BPBD setempat di ponsel." },
+  // Isinya disesuaikan status layanan 112 wilayah saat ditampilkan (lihatPersiapanWilayah, D-051).
+  { levelRisiko: "RENDAH", urutan: 3, isiPersiapan: ISI_PERSIAPAN_CATAT_NOMOR },
   { levelRisiko: "RENDAH", urutan: 4, isiPersiapan: "Kenali jalur evakuasi dan titik kumpul terdekat dari rumah." },
   // SEDANG
   { levelRisiko: "SEDANG", urutan: 1, isiPersiapan: "Siapkan tas siaga: dokumen, obat-obatan, senter, pakaian ganti, makanan dan air minum untuk 3 hari." },
@@ -157,15 +160,7 @@ export const persiapanSeed: PersiapanDiniInput[] = [
  * Buku Saku BNPB, bab Banjir: Prabencana hal. 33–35, Saat Bencana hal. 36–37, Pascabencana hal. 38–39
  * (DECISIONS D-044). Nomor halaman = nomor cetak di buku; di file PDF halamannya +2.
  */
-export const BUKU_SAKU_BNPB = {
-  nama: "BNPB, Buku Saku Tanggap Tangkas Tangguh Menghadapi Bencana",
-  url: "https://www.bnpb.go.id/storage/app/media/Buku%20BNPB/Buku%20Saku%20Bencana%20BNPB.pdf",
-} as const;
-
-export function sumberBukuSaku(halaman: string) {
-  const pertama = Number.parseInt(halaman, 10);
-  return { sumberNama: `${BUKU_SAKU_BNPB.nama}, hal. ${halaman}`, sumberUrl: `${BUKU_SAKU_BNPB.url}#page=${pertama + 2}` };
-}
+export { BUKU_SAKU_BNPB, sumberBukuSaku };
 
 /**
  * Detail Mitigasi dari Buku Saku BNPB (parafrase dekat; tidak menambah hal yang tidak disebut buku).
@@ -224,10 +219,12 @@ export const informasiSeed: InformasiInput[] = [
   },
   {
     kategori: "UMUM",
-    tanggal: "2026-01-08",
+    tanggal: "2026-09-28",
     judul: "Nomor Darurat yang Perlu Disimpan",
+    // Nomor dari tabel "Kontak Darurat" Buku Saku BNPB hal. 82 (D-051).
     isi:
-      "Simpan nomor berikut di ponsel Anda:\n- 112: Layanan darurat terpadu\n- 117: Call Center BNPB\n- 119: Layanan kesehatan / ambulans\n- 113: Pemadam kebakaran dan penyelamatan\n\nLayanan 112 diselenggarakan per kabupaten/kota dan belum tersedia di semua daerah. Status layanan 112 di wilayah Anda (menurut Portal 112 Komdigi) tampil di bagian Kontak darurat halaman Risiko.\n\nCari juga nomor BPBD kabupaten/kota Anda melalui situs resmi pemerintah daerah.",
+      "Simpan nomor berikut di ponsel Anda:\n- 112: Telepon darurat\n- 115: Basarnas (pencarian dan pertolongan)\n- 117: Call Center BNPB\n- 110: Polisi\n- 119: Ambulans\n- 113: Pemadam kebakaran\n\nLayanan 112 diselenggarakan per kabupaten/kota dan belum tersedia di semua daerah. Status layanan 112 di wilayah Anda (menurut Portal 112 Komdigi) dan nomor BPBD yang sudah diverifikasi dari situs resmi tampil di halaman Nomor Darurat (tombol Darurat di bagian atas aplikasi).\n\nCari juga nomor BPBD kabupaten/kota Anda melalui situs resmi pemerintah daerah.",
+    ...sumberBukuSaku("82"),
   },
   {
     // Panduan pascabencana: selalu bisa dibuka di Informasi, tidak bergantung level risiko (D-044).

@@ -4,6 +4,7 @@
  */
 import { Prisma, type TingkatWilayah, type Wilayah } from "@prisma/client";
 import { KONTAK_BPBD } from "@/data/kontak-bpbd";
+import { NOMOR_NASIONAL } from "@/data/nomor-nasional";
 import { formatTanggalLokalPanjang } from "@/lib/format";
 import { titikGrid } from "@/lib/grid";
 import { susunNomorDarurat, type KontakDarurat, type NomorDarurat } from "@/lib/kontak-darurat";
@@ -152,13 +153,8 @@ export type DataPemilih = Awaited<ReturnType<typeof dataPemilih>>;
 
 // ---------- Kontak darurat ----------
 
-/** Nama & deskripsi mengikuti board "Nomor Darurat" kanvas desain ulang (D-050). */
-const KONTAK_NASIONAL: KontakDarurat[] = [
-  { id: "112", nama: "Layanan darurat terpadu", deskripsi: "Nomor darurat nasional", telepon: "112" },
-  { id: "117", nama: "Call Center BNPB", deskripsi: "Badan Nasional Penanggulangan Bencana", telepon: "117" },
-  { id: "119", nama: "Ambulans", deskripsi: "Layanan kesehatan", telepon: "119" },
-  { id: "113", nama: "Pemadam Kebakaran", deskripsi: "Kebakaran & penyelamatan", telepon: "113" },
-];
+/** Nomor nasional bersumber resmi (src/data/nomor-nasional.ts, D-051); nama & deskripsi mengikuti board (D-050). */
+const KONTAK_NASIONAL: KontakDarurat[] = NOMOR_NASIONAL.map((k) => ({ ...k }));
 
 type LeluhurKontak = Pick<Wilayah, "idWilayah" | "namaWilayah" | "level">[];
 

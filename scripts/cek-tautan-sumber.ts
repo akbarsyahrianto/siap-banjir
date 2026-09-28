@@ -1,6 +1,6 @@
 /**
  * Periksa bahwa semua tautan sumber (informasi, riwayat otomatis, mitigasi) bisa dibuka, dan
- * bahwa setiap nomor BPBD terverifikasi masih tercantum di halaman sumbernya.
+ * bahwa setiap nomor BPBD terverifikasi dan nomor nasional (halaman HTML) masih tercantum di halaman sumbernya.
  *
  *   npm run cek:sumber
  *
@@ -10,6 +10,7 @@
  */
 import { informasiSeed, rekomendasiSeed } from "../prisma/seed-data";
 import { KONTAK_BPBD } from "../src/data/kontak-bpbd";
+import { SUMBER_NOMOR_NASIONAL } from "../src/data/nomor-nasional";
 import { SUMBER_DETEKSI } from "../src/lib/sumber-informasi";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0";
@@ -53,6 +54,14 @@ async function main() {
     })),
     // Nomor BPBD harus masih tercantum di situs resmi (D-043).
     ...Object.entries(KONTAK_BPBD).map(([kode, k]) => ({ judul: `BPBD ${kode}: ${k.telepon}`, url: k.sumberUrl, harusMemuat: k.telepon })),
+    // Nomor nasional (D-051): halaman HTML wajib masih memuat nomornya; PDF (Buku Saku) cukup bisa dibuka.
+    // Portal 112 Komdigi menolak klien non-browser (HTTP 403, D-042), jadi tidak dicek di sini.
+    ...SUMBER_NOMOR_NASIONAL.filter((s) => !s.url.startsWith("https://layanan112.komdigi.go.id/")).flatMap((s) => {
+      const url = s.url.split("#")[0] as string;
+      return url.endsWith(".pdf")
+        ? [{ judul: `Nomor nasional ${s.nomor.join(", ")}`, url }]
+        : s.nomor.map((nomor) => ({ judul: `Nomor nasional ${nomor}`, url, harusMemuat: nomor }));
+    }),
   ];
   const hasil = await Promise.all(daftar.map(async (d) => ({ ...d, ...(await cek(d.url, d.harusMemuat)) })));
   for (const h of hasil) console.log(`${h.ok ? "✔" : "✘"} ${h.keterangan.padEnd(8)} ${h.judul}\n    ${h.url}`);

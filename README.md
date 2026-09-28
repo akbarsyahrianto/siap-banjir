@@ -29,7 +29,7 @@ Keputusan desain dan penyimpangan dari rancangan dicatat di [docs/DECISIONS.md](
 |---|---|
 | `/` Beranda | Pilih desa/kelurahan (pencarian, pilihan bertingkat Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan, atau "Gunakan lokasi saya"), kartu cuaca terkini, badge level risiko, grafik curah hujan 48 jam, tombol "Aktifkan Peringatan" |
 | `/risiko` | Level + bilah skor, arti tiap level, parameter pemicu, grafik 48 jam saat state Bahaya, Detail Penanganan (Checklist Siaga + Detail Mitigasi), tautan ke Nomor Darurat. Dikendalikan state machine; refresh tiap 30 menit |
-| `/kontak` | Nomor Darurat: nomor utama (112, atau BPBD bernomor resmi jika 112 belum diluncurkan), nomor lainnya, konfirmasi sebelum menelepon, status layanan 112 dan sumber resmi |
+| `/kontak` | Nomor Darurat: nomor utama (112, atau BPBD bernomor resmi jika 112 belum diluncurkan; tanpa keduanya 112 didampingi nomor nasional), nomor lainnya (115, 117, 110, 119, 113, BPBD), konfirmasi sebelum menelepon, status layanan 112 dan sumber resmi |
 | `/cuaca` | Prakiraan 3 hari per jam dan harian |
 | `/informasi` | Artikel umum banjir (bertanggal terbit), riwayat kejadian banjir dengan tautan sumber, dan riwayat risiko tinggi otomatis per kab/kota |
 | `/pengaturan` | Wilayah, aktif/nonaktif notifikasi, level minimum, kirim notifikasi uji |
@@ -39,7 +39,7 @@ Keputusan desain dan penyimpangan dari rancangan dicatat di [docs/DECISIONS.md](
 - **Rule engine risiko:** ambang batas dibaca dari tabel `AmbangRisiko` (tidak di-hard-code). Ambang **diwariskan bertingkat**: desa > kecamatan > kab/kota > provinsi > global. Tingkat paling spesifik yang punya ambang untuk suatu parameter yang dipakai; wilayah tanpa ambang khusus memakai ambang global. Level akhir = level tertinggi dari semua parameter. Persiapan dini, rekomendasi, dan informasi diwariskan dengan cara yang sama.
 - **Notifikasi push** (Web Push + VAPID): langganan per desa/kelurahan, anti-spam 6 jam (kecuali level naik), subscription 404/410 dihapus otomatis. Klik notifikasi membuka `/risiko?wilayah={kode}#penanganan`.
 - **Riwayat:** deteksi risiko TINGGI disimpan sebagai satu entri per kab/kota per hari (WIB), berisi daftar desa/kelurahan yang terdeteksi hari itu.
-- **Kontak darurat:** nomor nasional (112, 117, 119, 113) + nama BPBD kab/kota setempat (BPBD Provinsi untuk DKI Jakarta).
+- **Kontak darurat:** halaman `/kontak` berisi nomor nasional bersumber resmi (112, 115 Basarnas, 117 BNPB, 110, 119, 113), status layanan 112 kab/kota (Portal 112 Komdigi), dan BPBD kab/kota + provinsi (nomor hanya dari situs resmi). Lihat DECISIONS D-042, D-043, D-050, D-051.
 - **PWA:** bisa di-install di HP, halaman yang pernah dibuka tetap tampil saat offline.
 - **Cron:** hanya untuk desa/kelurahan yang punya pelanggan notifikasi: update cuaca → hitung risiko → kirim notifikasi → simpan riwayat.
 
