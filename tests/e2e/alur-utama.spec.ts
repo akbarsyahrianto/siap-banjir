@@ -250,7 +250,8 @@ const HALAMAN_TOMBOL_PERBARUI = [
     nama: "Risiko",
     url: `/risiko?wilayah=${DESA_UJI}`,
     tombol: (page: Page) => page.getByRole("button", { name: "Perbarui", exact: true }),
-    jamData: (page: Page, jam: string) => page.getByText(new RegExp(`^Diperbarui ${jam} WIB ·`)),
+    // Dibatasi ke #konten: salinan HTML streaming Next yang tersembunyi bisa memuat teks yang sama.
+    jamData: (page: Page, jam: string) => page.locator("#konten").getByText(new RegExp(`^Diperbarui ${jam} WIB ·`)),
   },
 ];
 
