@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openMeteoResponseSchema } from "@/server/integrations/open-meteo";
-import { ringkasanHarian, seriHujan48Jam, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
+import { ringkasanHarian, seriHujan48Jam, seriPerJamPerHari, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
 
 const hari = ["2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27"];
 const time = hari.flatMap((h) => Array.from({ length: 24 }, (_, j) => `${h}T${String(j).padStart(2, "0")}:00`));
@@ -50,5 +50,13 @@ describe("seri-cuaca", () => {
     const harian = ringkasanHarian(raw);
     expect(harian.map((h) => h.tanggal)).toEqual(["2026-09-25", "2026-09-26", "2026-09-27"]);
     expect(harian[0]).toMatchObject({ hujan: 3, peluangMaks: 30, suhuMin: 24, suhuMaks: 35.5 });
+  });
+
+  it("per jam per hari: mulai hari ini, 24 jam per tanggal, jam yang sudah lewat bertanda lalu", () => {
+    const hari = seriPerJamPerHari(raw);
+    expect(hari.map((h) => h.tanggal)).toEqual(["2026-09-25", "2026-09-26", "2026-09-27"]);
+    expect(hari.map((h) => h.titik.length)).toEqual([24, 24, 24]);
+    expect(hari[0]!.titik.filter((t) => t.lalu).map((t) => t.jam).at(-1)).toBe("13:00");
+    expect(hari[1]!.titik.some((t) => t.lalu)).toBe(false);
   });
 });

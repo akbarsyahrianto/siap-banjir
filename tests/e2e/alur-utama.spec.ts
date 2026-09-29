@@ -156,13 +156,27 @@ test("halaman Cuaca: cuaca terkini, prakiraan harian, dan curah hujan per jam", 
   await expect(harian.first().getByRole("heading", { name: "Hari ini" })).toBeVisible();
   await expect(harian.first()).toContainText(/Curah hujan[\d,]+ mmPeluang hujan\d+%Suhu[\d,]+–[\d,]+°C/);
 
-  const jam = konten.getByRole("region", { name: "Curah hujan per jam" });
-  await expect(
-    jam.getByRole("img", {
-      name: /^Grafik curah hujan per jam, .+\. (Tertinggi [\d,]+ mm pada \w+ pukul \d{2}\.\d{2}|Tidak ada hujan yang diprakirakan)\.$/,
-    }),
-  ).toBeVisible();
-  await expect(jam.getByText(/^Mulai pukul \d{2}\.\d{2} hari ini\. Satu batang = satu jam\.$/)).toBeVisible();
+  // D-052: grafik Recharts satu hari; pilihan hari lewat tab, hari ini bawaan.
+  const jam = konten.getByRole("region", { name: "Prakiraan per jam" });
+  const tabHariIni = jam.getByRole("tab", { name: /^Hari ini/ });
+  await expect(tabHariIni).toHaveAttribute("aria-selected", "true");
+  await expect(jam.locator(".recharts-surface")).toBeVisible();
+  await expect(jam.locator(".recharts-xAxis .recharts-cartesian-axis-tick")).toHaveCount(8);
+  // Keyboard: panah kanan pindah ke Besok.
+  await tabHariIni.focus();
+  await page.keyboard.press("ArrowRight");
+  const tabBesok = jam.getByRole("tab", { name: /^Besok/ });
+  await expect(tabBesok).toHaveAttribute("aria-selected", "true");
+  await expect(tabBesok).toBeFocused();
+  // Nilai per jam muncul saat grafik disentuh/diarahkan.
+  await jam.locator(".recharts-surface").hover({ position: { x: 150, y: 120 } });
+  await expect(jam.getByText(/^Pukul \d{2}:00 WIB$/)).toBeVisible();
+  await expect(jam.getByText(/^Peluang hujan: /)).toBeVisible();
+  // Tabel per jam untuk pembaca layar & keyboard: 24 baris, tanpa tanda "sudah lewat" di Besok.
+  await jam.getByText("Lihat tabel per jam").click();
+  const baris = jam.getByRole("table").getByRole("row");
+  await expect(baris).toHaveCount(25);
+  await expect(jam.getByRole("table")).not.toContainText("sudah lewat");
   await expect(page.getByRole("combobox", { name: "Cari desa/kelurahan" })).toHaveCount(0);
 });
 

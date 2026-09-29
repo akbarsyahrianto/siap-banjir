@@ -75,3 +75,18 @@ export function ringkasanHarian(raw: OpenMeteoResponse): RingkasanHarian[] {
     })
     .filter((h) => h.tanggal >= hariIni);
 }
+
+export type SeriHarian = { tanggal: string; titik: TitikGrafikJam[] };
+
+/** Data per jam dikelompokkan per tanggal, mulai hari ini (00:00–23:00; jam yang sudah lewat bertanda `lalu`). */
+export function seriPerJamPerHari(raw: OpenMeteoResponse): SeriHarian[] {
+  const hariIni = raw.current.time.slice(0, 10);
+  const hasil: SeriHarian[] = [];
+  for (const t of semuaTitik(raw)) {
+    if (t.tanggal < hariIni) continue;
+    const terakhir = hasil.at(-1);
+    if (terakhir?.tanggal === t.tanggal) terakhir.titik.push(t);
+    else hasil.push({ tanggal: t.tanggal, titik: [t] });
+  }
+  return hasil;
+}

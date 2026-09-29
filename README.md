@@ -30,7 +30,7 @@ Keputusan desain dan penyimpangan dari rancangan dicatat di [docs/DECISIONS.md](
 | `/` Beranda | Pilih desa/kelurahan (pencarian, pilihan bertingkat Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan, atau "Gunakan lokasi saya"), kartu cuaca terkini, badge level risiko, grafik curah hujan 48 jam, tombol "Aktifkan Peringatan" |
 | `/risiko` | Level + bilah skor, arti tiap level, parameter pemicu, grafik 48 jam saat state Bahaya, Detail Penanganan (Checklist Siaga + Detail Mitigasi), tautan ke Nomor Darurat. Dikendalikan state machine; refresh tiap 30 menit |
 | `/kontak` | Nomor Darurat: nomor utama (112, atau BPBD bernomor resmi jika 112 belum diluncurkan; tanpa keduanya 112 didampingi nomor nasional), nomor lainnya (115, 117, 110, 119, 113, BPBD), konfirmasi sebelum menelepon, status layanan 112 dan sumber resmi |
-| `/cuaca` | Cuaca terkini (suhu, kondisi, kelembapan, angin, hujan 15 menit), prakiraan harian 3 hari (kategori hujan BMKG, curah hujan, peluang, suhu), grafik batang curah hujan per jam sampai akhir prakiraan |
+| `/cuaca` | Cuaca terkini (suhu, kondisi, kelembapan, angin, hujan 15 menit), prakiraan harian 3 hari (kategori hujan BMKG, curah hujan, peluang, suhu), grafik per jam satu hari (hujan, peluang, suhu; tab Hari ini/Besok/Lusa, tooltip, tabel nilai) |
 | `/informasi` | Artikel umum banjir (bertanggal terbit), riwayat kejadian banjir dengan tautan sumber, dan riwayat risiko tinggi otomatis per kab/kota |
 | `/pengaturan` | Wilayah, aktif/nonaktif notifikasi, level minimum, kirim notifikasi uji |
 | `/offline` | Halaman cadangan PWA saat tidak ada koneksi |
