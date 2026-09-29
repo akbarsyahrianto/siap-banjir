@@ -600,3 +600,22 @@ Urutannya juga tidak deterministik. Dialog Radix bersifat modal dan hanya member
 - **Halaman artikel** (`/informasi/[id]`) tidak punya board. Tipografinya disamakan dengan halaman lain (judul 28 px extrabold, isi dalam kartu putih, tautan Kembali setinggi 44 px), dan isinya tidak berubah.
 
 **Diuji:** e2e Informasi: tab umum bawaan dengan jumlah, panel riwayat tersembunyi, panah kanan → Riwayat dan URL `?tab=riwayat`, tautan sumber BNPB (tab baru, `noopener noreferrer`), artikel riwayat → "Kembali ke Informasi" membuka tab Riwayat, artikel umum → Kembali ke `/informasi`. Tes offline dan tanpa scroll horizontal tetap mencakup `/informasi`.
+
+## D-054 · Desain ulang: halaman Pengaturan
+
+**Sumber desain.** Board "Pengaturan" di kanvas desain ulang. Kanvas tidak diubah.
+
+**Keputusan.**
+- **Header** memakai `KepalaHalaman` (tanpa baris wilayah; wilayah diatur di kartu Wilayah). `PageHeader` tidak dipakai lagi di halaman mana pun dan dihapus.
+- **Kartu Wilayah** (`PilihWilayah`): kotak biru "Wilayah yang dipantau", label tebal "Cari desa/kelurahan", kolom 48 px bergaris `#9AA6B8` dengan ikon kaca pembesar dan teks 16 px (tidak memicu zoom di iOS), tombol "Gunakan lokasi saya" bergaris biru, pemisah "atau pilih bertingkat", dan empat pilihan bertumpuk satu kolom. `PilihWilayah` juga tampil di Beranda, Risiko, dan Cuaca saat wilayah belum dipilih, jadi gaya baru ini ikut berlaku di sana. Perilakunya tidak berubah: combobox ARIA, pesan hasil GPS yang bertahan (D-052), dan dialog izin (D-049). Pemisah tetap berupa `<legend>` fieldset, jadi keempat pilihan tetap terbaca sebagai satu kelompok.
+- **Kartu Notifikasi** (`PengaturanNotifikasi`):
+  - Sakelar mengikuti board (58 × 34 px, biru saat aktif, abu-abu `#8A95A6` saat mati). Wujudnya `<button role="switch">` native: namanya dari label "Peringatan banjir", dan teks status jadi deskripsinya (`aria-describedby`). Animasi knob hanya berjalan saat `prefers-reduced-motion` tidak aktif.
+  - Teks status aktif/nonaktif mengikuti board ("Aktif. Anda akan menerima peringatan di perangkat ini." / "Nonaktif. Anda tidak akan menerima peringatan."). Status lain yang tidak ada di board (belum aktif, izin ditolak, tidak didukung, belum dikonfigurasi, memuat) tetap dijelaskan dengan kalimat sendiri.
+  - Pilihan level berupa kartu radio native (22 px, `accent-color` biru, garis biru + latar `#F1F5FE` saat terpilih) berisi chip Sedang/Tinggi. **Chip diberi ikon level selain teks dan warna** (board hanya teks + warna), sesuai konvensi bahwa level tidak dibedakan dengan warna saja. Nama radio untuk pembaca layar tetap "Sedang dan Tinggi" / "Hanya Tinggi" + keterangan, dan chip disembunyikan dari teknologi bantu supaya tidak dibaca dua kali.
+  - "Kirim notifikasi uji" bergaris abu-abu dan catatan anti-spam 6 jam mengikuti board.
+  - Komponen shadcn `Switch` dan `RadioGroup` tidak dipakai lagi dan dihapus. Paket `radix-ui` tetap dipakai oleh dialog.
+- **Catatan privasi** dalam kartu putih dengan ikon perisai hijau, seperti board.
+
+**Catatan pengujian.** Menjalankan tes alur utama berulang cepat (`--repeat-each=5`) gagal di ulangan ke-4/5, baik di kode sebelum maupun sesudah perubahan ini. Penyebabnya rate limit subscribe/unsubscribe (10/menit per IP), bukan desain ulang ini. Run biasa lolos.
+
+**Diuji:** e2e alur utama kini juga memeriksa judul Pengaturan, deskripsi sakelar saat aktif/nonaktif, nama radio "Sedang dan Tinggi: …" (terpilih), dan radio yang nonaktif saat notifikasi dimatikan. Tes GPS dan pilih bertingkat di `/pengaturan` (D-052) serta pemilih di Beranda/Risiko/Cuaca tanpa wilayah tetap lolos.

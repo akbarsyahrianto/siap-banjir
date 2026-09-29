@@ -32,7 +32,7 @@ Keputusan desain dan penyimpangan dari rancangan dicatat di [docs/DECISIONS.md](
 | `/kontak` | Nomor Darurat: nomor utama (112, atau BPBD bernomor resmi jika 112 belum diluncurkan; tanpa keduanya 112 didampingi nomor nasional), nomor lainnya (115, 117, 110, 119, 113, BPBD), konfirmasi sebelum menelepon, status layanan 112 dan sumber resmi |
 | `/cuaca` | Cuaca terkini (suhu, kondisi, kelembapan, angin, hujan 15 menit), prakiraan harian 3 hari (kategori hujan BMKG, curah hujan, peluang, suhu), grafik per jam satu hari (hujan, peluang, suhu; tab Hari ini/Besok/Lusa, tooltip, tabel nilai) |
 | `/informasi` | Tab Informasi umum / Riwayat kejadian (tersimpan di `?tab=`): artikel umum banjir (bertanggal terbit), riwayat kejadian banjir dengan tautan sumber, dan riwayat risiko tinggi otomatis per kab/kota |
-| `/pengaturan` | Wilayah, aktif/nonaktif notifikasi, level minimum, kirim notifikasi uji |
+| `/pengaturan` | Wilayah (pencarian, lokasi, pilihan bertingkat), sakelar peringatan banjir, level minimum (Sedang & Tinggi / hanya Tinggi), kirim notifikasi uji, catatan privasi |
 | `/offline` | Halaman cadangan PWA saat tidak ada koneksi |
 
 - **Unit pemantauan = desa/kelurahan.** Kode wilayah memakai kode Kemendagri bertitik, misal `36.71.01.1001` (Kelurahan Sukarasa, Kota Tangerang), dan tampil di URL `/risiko?wilayah=36.71.01.1001`.

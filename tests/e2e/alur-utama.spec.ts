@@ -80,8 +80,12 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
 
   await test.step("Pengaturan: level minimum & nonaktifkan notifikasi", async () => {
     await page.goto("/pengaturan");
+    await expect(page.getByRole("heading", { name: "Pengaturan", level: 1 })).toBeVisible();
     const sakelar = page.getByRole("switch", { name: "Peringatan banjir" });
     await expect(sakelar).toBeChecked();
+    // D-054: status di bawah label sakelar mengikuti board.
+    await expect(sakelar).toHaveAccessibleDescription("Aktif. Anda akan menerima peringatan di perangkat ini.");
+    await expect(page.getByRole("radio", { name: /^Sedang dan Tinggi: Peringatan lebih awal/ })).toBeChecked();
 
     await page.getByRole("radio", { name: /Hanya Tinggi/ }).click();
     await expect(page.getByText("Level minimum disimpan.", { exact: true })).toBeVisible();
@@ -90,6 +94,8 @@ test("alur utama: pilih wilayah → lihat risiko → aktifkan notifikasi → atu
     await sakelar.click();
     await expect(page.getByText("Notifikasi dinonaktifkan.", { exact: true })).toBeVisible();
     await expect(sakelar).not.toBeChecked();
+    await expect(sakelar).toHaveAccessibleDescription("Nonaktif. Anda tidak akan menerima peringatan.");
+    await expect(page.getByRole("radio", { name: /^Hanya Tinggi/ })).toBeDisabled();
     expect(await statusLangganan()).toMatchObject({ status: false });
   });
 });

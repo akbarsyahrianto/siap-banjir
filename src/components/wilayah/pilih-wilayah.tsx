@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { LoaderCircle, LocateFixed, MapPin, Search } from "lucide-react";
+import { LoaderCircle, LocateFixed, Search } from "lucide-react";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
-import { Button } from "@/components/ui/button";
 import { useWilayah } from "@/hooks/useWilayah";
 import { jenisWilayah } from "@/lib/kode-wilayah";
 import { cn } from "@/lib/utils";
@@ -29,8 +28,9 @@ async function ambilData<T>(url: string): Promise<T> {
   return (json as { data: T }).data;
 }
 
+/** Kolom isian & pilihan (board Pengaturan): 48 px, garis #9AA6B8, teks 16 px (tidak memicu zoom di iOS). */
 const kelasSelect =
-  "h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50";
+  "min-h-12 w-full rounded-xl border border-[#9aa6b8] bg-card px-3 text-[16px] text-foreground disabled:cursor-not-allowed disabled:opacity-50";
 
 /** Kotak pencarian desa/kelurahan (pola combobox ARIA). */
 function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) {
@@ -82,11 +82,15 @@ function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) 
 
   return (
     <div className="relative">
-      <label htmlFor={`${id}-input`} className="mb-1 block font-medium">
+      <label htmlFor={`${id}-input`} className="mb-1.5 block text-[14px] font-bold">
         Cari desa/kelurahan
       </label>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
+          strokeWidth={2.2}
+          aria-hidden="true"
+        />
         <input
           id={`${id}-input`}
           type="search"
@@ -120,13 +124,13 @@ function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) 
               setTerbuka(false);
             }
           }}
-          className={cn(kelasSelect, "pl-9")}
+          className={cn(kelasSelect, "pr-10 pl-[42px] placeholder:text-[#5b6678]")}
         />
         {memuat ? (
           <LoaderCircle className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-hidden="true" />
         ) : null}
       </div>
-      <p id={`${id}-bantuan`} className="mt-1 text-sm text-muted-foreground">
+      <p id={`${id}-bantuan`} className="mt-1.5 text-[13px] leading-[1.45] text-muted-foreground">
         Ketik minimal 3 huruf: nama desa/kelurahan, bisa ditambah nama kecamatan atau kota.
       </p>
       {tampil ? (
@@ -134,7 +138,7 @@ function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) 
           id={`${id}-daftar`}
           role="listbox"
           aria-label="Hasil pencarian"
-          className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-md border bg-popover p-1 shadow-lg"
+          className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-xl border bg-popover p-1 shadow-lg"
         >
           {galat ? (
             <li className="px-3 py-2 text-sm text-destructive">{galat}</li>
@@ -149,7 +153,7 @@ function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) 
                 aria-selected={i === aktif}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pilih(h)}
-                className={cn("cursor-pointer rounded px-3 py-2", i === aktif ? "bg-accent" : "hover:bg-accent/60")}
+                className={cn("cursor-pointer rounded-lg px-3 py-2", i === aktif ? "bg-[#e8eefd]" : "hover:bg-[#f1f5fe]")}
               >
                 <span className="block font-medium">
                   {h.jenis} {h.namaWilayah}
@@ -274,33 +278,43 @@ export function PilihWilayah({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-3.5">
       {namaTerpilih ? (
-        <p className="flex items-start gap-2 rounded-lg bg-primary/5 p-3">
-          <MapPin className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
-          <span>
-            <span className="block text-sm text-muted-foreground">Wilayah yang dipantau</span>
-            <span className="font-semibold">{namaTerpilih}</span>
-          </span>
+        <p className="flex flex-col gap-0.5 rounded-[14px] bg-[#e8eefd] px-3.5 py-3">
+          <span className="text-[12px] font-semibold text-[#3e4a5c]">Wilayah yang dipantau</span>
+          <span className="text-[16px] font-extrabold">{namaTerpilih}</span>
         </p>
       ) : null}
 
       <CariWilayah onPilih={(h) => pilihDesa(h.idWilayah, `${h.jenis} ${h.namaWilayah}, ${h.namaLengkap.split(", ").at(-2) ?? ""}`)} />
 
-      <Button type="button" variant="outline" className="h-11 w-full" onClick={pakaiLokasi} disabled={gps}>
-        {gps ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <LocateFixed aria-hidden="true" />}
+      <button
+        type="button"
+        onClick={pakaiLokasi}
+        disabled={gps}
+        className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary bg-card text-[15px] font-bold text-primary transition-colors hover:bg-[#f1f5fe] disabled:opacity-60"
+      >
+        {gps ? (
+          <LoaderCircle className="size-[18px] animate-spin" aria-hidden="true" />
+        ) : (
+          <LocateFixed className="size-[18px]" strokeWidth={2.2} aria-hidden="true" />
+        )}
         Gunakan lokasi saya
-      </Button>
+      </button>
 
-      <fieldset className="space-y-3">
-        <legend className="mb-1 font-medium">Atau pilih bertingkat</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-3.5 flex w-full items-center gap-2.5 text-[13px] font-semibold text-muted-foreground">
+          <span className="h-px flex-1 bg-border" aria-hidden="true" />
+          atau pilih bertingkat
+          <span className="h-px flex-1 bg-border" aria-hidden="true" />
+        </legend>
+        <div className="flex flex-col gap-3">
           {TINGKAT.map(({ id: t, label, kosong }, i) => {
             const opsi = daftar[t];
             const indukKosong = i > 0 && !pilihan[TINGKAT[i - 1]!.id];
             return (
-              <div key={t}>
-                <label htmlFor={`${id}-${t}`} className="mb-1 flex items-center gap-2 text-sm font-medium">
+              <div key={t} className="flex flex-col gap-1.5">
+                <label htmlFor={`${id}-${t}`} className="flex items-center gap-2 text-[14px] font-bold">
                   {label}
                   {memuat === t ? <LoaderCircle className="size-3.5 animate-spin" aria-label="Memuat" /> : null}
                 </label>
@@ -326,7 +340,7 @@ export function PilihWilayah({
         </div>
       </fieldset>
 
-      <p aria-live="polite" className={pesan?.tipe === "galat" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
+      <p aria-live="polite" className={cn("text-[14px] leading-normal empty:hidden", pesan?.tipe === "galat" ? "text-destructive" : "text-[#3e4a5c]")}>
         {pesan?.teks}
       </p>
     </div>
