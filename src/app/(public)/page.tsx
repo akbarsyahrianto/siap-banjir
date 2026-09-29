@@ -1,16 +1,13 @@
 import { Suspense } from "react";
-import { KartuPeringatanDini } from "@/components/beranda/kartu-peringatan-dini";
-import { KartuCuacaRingkas, TautanKontakDarurat, WilayahDipantau } from "@/components/beranda/kartu-ringkas";
-import { PanelLevel } from "@/components/beranda/panel-level";
-import { StatusData } from "@/components/cuaca/status-data";
+import { WilayahDipantau } from "@/components/beranda/kartu-ringkas";
+import { RingkasanBeranda } from "@/components/beranda/ringkasan-beranda";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
 import { APP_NAME } from "@/lib/constants";
-import { formatNilaiParameter } from "@/lib/risiko";
-import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
+import { keRisikoKlien, lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { muatPemilih } from "@/server/wilayah-terpilih";
 
 type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
@@ -53,31 +50,16 @@ export default async function BerandaPage({ searchParams }: Props) {
 async function RingkasanWilayah({ idWilayah, namaWilayah }: { idWilayah: string; namaWilayah: string }) {
   const kondisi = await lihatKondisiWilayah(idWilayah);
   if (!kondisi) return <BelumPilihWilayah />;
-  if (!kondisi.cuaca || !kondisi.risiko) return <DataCuacaTidakTersedia />;
+  const risiko = keRisikoKlien(kondisi);
+  if (!risiko || !kondisi.cuaca) return <DataCuacaTidakTersedia />;
 
-  const { cuaca, risiko } = kondisi;
-  const hujan24 = risiko.hasilPerParameter.find((p) => p.parameter === "hujan_24jam");
-  const dataLama = cuaca.sumber === "cadangan" || cuaca.sumber === "hemat-kuota";
-
+  const { suhu, kondisiCuaca } = kondisi.cuaca.dataCuaca;
+  // key: data server baru (render ulang AutoRefresh/navigasi) menggantikan state klien.
   return (
-    <>
-      <PanelLevel
-        level={risiko.level}
-        deskripsi={risiko.deskripsi}
-        simulasi={risiko.simulasi}
-        waktuData={cuaca.dataCuaca.waktuAmbil}
-        idWilayah={idWilayah}
-      />
-      {dataLama && <StatusData sumber={cuaca.sumber} waktuAmbil={cuaca.dataCuaca.waktuAmbil} />}
-      <div className="grid grid-cols-2 gap-3">
-        <KartuCuacaRingkas
-          suhu={cuaca.dataCuaca.suhu}
-          kodeCuaca={cuaca.dataCuaca.kondisiCuaca}
-          hujan24Jam={hujan24 ? { teks: formatNilaiParameter("hujan_24jam", hujan24.nilai), level: hujan24.level } : null}
-        />
-        <KartuPeringatanDini wilayah={{ idWilayah, namaWilayah }} />
-      </div>
-      <TautanKontakDarurat href={`/kontak?wilayah=${idWilayah}`} tinggi={risiko.level === "TINGGI"} />
-    </>
+    <RingkasanBeranda
+      key={`${risiko.idRisiko}:${risiko.waktuAmbilData}`}
+      awal={{ risiko, terkini: { suhu, kondisiCuaca } }}
+      namaWilayah={namaWilayah}
+    />
   );
 }

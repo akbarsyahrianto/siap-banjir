@@ -1,8 +1,8 @@
-import { CloudOff, RefreshCw } from "lucide-react";
+import { CloudOff } from "lucide-react";
 import { formatJam } from "@/lib/format";
 import type { SumberData } from "@/lib/tipe-risiko";
 
-/** Label waktu pembaruan; jika API gagal, beri tahu bahwa ini data terakhir yang tersimpan. */
+/** Peringatan data lama: jika API gagal atau kuota menipis, beri tahu bahwa ini data terakhir yang tersimpan. */
 export function StatusData({ sumber, waktuAmbil }: { sumber: SumberData; waktuAmbil: Date }) {
   const jam = formatJam(waktuAmbil);
   if (sumber === "cadangan" || sumber === "hemat-kuota") {
@@ -19,10 +19,6 @@ export function StatusData({ sumber, waktuAmbil }: { sumber: SumberData; waktuAm
       </p>
     );
   }
-  return (
-    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-      <RefreshCw className="size-3.5" aria-hidden="true" />
-      Data diperbarui pukul {jam} WIB
-    </p>
-  );
+  // Data segar: jam pembaruan sudah tampil di kartu masing-masing halaman (D-055).
+  return null;
 }

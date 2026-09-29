@@ -3,25 +3,13 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
+import { ambilDataWilayah, ambilJson } from "@/lib/ambil-data-wilayah";
 import { konteksAwal, transisi, type KanalPeringatan } from "@/lib/mesin-risiko";
 import { LABEL_SIMULASI } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
 import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
 
 export const INTERVAL_REFRESH_MS = 30 * 60 * 1000;
-
-async function ambilJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { cache: "no-store" });
-  const json: unknown = await res.json().catch(() => null);
-  if (!res.ok) {
-    const pesan =
-      json && typeof json === "object" && "error" in json && typeof json.error === "string"
-        ? json.error
-        : `HTTP ${res.status}`;
-    throw new Error(pesan);
-  }
-  return (json as { data: T }).data;
-}
 
 /**
  * Menjalankan state machine risiko untuk satu wilayah beserta efek tiap state.
@@ -44,13 +32,9 @@ export function useRiskState(awal: {
   const muatUlang = useCallback(async () => {
     kirim({ type: "MUAT" });
     try {
-      const q = encodeURIComponent(idWilayah);
-      const [risiko, cuaca] = await Promise.all([
-        ambilJson<RisikoKlien>(`/api/risiko?wilayah=${q}`),
-        ambilJson<{ hujan48Jam: TitikGrafikJam[] }>(`/api/cuaca?wilayah=${q}`),
-      ]);
+      const { risiko, hujan48Jam } = await ambilDataWilayah(idWilayah);
       terakhirDimuat.current = Date.now();
-      setGrafik(cuaca.hujan48Jam);
+      setGrafik(hujan48Jam);
       kirim({ type: "DATA_DITERIMA", data: risiko });
     } catch (err) {
       kirim({ type: "GAGAL_MUAT", pesan: err instanceof Error ? err.message : "Gagal memuat data" });

@@ -1,8 +1,8 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { TingkatRisiko } from "@prisma/client";
-import { ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { GAYA_LEVEL } from "@/components/risiko/gaya-level";
-import { formatJam } from "@/lib/format";
 import { LABEL_LEVEL } from "@/lib/risiko";
 import { cn } from "@/lib/utils";
 import { IlustrasiAir } from "./ilustrasi-air";
@@ -53,14 +53,15 @@ export function PanelLevel({
   level,
   deskripsi,
   simulasi,
-  waktuData,
   idWilayah,
+  tombolPerbarui,
 }: {
   level: TingkatRisiko;
   deskripsi: string;
   simulasi: boolean;
-  waktuData: Date;
   idWilayah: string;
+  /** Jam pembaruan yang sekaligus tombol Perbarui (D-055). */
+  tombolPerbarui: ReactNode;
 }) {
   const gaya = GAYA_LEVEL[level];
   const Ikon = gaya.ikon;
@@ -71,11 +72,7 @@ export function PanelLevel({
           <Ikon className="size-[22px]" strokeWidth={2.4} aria-hidden="true" />
           {gaya.label}
         </p>
-        <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#2d3748]">
-          <RefreshCw className="size-3.5" strokeWidth={2.2} aria-hidden="true" />
-          <span className="sr-only">Data diperbarui pukul</span>
-          {formatJam(waktuData)} WIB
-        </p>
+        {tombolPerbarui}
       </div>
 
       {simulasi && (

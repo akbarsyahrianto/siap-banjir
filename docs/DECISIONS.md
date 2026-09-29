@@ -619,3 +619,27 @@ Urutannya juga tidak deterministik. Dialog Radix bersifat modal dan hanya member
 **Catatan pengujian.** Menjalankan tes alur utama berulang cepat (`--repeat-each=5`) gagal di ulangan ke-4/5, baik di kode sebelum maupun sesudah perubahan ini. Penyebabnya rate limit subscribe/unsubscribe (10/menit per IP), bukan desain ulang ini. Run biasa lolos.
 
 **Diuji:** e2e alur utama kini juga memeriksa judul Pengaturan, deskripsi sakelar saat aktif/nonaktif, nama radio "Sedang dan Tinggi: …" (terpilih), dan radio yang nonaktif saat notifikasi dimatikan. Tes GPS dan pilih bertingkat di `/pengaturan` (D-052) serta pemilih di Beranda/Risiko/Cuaca tanpa wilayah tetap lolos.
+
+## D-055 · Jam pembaruan di Beranda menjadi tombol Perbarui; Beranda memperbarui data lewat state klien
+
+**Konteks.** Di kartu level Beranda, ikon putar di sebelah jam pembaruan ("19:00 WIB") terlihat seperti tombol, tetapi hanya teks. Permintaan: jadikan tombol yang benar-benar memperbarui data dengan fungsi yang sama seperti tombol Perbarui di Risiko, lengkap dengan indikator memuat dan label yang jelas untuk pembaca layar. Periksa juga halaman lain.
+
+**Temuan saat implementasi: `router.refresh()` tidak andal.** Rancangan pertama memanggil API lalu `router.refresh()` untuk merender ulang Beranda. Pengukuran pada build produksi (Next.js 15.5.26, Chromium) menunjukkan:
+- `window.next.router.refresh()` yang dipanggil langsung, tanpa kode tombol ini, hanya ter-commit **2 dari 8 kali** di Beranda.
+- Gagal di Beranda dan Cuaca yang punya wilayah (halaman dengan `<Suspense>` berisi data wilayah); selalu berhasil di `/` tanpa wilayah, Informasi, Pengaturan, dan Kontak.
+- Server mengirim payload RSC lengkap dalam ±10 ms (berisi nilai baru), tetapi React tidak pernah meng-commit-nya. Refresh berikutnya juga tidak ter-commit (antrean aksi router tersumbat). Navigasi lewat tautan tetap berjalan.
+- Tidak dipengaruhi service worker, jeda sebelum klik, `key` Suspense, maupun letak komponen klien di dalam/luar Suspense.
+
+Akar masalah di dalam Next/React tidak ditemukan dalam waktu yang wajar. **Konsekuensi yang sudah ada sebelumnya:** `AutoRefresh` (render ulang otomatis tiap 30 menit di Beranda dan Cuaca) memakai `router.refresh()`, jadi pembaruan otomatisnya sering tidak diterapkan. Perbaikannya belum termasuk di sini.
+
+**Keputusan.**
+- Pengambilan data tombol Perbarui di Risiko dipindah ke **`ambilDataWilayah()`** (`src/lib/ambil-data-wilayah.ts`): `/api/risiko` + `/api/cuaca`, yang memanggil `lihatKondisiWilayah()` di server. Fungsi ini sekarang juga mengembalikan cuaca terkini. Risiko (`useRiskState.muatUlang`) dan Beranda memakai fungsi yang sama.
+- **Beranda meniru cara Risiko:** isi kartu wilayah (`RingkasanBeranda`, komponen klien) berangkat dari data render server, lalu hasil `ambilDataWilayah()` langsung diterapkan ke state, tanpa `router.refresh()`. Komponen diberi `key` dari `idRisiko` + waktu data, supaya render server yang baru (navigasi, atau `AutoRefresh` saat berhasil) menggantikan state lama.
+- **Tombol jam pembaruan:** `<button>` dengan ikon putar dan garis tepi (tampak seperti tombol), tinggi 44 px.
+  - Nama untuk pembaca layar: "Perbarui data. Terakhir diperbarui pukul HH:MM WIB".
+  - Saat memuat: ikon berganti lingkaran pemuat (berputar hanya jika gerak tidak dikurangi), `aria-disabled="true"` (bukan `disabled`, agar fokus keyboard tidak hilang), dan namanya menjadi "Memperbarui data. …". Jam tetap terlihat agar lebar tombol tidak berubah; teks "Memperbarui…" membuat tombol turun ke baris baru di 390 px.
+  - Wilayah `role="status"` mengumumkan "Memperbarui data…" lalu "Data diperbarui. Terakhir diperbarui pukul HH:MM WIB.".
+  - Gagal: `role="alert"` "Gagal memperbarui: {pesan}. Menampilkan data terakhir." (kalimat sama dengan Risiko), dan data lama tetap tampil.
+- **Pemeriksaan halaman lain:** semua ikon dan gaya hover lain yang tampak bisa diklik memang berada di tombol, tautan, label input, atau kartu bertautan. Satu-satunya pola serupa adalah cabang "Data diperbarui pukul …" berikon putar di `StatusData`; cabang itu tidak pernah dirender (semua pemanggil hanya memakainya untuk data lama) dan dihapus, sehingga `StatusData` kini hanya peringatan data lama.
+
+**Diuji:** e2e: tombol bernama benar; respons `/api/risiko` ditahan → nama "Memperbarui data. …", `aria-disabled="true"`, status "Memperbarui data…"; respons diubah (deskripsi dan jam 12:07) → deskripsi baru tampil, nama tombol memuat 12:07, status "Data diperbarui. …"; respons 503 → pesan gagal dan data terakhir tetap tampil. Diulang 5× per proyek tanpa gagal.

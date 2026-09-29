@@ -186,6 +186,48 @@ test("halaman Cuaca: cuaca terkini, prakiraan harian, dan curah hujan per jam", 
   await expect(page.getByRole("combobox", { name: "Cari desa/kelurahan" })).toHaveCount(0);
 });
 
+test("Beranda: jam pembaruan adalah tombol Perbarui yang menerapkan data baru (D-055)", async ({ page }) => {
+  await page.goto(`/?wilayah=${DESA_UJI}`);
+  const tombol = page.getByRole("button", { name: /^Perbarui data\. Terakhir diperbarui pukul \d{2}:\d{2} WIB$/ });
+  await expect(tombol).toBeVisible();
+
+  // Respons API ditahan (indikator memuat terlihat), lalu diubah agar pembaruan terbukti diterapkan.
+  let lepas: () => void = () => {};
+  const tahan = new Promise<void>((r) => (lepas = r));
+  await page.route("**/api/risiko?*", async (route) => {
+    await tahan;
+    const res = await route.fetch();
+    const json = (await res.json()) as { data: Record<string, unknown> };
+    json.data.deskripsi = "UJI: deskripsi terbaru dari API.";
+    json.data.waktuAmbilData = "2026-01-01T05:07:00.000Z"; // 12:07 WIB
+    await route.fulfill({ response: res, json });
+  });
+  await tombol.click();
+  const memuat = page.getByRole("button", { name: /^Memperbarui data\. Terakhir diperbarui pukul \d{2}:\d{2} WIB$/ });
+  await expect(memuat).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByRole("status").filter({ hasText: "Memperbarui data…" })).toBeAttached();
+  lepas();
+  await expect(page.getByRole("heading", { name: "UJI: deskripsi terbaru dari API." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Perbarui data. Terakhir diperbarui pukul 12:07 WIB" })).toHaveAttribute(
+    "aria-disabled",
+    "false",
+  );
+  await expect(page.getByRole("status").filter({ hasText: "Data diperbarui" })).toHaveText(
+    "Data diperbarui. Terakhir diperbarui pukul 12:07 WIB.",
+  );
+  await page.unroute("**/api/risiko?*");
+
+  // Gagal: pesan sama dengan Risiko, data terakhir tetap tampil.
+  await page.route("**/api/risiko?*", (route) =>
+    route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Data cuaca belum tersedia" }) }),
+  );
+  await page.getByRole("button", { name: /^Perbarui data\./ }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Gagal memperbarui" })).toHaveText(
+    "Gagal memperbarui: Data cuaca belum tersedia. Menampilkan data terakhir.",
+  );
+  await expect(page.getByRole("heading", { name: "UJI: deskripsi terbaru dari API." })).toBeVisible();
+});
+
 test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
   test("Bahaya → jalur push & grafik → join → Detail Penanganan → Final (ditutup)", async ({ page }) => {
     await page.goto(`/risiko?wilayah=${WILAYAH_SIMULASI}`);
