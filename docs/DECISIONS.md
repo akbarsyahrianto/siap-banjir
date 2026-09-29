@@ -695,3 +695,24 @@ Tes D-055 disesuaikan dengan teks baru.
 - Folder `.next-*` sudah diabaikan git dan ESLint.
 
 **Diuji:** `npm run build` saat `npm run dev` berjalan di port 3000. `.next` milik server pengembangan tidak berubah, dan seluruh e2e lolos dari `.next-prod`.
+
+## D-059 · Riwayat kejadian 2024–2026 dari rilis BNPB; sumber tanggal kejadian dan "Data per"
+
+**Konteks.** Riwayat kejadian seed berhenti di 2021. Data kejadian BNPB tidak bisa diunduh secara terprogram:
+- gis.bnpb.go.id/databencana menjawab 403.
+- Berkas data.bnpb.go.id terhalang pemeriksaan bot Cloudflare dan hanya berisi rekap tahunan.
+- DIBI menolak kueri data tanpa login.
+- Lapisan ArcGIS `Kejadian_Bencana_Mingguan` hanya memuat satu minggu (Juni–Juli 2026) dan terbuka untuk diubah publik.
+
+Karena itu dipilih kurasi manual dari rilis www.bnpb.go.id. Daftar berita ditelusuri halaman demi halaman sampai Januari 2024, lalu setiap usulan disetujui pemilik proyek sebelum dimasukkan. Sebagian rilis tidak menyebut tanggal kejadian.
+
+**Keputusan.**
+- **14 entri baru** dengan wilayah beragam: Sumatra Barat (Mei 2024), Kab. Luwu, Kota Ternate, Kab. Sukabumi, Kalimantan Barat, Bali, Kab. Nagekeo, Kab. Nduga, Aceh, Sumatra Utara, Sumatra Barat (2025), Kab. Kepulauan Sitaro, Jawa Tengah (Pantura), dan Kab. Solok. Isi hanya memuat hal yang disebut rilis yang dirujuk (D-039). Angka disebut beserta tanggal datanya karena berupa data sementara.
+- **Bencana banjir dan longsor Sumatra November 2025 dipecah per provinsi** (Aceh, Sumatra Utara, Sumatra Barat). Ketiganya memakai rilis 14 Desember 2025 (total 1.016 korban meninggal) dengan angka per provinsi. Uji seed kini mensyaratkan pasangan tautan + wilayah yang unik, bukan tautan saja.
+- **Tanggal** (kolom baru `Informasi`, migrasi `20260929194807_riwayat_sumber_tanggal`):
+  - Tanggal kejadian tidak ada di rilis utama tetapi ada di rilis BNPB lain: `tanggal` = tanggal kejadian, dan rilis kedua disimpan di `sumberTanggalNama/Url`. Keduanya ditampilkan: "Sumber: …" dan "Tanggal kejadian: …". Berlaku untuk Sumatra Barat 2024 (rilis Tanah Datar 12 Mei 2024: "Sabtu (11/5) pukul 21.00 WIB") dan Sumatra Utara 2025 (rilis 26 November 2025: "Senin (24/11) dan Selasa (25/11)").
+  - Tidak ada rilis BNPB yang menyebut tanggal mulai untuk cakupan entri itu: `tanggal` = tanggal data, `tanggalDataPer = true`, ditampilkan "Data per 19 Jan 2026". Berlaku untuk Kalimantan Barat (rilis Sambas 17 Januari 2025 hanya satu kabupaten), Aceh dan Sumatra Barat 2025 (rilis Padang/Agam hanya satu kota/kabupaten), dan Pantura Jawa Tengah (rilis 15 Januari 2026 membahas Muria Raya, kejadian lain).
+  - Solok: dua rilis menyebut jam berbeda (19.30 dan 19.45 WIB), jadi hanya tanggalnya yang dicantumkan.
+- `npm run cek:sumber` juga memeriksa tautan sumber tanggal.
+
+**Diuji:** `npm run cek:sumber` (31 tautan, semua HTTP 200, 30 September 2026). Unit seed memeriksa: host `.go.id` untuk kedua sumber; nama dan tautan sumber tanggal selalu berpasangan; sumber tanggal dan "Data per" tidak dipakai bersamaan. E2E Informasi memeriksa kartu Pantura ("Data per 19 Jan 2026") serta kartu Sumatra Utara (24 Nov 2025, sumber utama, dan tautan "Tanggal kejadian").

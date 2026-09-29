@@ -1,20 +1,25 @@
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Rujukan asli sebuah informasi; dibuka di tab baru tanpa mengirim referrer. */
+/**
+ * Rujukan asli sebuah informasi; dibuka di tab baru tanpa mengirim referrer.
+ * `label` "Tanggal kejadian" untuk sumber kedua riwayat (D-059).
+ */
 export function TautanSumber({
   nama,
   url,
+  label = "Sumber",
   className,
 }: {
   nama: string | null;
   url: string | null;
+  label?: string;
   className?: string;
 }) {
   if (!url) return null;
   return (
     <p className={cn("text-sm text-muted-foreground", className)}>
-      Sumber:{" "}
+      {label}:{" "}
       <a
         href={url}
         target="_blank"

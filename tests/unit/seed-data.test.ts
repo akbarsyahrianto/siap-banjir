@@ -117,12 +117,24 @@ describe("seed konten", () => {
       expect(r.sumberNama, r.judul).toBeTruthy();
       expect(r.sumberUrl, r.judul).toMatch(/^https:\/\//);
     }
-    expect(new Set(riwayat.map((r) => r.sumberUrl)).size).toBe(riwayat.length);
+    // Satu rilis boleh dipakai beberapa provinsi (mis. bansor Sumatra 2025, D-059), tidak untuk wilayah yang sama.
+    expect(new Set(riwayat.map((r) => `${r.sumberUrl}|${r.idWilayah}`)).size).toBe(riwayat.length);
+    expect(new Set(riwayat.map((r) => r.judul)).size).toBe(riwayat.length);
   });
 
   it("sumber riwayat seed adalah situs resmi pemerintah (BNPB/BMKG diutamakan)", () => {
     for (const r of informasiSeed.filter((i) => i.kategori === "RIWAYAT_KEJADIAN")) {
       expect(new URL(r.sumberUrl ?? "").hostname, r.judul).toMatch(/\.go\.id$/);
+      if (r.sumberTanggalUrl) expect(new URL(r.sumberTanggalUrl).hostname, r.judul).toMatch(/\.go\.id$/);
+    }
+  });
+
+  it("riwayat: tanggal kejadian dari sumber kedua dan 'Data per' tidak dipakai bersamaan (D-059)", () => {
+    for (const r of informasiSeed.filter((i) => i.kategori === "RIWAYAT_KEJADIAN")) {
+      expect(Boolean(r.sumberTanggalNama), r.judul).toBe(Boolean(r.sumberTanggalUrl));
+      expect(r.sumberTanggalUrl && r.tanggalDataPer, r.judul).toBeFalsy();
+      expect(r.sumberTanggalUrl, r.judul).not.toBe(r.sumberUrl);
+      expect(r.tanggal, r.judul).toBeTruthy();
     }
   });
 

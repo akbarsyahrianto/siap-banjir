@@ -33,6 +33,20 @@ export const KODE = {
   kotaBanjarmasin: "63.71",
   kotaSamarinda: "64.72",
   kotaManado: "71.71",
+  // Riwayat 2024–2026 (D-059).
+  aceh: "11",
+  sumateraUtara: "12",
+  sumateraBarat: "13",
+  kabSolok: "13.02",
+  kabSukabumi: "32.02",
+  jawaTengah: "33",
+  bali: "51",
+  kabNagekeo: "53.16",
+  kalimantanBarat: "61",
+  kabSitaro: "71.09",
+  kabLuwu: "73.17",
+  kotaTernate: "82.71",
+  kabNduga: "95.08",
 } as const;
 
 export type ProfilWilayah = { idWilayah: string; namaWilayah: string; deskripsi: string };
@@ -254,7 +268,10 @@ export const informasiSeed: InformasiInput[] = [
   // ----- RIWAYAT_KEJADIAN -----
   // Setiap entri wajib punya sumber yang bisa dibuka dan isinya hanya memuat hal yang disebut
   // sumber tersebut (DECISIONS D-039). Utamakan sumber resmi (BNPB/BMKG, lalu instansi
-  // pemerintah lain). Semua tautan diperiksa 25 September 2026; cek ulang: npm run cek:sumber.
+  // pemerintah lain). Semua tautan diperiksa 25 September 2026; entri 2024–2026 diperiksa
+  // 30 September 2026 (D-059). Cek ulang: npm run cek:sumber.
+  // Tanggal = tanggal kejadian. Bila sumber utama tidak menyebutnya, tanggal diambil dari rilis BNPB lain
+  // (sumberTanggal*); jika tidak ada, tanggal data ditampilkan sebagai "Data per …" (tanggalDataPer).
   {
     kategori: "RIWAYAT_KEJADIAN",
     idWilayah: KODE.dkiJakarta,
@@ -336,5 +353,153 @@ export const informasiSeed: InformasiInput[] = [
     sumberNama: "BNPB, 12 Juni 2019",
     sumberUrl:
       "https://www.bnpb.go.id/berita/banjir-kepung-sejumlah-wilayah-di-indonesia-bnpb-terjunkan-lebih-banyak-tim-dan-peralatan",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.sumateraBarat,
+    tanggal: "2024-05-11",
+    judul: "Banjir Lahar Hujan Sumatra Barat Mei 2024",
+    isi:
+      "Banjir lahar hujan dan banjir bandang melanda Sumatra Barat pada Sabtu malam, 11 Mei 2024. Hingga 13 Mei 2024, BNPB mencatat 43 orang meninggal dunia (Kabupaten Agam 19, Tanah Datar 14, Padang Pariaman 8, Padang Panjang 2) dan 15 orang dalam pencarian. Pengungsi tercatat 1.159 jiwa di Kabupaten Agam dan 2.039 jiwa di Kabupaten Tanah Datar.",
+    sumberNama: "BNPB, 13 Mei 2024",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-korban-banjir-lahar-hujan-sumatra-barat-mencapai-43-orang",
+    sumberTanggalNama: "BNPB, 12 Mei 2024 (Tanah Datar)",
+    sumberTanggalUrl: "https://www.bnpb.go.id/berita/banjir-landa-tanah-datar-tujuh-orang-meninggal-dunia",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kabLuwu,
+    tanggal: "2024-05-03",
+    judul: "Banjir dan Longsor Kabupaten Luwu Mei 2024",
+    isi:
+      "Banjir dan longsor terjadi di Kabupaten Luwu, Sulawesi Selatan, pada Jumat, 3 Mei 2024, pukul 01.17 WITA dan berdampak pada 13 kecamatan dengan ketinggian muka air 1–3 meter. BNPB mencatat 14 warga meninggal dunia. Per 4 Mei 2024, 1.385 KK terdampak, 115 jiwa mengungsi, dan 1.867 rumah terdampak.",
+    sumberNama: "BNPB, 4 Mei 2024",
+    sumberUrl: "https://www.bnpb.go.id/berita/total-14-warga-meninggal-dunia-akibat-banjir-dan-longsor-di-kabupaten-luwu",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kotaTernate,
+    tanggal: "2024-08-25",
+    judul: "Banjir Bandang Kota Ternate Agustus 2024",
+    isi:
+      "Banjir bandang terjadi di Kota Ternate, Maluku Utara, pada Minggu, 25 Agustus 2024, pukul 03.30 WIT. Per 26 Agustus 2024, BNPB mencatat 16 warga Kelurahan Rua, Kecamatan Pulau Ternate, meninggal dunia, delapan warga luka-luka, dan tiga warga masih dalam pencarian.",
+    sumberNama: "BNPB, 26 Agustus 2024",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-banjir-bandang-kota-ternate-16-warga-meningal-dunia-tiga-warga-dalam-pencarian",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kabSukabumi,
+    tanggal: "2024-12-03",
+    judul: "Banjir dan Tanah Longsor Kabupaten Sukabumi Desember 2024",
+    isi:
+      "Bencana hidrometeorologi basah (banjir dan tanah longsor) pada Selasa, 3 Desember 2024, berdampak di sejumlah lokasi di Kabupaten Sukabumi, Jawa Barat. Per 11 Desember 2024, BNPB mencatat 20.629 warga terdampak, 3.464 warga mengungsi, dan 2.058 rumah rusak berat.",
+    sumberNama: "BNPB, 12 Desember 2024",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-banjir-dan-tanah-longsor-sukabumi-sebanyak-20629-warga-terdampak-dan-3464-mengungsi",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kalimantanBarat,
+    tanggal: "2025-01-30",
+    tanggalDataPer: true,
+    judul: "Banjir Kalimantan Barat Januari 2025",
+    isi:
+      "Sejak pertengahan Januari 2025, banjir dengan ketinggian rata-rata dua meter merendam Kabupaten Sambas, Landak, Mempawah, Bengkayang, Kubu Raya, dan Kota Singkawang. Data yang disampaikan pada rapat koordinasi 30 Januari 2025 mencatat 148.693 jiwa terdampak dan sedikitnya 606 jiwa mengungsi.",
+    sumberNama: "BNPB, 31 Januari 2025",
+    sumberUrl: "https://www.bnpb.go.id/berita/enam-kabupaten-di-kalimantan-barat-terendam-banjir-kepala-bnpb-minta-belajar-dari-sintang",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.bali,
+    tanggal: "2025-09-10",
+    judul: "Banjir dan Longsor Bali September 2025",
+    isi:
+      "Banjir dan tanah longsor yang dilaporkan sejak Rabu, 10 September 2025, melanda tujuh kabupaten/kota di Bali dengan lebih dari 120 titik banjir, terbanyak di Kota Denpasar (81 titik). Per 11 September 2025 pukul 11.00 WIB, 14 orang meninggal dunia (Kota Denpasar 8, Kabupaten Jembrana 2, Gianyar 3, Badung 1) dan dua warga Kota Denpasar masih dalam pencarian.",
+    sumberNama: "BNPB, 11 September 2025",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-tujuh-wilayah-provinsi-bali-terdampak-banjir-dan-longsor",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kabNagekeo,
+    tanggal: "2025-09-08",
+    judul: "Banjir Bandang Nagekeo September 2025",
+    isi:
+      "Banjir bandang melanda Kabupaten Nagekeo, Nusa Tenggara Timur, pada Senin, 8 September 2025, dan berdampak pada 14 desa di Kecamatan Mauponggo, Nangaroro, dan Boawae. Per 10 September 2025, empat orang meninggal dunia dan empat orang masih dinyatakan hilang.",
+    sumberNama: "BNPB, 10 September 2025",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-banjir-bandang-nagekeo-korban-meninggal-jadi-4-orang-dan-bnpb-berangkat-ke-lokasi-malam-ini",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kabNduga,
+    tanggal: "2025-11-01",
+    judul: "Banjir Bandang Nduga November 2025",
+    isi:
+      "Banjir bandang akibat hujan berintensitas tinggi di kawasan hulu melanda dua distrik di Kabupaten Nduga, Papua Pegunungan, pada Sabtu, 1 November 2025, pukul 17.00 waktu setempat. Per 4 November 2025, 15 orang ditemukan meninggal dunia dan 8 orang masih dicari di Kampung Yuguru, Distrik Meborok.",
+    sumberNama: "BNPB, 4 November 2025",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-banjir-bandang-nduga-15-orang-meninggal-dunia-8-orang-masih-dalam-pencarian",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.aceh,
+    tanggal: "2025-12-14",
+    tanggalDataPer: true,
+    judul: "Banjir dan Longsor Aceh 2025",
+    isi:
+      "Banjir dan longsor melanda Aceh bersamaan dengan Sumatra Utara dan Sumatra Barat. Per 14 Desember 2025, BNPB mencatat 424 orang meninggal dunia dan 32 orang hilang di Aceh, dari total 1.016 korban meninggal di ketiga provinsi.",
+    sumberNama: "BNPB, 14 Desember 2025",
+    sumberUrl: "https://www.bnpb.go.id/berita/total-korban-meninggal-dunia-akibat-bansor-sumatra-1016-jiwa",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.sumateraUtara,
+    tanggal: "2025-11-24",
+    judul: "Banjir dan Longsor Sumatra Utara November 2025",
+    isi:
+      "Cuaca ekstrem pada Senin–Selasa, 24–25 November 2025, memicu banjir dan tanah longsor di Sibolga, Tapanuli Utara, Tapanuli Tengah, dan Tapanuli Selatan. Per 14 Desember 2025, BNPB mencatat 349 orang meninggal dunia dan 90 orang hilang di Sumatra Utara, dari total 1.016 korban meninggal di Aceh, Sumatra Utara, dan Sumatra Barat.",
+    sumberNama: "BNPB, 14 Desember 2025",
+    sumberUrl: "https://www.bnpb.go.id/berita/total-korban-meninggal-dunia-akibat-bansor-sumatra-1016-jiwa",
+    sumberTanggalNama: "BNPB, 26 November 2025",
+    sumberTanggalUrl: "https://www.bnpb.go.id/berita/empat-kabupaten-di-sumatera-utara-dilanda-bencana-banjir-dan-longsor-secara-bersamaan",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.sumateraBarat,
+    tanggal: "2025-12-14",
+    tanggalDataPer: true,
+    judul: "Banjir dan Longsor Sumatra Barat 2025",
+    isi:
+      "Banjir dan longsor melanda Sumatra Barat bersamaan dengan Aceh dan Sumatra Utara. Per 14 Desember 2025, BNPB mencatat 243 orang meninggal dunia dan 90 orang hilang di Sumatra Barat, dari total 1.016 korban meninggal di ketiga provinsi.",
+    sumberNama: "BNPB, 14 Desember 2025",
+    sumberUrl: "https://www.bnpb.go.id/berita/total-korban-meninggal-dunia-akibat-bansor-sumatra-1016-jiwa",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kabSitaro,
+    tanggal: "2026-01-05",
+    judul: "Banjir Bandang Sitaro Januari 2026",
+    isi:
+      "Hujan berintensitas tinggi sejak dini hari membuat aliran sungai meluap tiba-tiba pada Senin, 5 Januari 2026, pukul 02.30 WITA, di Kabupaten Kepulauan Siau Tagulandang Biaro (Sitaro), Sulawesi Utara. Banjir bandang berdampak pada empat kecamatan: Siau Timur, Siau Tengah, Siau Barat, dan Siau Barat Selatan. Hingga 6 Januari 2026, 16 orang meninggal dunia, tiga orang masih dicari, 22 orang luka, dan sekitar 682 jiwa mengungsi.",
+    sumberNama: "BNPB, 6 Januari 2026",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-banjir-bandang-sitaro-korban-meninggal-jadi-16-orang",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.jawaTengah,
+    tanggal: "2026-01-19",
+    tanggalDataPer: true,
+    judul: "Banjir Pantura Jawa Tengah Januari 2026",
+    isi:
+      "Hujan ekstrem di wilayah Pantai Utara (Pantura) Jawa Tengah menyebabkan banjir di Kabupaten Demak, Kendal, Batang, Pemalang, dan Kota Pekalongan. Hingga 19 Januari 2026, BNPB mencatat 71.479 jiwa terdampak dan 2.440 jiwa mengungsi.",
+    sumberNama: "BNPB, 19 Januari 2026",
+    sumberUrl: "https://www.bnpb.go.id/berita/banjir-pantura-jawa-tengah-71479-jiwa-terdampak-dan-2440-jiwa-mengungsi",
+  },
+  {
+    kategori: "RIWAYAT_KEJADIAN",
+    idWilayah: KODE.kabSolok,
+    tanggal: "2026-09-21",
+    judul: "Banjir Bandang Kabupaten Solok September 2026",
+    isi:
+      "Banjir bandang terjadi pada Senin malam, 21 September 2026, setelah hujan berintensitas tinggi meningkatkan debit sejumlah sungai di Kabupaten Solok, Sumatra Barat, termasuk Sungai Batang Laso, dan memicu longsor di perbukitan sekitarnya. Material banjir menerjang Kompleks Perkantoran Pemerintah Kabupaten Solok dan permukiman sekitarnya. Dua orang meninggal dunia dan empat warga luka-luka.",
+    sumberNama: "BNPB, 26 September 2026",
+    sumberUrl: "https://www.bnpb.go.id/berita/update-banjir-bandang-solok-satu-korban-hilang-berhasil-ditemukan",
   },
 ];

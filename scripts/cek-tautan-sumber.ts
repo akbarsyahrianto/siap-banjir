@@ -46,6 +46,10 @@ async function cek(url: string, harusMemuat?: string): Promise<{ ok: boolean; ke
 async function main() {
   const daftar: { judul: string; url: string; harusMemuat?: string }[] = [
     ...informasiSeed.filter((i) => i.sumberUrl).map((i) => ({ judul: i.judul, url: i.sumberUrl as string })),
+    // Sumber tanggal kejadian riwayat (D-059).
+    ...informasiSeed
+      .filter((i) => i.sumberTanggalUrl)
+      .map((i) => ({ judul: `${i.judul} (tanggal kejadian)`, url: i.sumberTanggalUrl as string })),
     { judul: "Riwayat otomatis", url: SUMBER_DETEKSI.url },
     // Rekomendasi merujuk dokumen yang sama dengan #page berbeda; cukup dicek sekali per dokumen.
     ...[...new Set(rekomendasiSeed.flatMap((r) => (r.sumberUrl ? [r.sumberUrl.split("#")[0] as string] : [])))].map((url) => ({

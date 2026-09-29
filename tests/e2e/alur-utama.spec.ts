@@ -517,6 +517,19 @@ test("Informasi: tab umum bawaan; riwayat punya tautan sumber; Kembali dari arti
   await expect(sumber).toHaveAttribute("target", "_blank");
   await expect(sumber).toHaveAttribute("rel", "noopener noreferrer");
 
+  // D-059: tanpa tanggal kejadian di sumber resmi → "Data per …"; tanggal dari rilis lain → tautan kedua.
+  const kartu = (judul: string) => riwayat.getByRole("article").filter({ has: page.getByRole("heading", { name: judul }) });
+  await expect(kartu("Banjir Pantura Jawa Tengah Januari 2026")).toContainText("Data per 19 Jan 2026");
+  const sumut = kartu("Banjir dan Longsor Sumatra Utara November 2025");
+  await expect(sumut).toContainText("24 Nov 2025");
+  await expect(sumut).not.toContainText("Data per");
+  await expect(sumut.getByRole("link", { name: /BNPB, 14 Desember 2025/ })).toBeVisible();
+  await expect(sumut.getByText(/^Tanggal kejadian:/)).toBeVisible();
+  await expect(sumut.getByRole("link", { name: /BNPB, 26 November 2025/ })).toHaveAttribute(
+    "href",
+    "https://www.bnpb.go.id/berita/empat-kabupaten-di-sumatera-utara-dilanda-bencana-banjir-dan-longsor-secara-bersamaan",
+  );
+
   // Artikel riwayat → "Kembali ke Informasi" membuka tab Riwayat lagi.
   await riwayat.getByRole("heading").first().getByRole("link").click();
   await expect(page).toHaveURL(/\/informasi\/[a-z0-9]+$/);
