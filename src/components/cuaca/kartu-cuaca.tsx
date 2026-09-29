@@ -1,65 +1,48 @@
 import type { DataCuaca } from "@prisma/client";
-import { Droplets, Thermometer, Umbrella, Wind } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatAngka } from "@/lib/format";
+import { OPEN_METEO_ATTRIBUTION } from "@/lib/constants";
+import { formatAngka, formatJam } from "@/lib/format";
 import { infoKondisiCuaca } from "@/lib/weather-code";
-import type { SumberData } from "@/server/services/weather.service";
-import { AtribusiOpenMeteo } from "./atribusi-open-meteo";
-import { CatatanLokasi } from "./catatan-lokasi";
-import { StatusData } from "./status-data";
+import { teksCatatanLokasi } from "./catatan-lokasi";
 
-export function KartuCuaca({
-  dataCuaca,
-  sumber,
-  namaWilayah,
-  koordinatPerkiraan = false,
-}: {
-  dataCuaca: DataCuaca;
-  sumber: SumberData;
-  namaWilayah: string;
-  koordinatPerkiraan?: boolean;
-}) {
+/** Cuaca terkini di halaman Cuaca (board Cuaca): suhu, kondisi, tiga ubin detail, waktu data & atribusi. */
+export function KartuCuaca({ dataCuaca, koordinatPerkiraan }: { dataCuaca: DataCuaca; koordinatPerkiraan: boolean }) {
   const kondisi = infoKondisiCuaca(dataCuaca.kondisiCuaca);
   const Ikon = kondisi.ikon;
   const detail = [
-    { ikon: Droplets, label: "Kelembapan", nilai: `${formatAngka(dataCuaca.kelembapan, 0)}%` },
-    { ikon: Wind, label: "Angin", nilai: `${formatAngka(dataCuaca.kecepatanAngin)} km/jam` },
-    { ikon: Umbrella, label: "Hujan (15 menit)", nilai: `${formatAngka(dataCuaca.curahHujan)} mm` },
+    { label: "Kelembapan", nilai: `${formatAngka(dataCuaca.kelembapan, 0)}%` },
+    { label: "Angin", nilai: `${formatAngka(dataCuaca.kecepatanAngin)} km/j` },
+    { label: "Hujan 15 mnt", nilai: `${formatAngka(dataCuaca.curahHujan)} mm` },
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base text-muted-foreground">Cuaca terkini · {namaWilayah}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Ikon className="size-16 text-primary" aria-hidden="true" />
-          <div>
-            <p className="flex items-center gap-1 text-4xl font-bold tabular-nums">
-              <Thermometer className="size-6 text-muted-foreground" aria-hidden="true" />
-              {formatAngka(dataCuaca.suhu)}°C
-            </p>
-            <p className="text-lg font-medium">{kondisi.label}</p>
+    <section aria-labelledby="judul-kini" className="flex flex-col gap-3.5 rounded-[20px] border bg-card p-4 text-card-foreground">
+      <h2 id="judul-kini" className="text-[14px] font-bold text-[#3e4a5c]">
+        Cuaca terkini
+      </h2>
+      <div className="flex items-center gap-3.5">
+        <Ikon className="size-[60px] shrink-0 text-primary" strokeWidth={1.6} aria-hidden="true" />
+        <div className="flex flex-col">
+          <span className="text-[42px] leading-[1.05] font-extrabold tracking-[-0.03em] tabular-nums">
+            {formatAngka(dataCuaca.suhu)}°C
+          </span>
+          <span className="text-[16px] font-semibold text-[#1f2937]">{kondisi.label}</span>
+        </div>
+      </div>
+      <dl className="grid grid-cols-3 gap-2">
+        {detail.map(({ label, nilai }) => (
+          <div key={label} className="flex flex-col items-center gap-0.5 rounded-xl bg-background px-2 py-2.5 text-center">
+            <dt className="text-[12px] font-semibold text-[#3e4a5c]">{label}</dt>
+            <dd className="text-[17px] font-extrabold tabular-nums">{nilai}</dd>
           </div>
-        </div>
-        <dl className="grid grid-cols-3 gap-2">
-          {detail.map(({ ikon: IkonDetail, label, nilai }) => (
-            <div key={label} className="rounded-lg bg-muted p-2 text-center">
-              <dt className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                <IkonDetail className="size-3.5" aria-hidden="true" />
-                {label}
-              </dt>
-              <dd className="font-semibold tabular-nums">{nilai}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="space-y-1">
-          <StatusData sumber={sumber} waktuAmbil={dataCuaca.waktuAmbil} />
-          <CatatanLokasi koordinatPerkiraan={koordinatPerkiraan} />
-          <AtribusiOpenMeteo />
-        </div>
-      </CardContent>
-    </Card>
+        ))}
+      </dl>
+      <p className="text-[13px] leading-normal text-[#3e4a5c]">
+        Diperbarui {formatJam(dataCuaca.waktuAmbil)} WIB · {teksCatatanLokasi(koordinatPerkiraan)}{" "}
+        <a href={OPEN_METEO_ATTRIBUTION.url} className="text-primary hover:text-primary-hover">
+          Open-Meteo.com
+        </a>{" "}
+        ({OPEN_METEO_ATTRIBUTION.licenseLabel})
+      </p>
+    </section>
   );
 }

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { KepalaHalaman } from "@/components/layout/kepala-halaman";
 import { Disclaimer } from "@/components/risiko/disclaimer";
 import { PanelRisiko } from "@/components/risiko/panel-risiko";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
@@ -27,24 +26,11 @@ export default async function RisikoPage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-4">
-      <header className="flex flex-col gap-3.5">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[28px] leading-[1.2] font-extrabold tracking-[-0.02em]">Risiko Banjir</h1>
-          <p className="text-[15px] leading-[1.45] text-[#3e4a5c]">Level risiko, persiapan dini, dan rekomendasi tindakan.</p>
-        </div>
-        {terpilih && namaTerpilih ? (
-          <p className="flex items-center gap-2.5">
-            <MapPin className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden="true" />
-            <span className="text-[15px] font-bold">{namaTerpilih}</span>
-            <Link
-              href="/pengaturan"
-              className="ml-auto inline-flex min-h-11 shrink-0 items-center text-[14px] font-bold text-primary hover:text-primary-hover"
-            >
-              Ubah<span className="sr-only"> wilayah</span>
-            </Link>
-          </p>
-        ) : null}
-      </header>
+      <KepalaHalaman
+        judul="Risiko Banjir"
+        subjudul="Level risiko, persiapan dini, dan rekomendasi tindakan."
+        namaWilayah={terpilih ? namaTerpilih : null}
+      />
       <Disclaimer />
       {terpilih ? (
         <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>

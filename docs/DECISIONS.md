@@ -564,3 +564,20 @@ Urutannya juga tidak deterministik. Dialog Radix bersifat modal dan hanya member
 - `BUKU_SAKU_BNPB` dan `sumberBukuSaku` pindah ke `src/data/buku-saku-bnpb.ts` (dipakai aplikasi dan seed). `npm run cek:sumber` kini juga memeriksa halaman Basarnas masih memuat "115". Portal 112 tidak ikut dicek karena menolak `fetch` biasa.
 
 **Diuji:** unit (urutan & pendamping untuk keempat kasus, teks butir checklist, kelengkapan sumber setiap nomor, Buku Saku → `#page=84`); integration `lihatPersiapanWilayah` (Semarang teks asli, Kulon Progo BPBD DIY lebih dulu, Nias nomor nasional, `idPersiapan` & urutan tetap); e2e (115/110 dan sumbernya di Semarang, pendamping + konfirmasi 115 di Desa Ononamolo I Bot, Kabupaten Nias yang 112-nya "Uji Coba").
+
+## D-052 · Desain ulang: halaman Cuaca
+
+**Sumber desain.** Board "Cuaca" di kanvas desain ulang. Kanvas tidak diubah.
+
+**Keputusan.**
+- **Header** sama dengan Risiko: judul "Prakiraan Cuaca", subjudul "Prakiraan 3 hari, harian dan per jam.", baris wilayah dengan tautan "Ubah" ke Pengaturan. Markup header Risiko dipindah ke komponen bersama `KepalaHalaman` (dipakai Risiko dan Cuaca).
+- **Pemilih wilayah hanya tampil jika belum ada wilayah terpilih**, sama seperti Beranda (D-046) dan Risiko (D-047). Sebelumnya `/cuaca` selalu menampilkan pemilih. Konsekuensinya, pesan hasil "Gunakan lokasi saya" ("Desa/kelurahan terdekat: … Bukan wilayah Anda? Pilih dari daftar.") hilang setelah halaman dirender ulang dengan wilayah itu. Nama wilayah tetap terlihat di baris wilayah, dan pesan tersebut tetap bertahan di Pengaturan.
+- **Cuaca terkini:** ikon kondisi, suhu, label kondisi, tiga ubin (Kelembapan, Angin dalam "km/j", Hujan 15 mnt), lalu "Diperbarui HH:MM WIB · Data cuaca berlaku untuk area ±11 km…" + atribusi Open-Meteo (CC BY 4.0) dalam satu kalimat, seperti board. Kalimat lokasi memakai `teksCatatanLokasi` yang sama dengan Risiko (termasuk keterangan titik pusat kecamatan bila koordinat desa perkiraan), bukan versi board yang lebih pendek. Peringatan data cadangan/hemat kuota (`StatusData`) tampil sebagai kotak di bawah kartu, seperti Beranda dan Risiko. Nama wilayah tidak lagi ada di judul kartu karena sudah ada di header. Komponen `CatatanLokasi` tidak dipakai lagi dan dihapus (fungsi `teksCatatanLokasi` tetap).
+- **Prakiraan harian:** satu kartu per hari ("Hari ini", lalu "Rab, 30 Sep"), kategori hujan harian BMKG (`kategoriHujanHarian`) berwarna biru, lalu curah hujan, peluang hujan maksimum, dan rentang suhu. Nama hari menjadi `h3` (di board hanya teks) supaya bisa dinavigasi lewat heading.
+- **Curah hujan per jam** menggantikan grafik Recharts gabungan (hujan + suhu + peluang). Board hanya memuat curah hujan, sedangkan suhu dan peluang sudah ada per hari. Grafik berupa batang CSS murni tanpa JavaScript (`/cuaca` tidak lagi memuat Recharts): satu batang per jam dari jam sekarang sampai akhir prakiraan, garis bantu tiap sepertiga tinggi, label hari proporsional terhadap jumlah jam per tanggal, dan keterangan "Mulai pukul HH.MM hari ini. Satu batang = satu jam.".
+  - Skala sumbu Y (`grafikHujanPerJam`, `src/lib/grafik-hujan.ts`): tiga selang dengan langkah terkecil dari 0,5 / 1 / 2 / 5 / 10 / 20 / 50 / 100 mm yang memuat nilai tertinggi (di atas itu kelipatan 50). Tanpa hujan, skala tetap 0–1,5 mm.
+  - Grafik ber-`role="img"` dengan ringkasan untuk pembaca layar: rentang tanggal dan puncak ("Tertinggi 1,4 mm pada Senin pukul 14.00."), atau "Tidak ada hujan yang diprakirakan.".
+  - Tanggal dengan kurang dari 5 jam (mis. pukul 22.00) hanya diberi garis pemisah, tanpa label, karena labelnya tidak muat.
+- Data tetap dari Open-Meteo (`ringkasanHarian`, `seriPrakiraanPerJam`); angka contoh di board tidak dipakai.
+
+**Diuji:** unit `grafikHujanPerJam` (skala, pembagian hari, ringkasan puncak, tanpa hujan, lintas bulan, data kosong). E2E: tes baru halaman Cuaca (header + Ubah wilayah, cuaca terkini + atribusi, tiga kartu harian, ringkasan grafik, tanpa pemilih); "Gunakan lokasi saya" di `/cuaca` kini memastikan pemilih hilang setelah wilayah terpilih; pemeriksaan pesan GPS yang bertahan dan tes pilih bertingkat pindah ke `/pengaturan`.
