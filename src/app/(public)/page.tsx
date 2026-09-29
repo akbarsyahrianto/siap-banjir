@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { WilayahDipantau } from "@/components/beranda/kartu-ringkas";
 import { RingkasanBeranda } from "@/components/beranda/ringkasan-beranda";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
-import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
@@ -31,7 +30,6 @@ export default async function BerandaPage({ searchParams }: Props) {
           <WilayahDipantau nama={namaTerpilih} />
           <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
             <RingkasanWilayah idWilayah={terpilih} namaWilayah={namaTerpilih} />
-            <AutoRefresh />
             <TandaKontenWilayah idWilayah={terpilih} />
           </Suspense>
         </>
@@ -54,7 +52,7 @@ async function RingkasanWilayah({ idWilayah, namaWilayah }: { idWilayah: string;
   if (!risiko || !kondisi.cuaca) return <DataCuacaTidakTersedia />;
 
   const { suhu, kondisiCuaca } = kondisi.cuaca.dataCuaca;
-  // key: data server baru (render ulang AutoRefresh/navigasi) menggantikan state klien.
+  // key: data server baru (navigasi) menggantikan state klien; pembaruan berkala lewat state klien (D-056).
   return (
     <RingkasanBeranda
       key={`${risiko.idRisiko}:${risiko.waktuAmbilData}`}

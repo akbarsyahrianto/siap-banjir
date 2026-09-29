@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
+import { usePembaruanOtomatis } from "@/hooks/usePembaruanOtomatis";
 import { ambilDataWilayah, ambilJson } from "@/lib/ambil-data-wilayah";
 import { konteksAwal, transisi, type KanalPeringatan } from "@/lib/mesin-risiko";
 import { LABEL_SIMULASI } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
 import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
-
-export const INTERVAL_REFRESH_MS = 30 * 60 * 1000;
 
 /**
  * Menjalankan state machine risiko untuk satu wilayah beserta efek tiap state.
@@ -25,15 +24,13 @@ export function useRiskState(awal: {
   const [ktx, kirim] = useReducer(transisi, awal.risiko, konteksAwal);
   const [grafik, setGrafik] = useState(awal.grafik);
   const [penanganan, setPenanganan] = useState(awal.penanganan);
-  const terakhirDimuat = useRef(Date.now());
   const { status: statusPush, langganan } = useNotifikasi();
 
   // --- Pemantauan: entry ambil data (API memastikan data Open-Meteo/cache segar) ---
-  const muatUlang = useCallback(async () => {
+  const muat = useCallback(async () => {
     kirim({ type: "MUAT" });
     try {
       const { risiko, hujan48Jam } = await ambilDataWilayah(idWilayah);
-      terakhirDimuat.current = Date.now();
       setGrafik(hujan48Jam);
       kirim({ type: "DATA_DITERIMA", data: risiko });
     } catch (err) {
@@ -41,20 +38,8 @@ export function useRiskState(awal: {
     }
   }, [idWilayah]);
 
-  // Refresh berkala tiap 30 menit; juga saat tab kembali aktif setelah lama ditinggal.
-  useEffect(() => {
-    const timer = window.setInterval(() => void muatUlang(), INTERVAL_REFRESH_MS);
-    const saatTerlihat = () => {
-      if (document.visibilityState === "visible" && Date.now() - terakhirDimuat.current >= INTERVAL_REFRESH_MS) {
-        void muatUlang();
-      }
-    };
-    document.addEventListener("visibilitychange", saatTerlihat);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", saatTerlihat);
-    };
-  }, [muatUlang]);
+  // Refresh berkala tiap 30 menit; juga saat kembali ke tab/aplikasi bila data sudah lama (D-056).
+  const muatUlang = usePembaruanOtomatis(muat);
 
   // Deep link dari notifikasi push: /risiko?wilayah={id}#penanganan → Detail Penanganan.
   useEffect(() => {

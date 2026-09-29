@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cekRateLimit, parseQuery, tidakDitemukan } from "@/server/http";
 import { limitBacaCuaca } from "@/server/rate-limits";
 import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
-import { ringkasanHarian, seriHujan48Jam, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
+import { ringkasanHarian, seriHujan48Jam, seriPerJamPerHari, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
 import { namaTampilan } from "@/server/services/wilayah.service";
 import { queryWilayahSchema } from "@/server/validators/risiko";
 
@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
       hujan48Jam: seriHujan48Jam(raw),
       perJam: seriPrakiraanPerJam(raw),
       harian: ringkasanHarian(raw),
+      perJamPerHari: seriPerJamPerHari(raw),
       atribusi: "Data cuaca: Open-Meteo.com (CC BY 4.0)",
     },
   });

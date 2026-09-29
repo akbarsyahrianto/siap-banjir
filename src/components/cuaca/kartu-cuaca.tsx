@@ -1,11 +1,19 @@
-import type { DataCuaca } from "@prisma/client";
+import type { CuacaTerkini } from "@/lib/ambil-data-wilayah";
 import { OPEN_METEO_ATTRIBUTION } from "@/lib/constants";
 import { formatAngka, formatJam } from "@/lib/format";
 import { infoKondisiCuaca } from "@/lib/weather-code";
 import { teksCatatanLokasi } from "./catatan-lokasi";
 
 /** Cuaca terkini di halaman Cuaca (board Cuaca): suhu, kondisi, tiga ubin detail, waktu data & atribusi. */
-export function KartuCuaca({ dataCuaca, koordinatPerkiraan }: { dataCuaca: DataCuaca; koordinatPerkiraan: boolean }) {
+export function KartuCuaca({
+  dataCuaca,
+  waktuAmbil,
+  koordinatPerkiraan,
+}: {
+  dataCuaca: CuacaTerkini;
+  waktuAmbil: Date;
+  koordinatPerkiraan: boolean;
+}) {
   const kondisi = infoKondisiCuaca(dataCuaca.kondisiCuaca);
   const Ikon = kondisi.ikon;
   const detail = [
@@ -37,7 +45,7 @@ export function KartuCuaca({ dataCuaca, koordinatPerkiraan }: { dataCuaca: DataC
         ))}
       </dl>
       <p className="text-[13px] leading-normal text-[#3e4a5c]">
-        Diperbarui {formatJam(dataCuaca.waktuAmbil)} WIB · {teksCatatanLokasi(koordinatPerkiraan)}{" "}
+        Diperbarui {formatJam(waktuAmbil)} WIB · {teksCatatanLokasi(koordinatPerkiraan)}{" "}
         <a href={OPEN_METEO_ATTRIBUTION.url} className="text-primary hover:text-primary-hover">
           Open-Meteo.com
         </a>{" "}

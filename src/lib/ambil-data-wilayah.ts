@@ -1,5 +1,5 @@
-import type { RisikoKlien } from "@/lib/tipe-risiko";
-import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
+import type { RisikoKlien, SumberData } from "@/lib/tipe-risiko";
+import type { RingkasanHarian, SeriHarian, TitikGrafikJam } from "@/server/services/seri-cuaca";
 
 /** Bagian `terkini` dari GET /api/cuaca. */
 export type CuacaTerkini = {
@@ -8,6 +8,17 @@ export type CuacaTerkini = {
   curahHujan: number;
   kecepatanAngin: number;
   kondisiCuaca: number;
+};
+
+/** Isi halaman Cuaca (D-056): dari render server atau GET /api/cuaca. */
+export type DataHalamanCuaca = {
+  terkini: CuacaTerkini;
+  /** ISO 8601 */
+  waktuAmbil: string;
+  sumber: SumberData;
+  koordinatPerkiraan: boolean;
+  harian: RingkasanHarian[];
+  perJamPerHari: SeriHarian[];
 };
 
 /** GET JSON `{ data }` dari API sendiri; galat membawa pesan `error` dari server. */
@@ -26,14 +37,21 @@ export async function ambilJson<T>(url: string): Promise<T> {
 
 /**
  * Ambil ulang risiko & cuaca satu wilayah dari API (server memastikan data Open-Meteo/cache segar).
- * Dipakai tombol "Perbarui" di Risiko (state machine) dan tombol jam pembaruan di Beranda (D-055).
- * Beranda tidak memakai `router.refresh()` untuk ini: di Next.js 15.5 refresh sering tidak di-commit (D-055).
+ * Dipakai tombol "Perbarui" di Risiko (state machine), tombol jam pembaruan di Beranda (D-055), dan
+ * pembaruan otomatis Beranda, Cuaca, Risiko (D-056). Bukan `router.refresh()`: di Next.js 15.5 refresh
+ * sering tidak di-commit (D-055).
  */
 export async function ambilDataWilayah(idWilayah: string) {
   const q = encodeURIComponent(idWilayah);
   const [risiko, cuaca] = await Promise.all([
     ambilJson<RisikoKlien>(`/api/risiko?wilayah=${q}`),
-    ambilJson<{ hujan48Jam: TitikGrafikJam[]; terkini: CuacaTerkini }>(`/api/cuaca?wilayah=${q}`),
+    ambilJson<DataHalamanCuaca & { hujan48Jam: TitikGrafikJam[] }>(`/api/cuaca?wilayah=${q}`),
   ]);
-  return { risiko, hujan48Jam: cuaca.hujan48Jam, terkini: cuaca.terkini };
+  const { hujan48Jam, terkini, waktuAmbil, sumber, koordinatPerkiraan, harian, perJamPerHari } = cuaca;
+  return {
+    risiko,
+    hujan48Jam,
+    terkini,
+    cuaca: { terkini, waktuAmbil, sumber, koordinatPerkiraan, harian, perJamPerHari } satisfies DataHalamanCuaca,
+  };
 }

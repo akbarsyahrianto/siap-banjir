@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { DESA_TANPA_112, DESA_TANPA_112_TANPA_BPBD, DESA_UJI, identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
 
 test.beforeEach(async ({ context, page }, testInfo) => {
@@ -227,6 +227,87 @@ test("Beranda: jam pembaruan adalah tombol Perbarui yang menerapkan data baru (D
   );
   await expect(page.getByRole("heading", { name: "UJI: deskripsi terbaru dari API." })).toBeVisible();
 });
+
+/** Tab disembunyikan/ditampilkan lagi (HP dikunci, pindah aplikasi/tab); Chromium headless selalu "visible". */
+async function aturVisibilitas(page: Page, status: "hidden" | "visible") {
+  await page.evaluate((s) => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => s });
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => s === "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, status);
+}
+
+const HALAMAN_PEMBARUAN_OTOMATIS = [
+  {
+    nama: "Beranda",
+    url: `/?wilayah=${DESA_UJI}`,
+    api: "**/api/risiko?*",
+    siap: (page: Page) => page.getByRole("button", { name: /^Perbarui data\./ }),
+    ubah: (data: Record<string, unknown>, ke: number) => {
+      data.deskripsi = `UJI: deskripsi pembaruan otomatis ${ke}.`;
+    },
+    terbaru: (page: Page, ke: number) => page.getByRole("heading", { name: `UJI: deskripsi pembaruan otomatis ${ke}.` }),
+  },
+  {
+    nama: "Cuaca",
+    url: `/cuaca?wilayah=${DESA_UJI}`,
+    api: "**/api/cuaca?*",
+    siap: (page: Page) => page.getByRole("region", { name: "Cuaca terkini" }),
+    ubah: (data: Record<string, unknown>, ke: number) => {
+      (data.terkini as Record<string, unknown>).suhu = 40 + ke + 0.5;
+      data.waktuAmbil = `2026-01-01T0${4 + ke}:07:00.000Z`; // 12:07 / 13:07 WIB
+    },
+    terbaru: (page: Page, ke: number) =>
+      page
+        .getByRole("region", { name: "Cuaca terkini" })
+        .filter({ hasText: `${40 + ke},5°C` })
+        .filter({ hasText: `Diperbarui ${11 + ke}:07 WIB` }),
+  },
+];
+
+for (const h of HALAMAN_PEMBARUAN_OTOMATIS) {
+  test(`${h.nama}: pembaruan otomatis 30 menit & saat kembali ke tab, tanpa router.refresh (D-056)`, async ({ page }) => {
+    await page.clock.install();
+    // router.refresh() = permintaan RSC tanpa header prefetch; pembaruan harus lewat API, bukan ini.
+    let refreshRsc = 0;
+    page.on("request", (req) => {
+      const header = req.headers();
+      if (header.rsc === "1" && !header["next-router-prefetch"]) refreshRsc++;
+    });
+    await page.goto(h.url);
+    await expect(h.siap(page)).toBeVisible();
+
+    let permintaan = 0;
+    await page.route(h.api, async (route) => {
+      permintaan++;
+      const res = await route.fetch();
+      const json = (await res.json()) as { data: Record<string, unknown> };
+      h.ubah(json.data, permintaan);
+      await route.fulfill({ response: res, json });
+    });
+
+    // 29 menit, termasuk kembali ke tab: data belum dianggap lama → tidak ada pembaruan.
+    await page.clock.fastForward("29:00");
+    await aturVisibilitas(page, "hidden");
+    await aturVisibilitas(page, "visible");
+    // Menit ke-30: timer memperbarui lewat API.
+    await page.clock.fastForward("01:00");
+    await expect(h.terbaru(page, 1)).toBeVisible();
+    expect(permintaan).toBe(1);
+
+    // HP terkunci / tab di latar belakang: jam dinding maju 31 menit, timer tidak berjalan (setSystemTime
+    // tidak menjalankan timer). Saat pengguna kembali, data yang sudah >30 menit langsung diperbarui.
+    await aturVisibilitas(page, "hidden");
+    const sekarang = await page.evaluate(() => Date.now());
+    await page.clock.setSystemTime(sekarang + 31 * 60 * 1000);
+    await page.waitForTimeout(500);
+    expect(permintaan).toBe(1);
+    await aturVisibilitas(page, "visible");
+    await expect(h.terbaru(page, 2)).toBeVisible();
+    expect(permintaan).toBe(2);
+    expect(refreshRsc).toBe(0);
+  });
+}
 
 test.describe("state machine risiko (wilayah disimulasikan TINGGI)", () => {
   test("Bahaya → jalur push & grafik → join → Detail Penanganan → Final (ditutup)", async ({ page }) => {

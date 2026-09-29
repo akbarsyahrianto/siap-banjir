@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { StatusData } from "@/components/cuaca/status-data";
+import { usePembaruanOtomatis } from "@/hooks/usePembaruanOtomatis";
 import { ambilDataWilayah, type CuacaTerkini } from "@/lib/ambil-data-wilayah";
 import { formatJam } from "@/lib/format";
 import { formatNilaiParameter } from "@/lib/risiko";
@@ -14,6 +15,7 @@ import { TombolPerbaruiData, type HasilPerbarui } from "./tombol-perbarui-data";
 /**
  * Isi Beranda untuk wilayah terpilih. Data awal dirender server; tombol jam pembaruan mengambil ulang
  * lewat `ambilDataWilayah` (sama dengan tombol Perbarui di Risiko) dan menerapkannya ke state ini (D-055).
+ * Pembaruan otomatis 30 menit & saat kembali ke tab memakai fungsi yang sama (D-056).
  */
 export function RingkasanBeranda({
   awal,
@@ -27,6 +29,8 @@ export function RingkasanBeranda({
   const [hasil, setHasil] = useState<HasilPerbarui>(null);
   const { risiko, terkini } = data;
   const idWilayah = risiko.idWilayah;
+
+  const perbaruiSekarang = usePembaruanOtomatis(perbarui);
 
   async function perbarui() {
     setMemuat(true);
@@ -54,7 +58,7 @@ export function RingkasanBeranda({
         simulasi={risiko.simulasi}
         idWilayah={idWilayah}
         tombolPerbarui={
-          <TombolPerbaruiData jam={formatJam(waktuData)} memuat={memuat} hasil={hasil} onPerbarui={() => void perbarui()} />
+          <TombolPerbaruiData jam={formatJam(waktuData)} memuat={memuat} hasil={hasil} onPerbarui={() => void perbaruiSekarang()} />
         }
       />
       {dataLama && <StatusData sumber={risiko.sumberData} waktuAmbil={waktuData} />}

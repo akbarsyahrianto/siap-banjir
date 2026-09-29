@@ -1,12 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { GrafikPrakiraanJam } from "@/components/cuaca/grafik-prakiraan-jam";
-import { KartuCuaca } from "@/components/cuaca/kartu-cuaca";
-import { PrakiraanHarian } from "@/components/cuaca/prakiraan-harian";
-import { StatusData } from "@/components/cuaca/status-data";
+import { IsiCuaca } from "@/components/cuaca/isi-cuaca";
 import { KepalaHalaman } from "@/components/layout/kepala-halaman";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
-import { AutoRefresh } from "@/components/wilayah/auto-refresh";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
 import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/status-kosong";
@@ -37,7 +33,6 @@ export default async function CuacaPage({ searchParams }: Props) {
       {terpilih ? (
         <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
           <Prakiraan idWilayah={terpilih} />
-          <AutoRefresh />
           <TandaKontenWilayah idWilayah={terpilih} />
         </Suspense>
       ) : (
@@ -58,19 +53,22 @@ async function Prakiraan({ idWilayah }: { idWilayah: string }) {
   if (!kondisi.cuaca) return <DataCuacaTidakTersedia />;
 
   const { wilayah, cuaca } = kondisi;
-  const dataLama = cuaca.sumber === "cadangan" || cuaca.sumber === "hemat-kuota";
+  const { suhu, kelembapan, curahHujan, kecepatanAngin, kondisiCuaca, waktuAmbil } = cuaca.dataCuaca;
+  const waktu = waktuAmbil.toISOString();
 
+  // key: data server baru (navigasi) menggantikan state klien; pembaruan berkala lewat state klien (D-056).
   return (
-    <>
-      <KartuCuaca dataCuaca={cuaca.dataCuaca} koordinatPerkiraan={wilayah.koordinatPerkiraan} />
-      {dataLama && <StatusData sumber={cuaca.sumber} waktuAmbil={cuaca.dataCuaca.waktuAmbil} />}
-      <PrakiraanHarian harian={ringkasanHarian(cuaca.raw)} />
-      <section aria-labelledby="judul-jam" className="flex flex-col gap-3 rounded-[20px] border bg-card p-4 text-card-foreground">
-        <h2 id="judul-jam" className="text-[18px] font-extrabold">
-          Prakiraan per jam
-        </h2>
-        <GrafikPrakiraanJam hari={seriPerJamPerHari(cuaca.raw)} />
-      </section>
-    </>
+    <IsiCuaca
+      key={waktu}
+      idWilayah={idWilayah}
+      awal={{
+        terkini: { suhu, kelembapan, curahHujan, kecepatanAngin, kondisiCuaca },
+        waktuAmbil: waktu,
+        sumber: cuaca.sumber,
+        koordinatPerkiraan: wilayah.koordinatPerkiraan,
+        harian: ringkasanHarian(cuaca.raw),
+        perJamPerHari: seriPerJamPerHari(cuaca.raw),
+      }}
+    />
   );
 }
