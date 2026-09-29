@@ -772,3 +772,24 @@ Yang belum ada adalah tes untuk kejadian dekat tengah malam.
 - E2E, dengan entri uji yang dibuat lalu dihapus:
   - Pengguna memilih wilayah WIB (Semarang): kejadian Ternate 00:30 WIT bertanggal 26 Sep 2026; Sitaro 5 Jan 2026 dengan isi "pukul 02.30 WITA".
   - Pengguna memilih wilayah WIT (Ternate): kejadian Semarang 23:30 WIB tetap 25 Sep 2026.
+
+## D-062 · Keterangan tombol Perbarui: versi singkat saat jam cek = jam data; semua jam berzona
+
+**Konteks.** Menekan Perbarui tepat setelah data diambil menghasilkan kalimat berulang seperti "Sudah dicek 06:11 · data terbaru dari 06:11 WIT. …". Jam cek juga belum mencantumkan zona.
+
+**Keputusan** (`teksHasilCek`, melanjutkan D-057):
+- Jam cek dan jam data sama (menit yang sama di zona wilayah): **"Data sudah terbaru (06:11 WIT). Bisa diperbarui lagi pukul 06:26 WIT."** Untuk data cadangan/hemat kuota cukup "Data sudah terbaru (06:11 WIT).", karena jam berikutnya tidak dijamin (lihat `StatusData`).
+- Selain itu tetap versi lengkap, kini dengan zona pada jam cek: "Sudah dicek 06:20 WIT · data terbaru dari 06:11 WIT. Data cuaca diambil ulang paling cepat 15 menit sekali, berikutnya 06:26 WIT."
+- "Data diperbarui pukul 06:26 WIT." tidak berubah.
+- Setiap jam di semua versi diikuti singkatan zona wilayah (D-060).
+
+**Diuji:**
+- Unit:
+  - Versi singkat di WIB/WITA/WIT.
+  - Versi singkat untuk data cadangan tanpa jam berikutnya.
+  - Beda satu menit → versi lengkap.
+  - Untuk setiap versi dan zona, semua pola `HH:MM` diikuti singkatan zona.
+- E2E D-057 (Beranda dan Risiko): jam browser dikunci dengan `page.clock.setFixedTime`.
+  - Sama dengan jam data → teks singkat persis.
+  - Dua menit kemudian → teks lengkap persis.
+  - Tidak ada panggilan Open-Meteo tambahan.

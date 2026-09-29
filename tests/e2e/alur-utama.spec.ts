@@ -226,7 +226,7 @@ test("Beranda: jam pembaruan adalah tombol Perbarui yang menerapkan data baru (D
   );
   // D-057: jam data tiruan (12:07) tidak lebih baru dari data sebelumnya → hasil cek, bukan "Data diperbarui".
   await expect(page.getByRole("status").filter({ hasText: "Sudah dicek" })).toHaveText(
-    /^Sudah dicek \d{2}:\d{2} · data terbaru dari 12:07 WIB\./,
+    /^Sudah dicek \d{2}:\d{2} WIB · data terbaru dari 12:07 WIB\./,
   );
   await page.unroute("**/api/risiko?*");
 
@@ -280,12 +280,22 @@ for (const h of HALAMAN_TOMBOL_PERBARUI) {
     expect(await jumlahData()).toBe(jumlahAwal + 1);
 
     // Ditekan lagi (< 15 menit): tidak memanggil Open-Meteo, umpan balik menjelaskan kenapa jam tetap.
+    // Jam cek = jam browser; dikunci agar versi singkat/lengkap pasti (D-062).
+    const { waktuAmbil } = await dataCuacaTerbaru(DESA_UJI);
+    const jamBerikutnya = jamWib(new Date(waktuAmbil.getTime() + 15 * 60_000));
+    // Menit yang sama dengan jam data → versi singkat.
+    await page.clock.setFixedTime(waktuAmbil);
+    await h.tombol(page).click();
+    await expect(page.getByRole("status").filter({ hasText: "Data sudah terbaru" })).toHaveText(
+      `Data sudah terbaru (${jamBaru} WIB). Bisa diperbarui lagi pukul ${jamBerikutnya} WIB.`,
+    );
+    // Dua menit kemudian → versi lengkap; setiap jam tetap dengan zona.
+    const duaMenit = new Date(waktuAmbil.getTime() + 2 * 60_000);
+    await page.clock.setFixedTime(duaMenit);
     await h.tombol(page).click();
     await expect(page.getByRole("status").filter({ hasText: "Sudah dicek" })).toHaveText(
-      new RegExp(
-        `^Sudah dicek \\d{2}:\\d{2} · data terbaru dari ${jamBaru} WIB\\. ` +
-          "Data cuaca diambil ulang paling cepat 15 menit sekali, berikutnya \\d{2}:\\d{2} WIB\\.$",
-      ),
+      `Sudah dicek ${jamWib(duaMenit)} WIB · data terbaru dari ${jamBaru} WIB. ` +
+        `Data cuaca diambil ulang paling cepat 15 menit sekali, berikutnya ${jamBerikutnya} WIB.`,
     );
     await expect(h.jamData(page, jamBaru)).toBeVisible();
     expect(await jumlahData()).toBe(jumlahAwal + 1);
