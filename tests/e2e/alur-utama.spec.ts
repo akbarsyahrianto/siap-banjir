@@ -3,6 +3,7 @@ import {
   DESA_TANPA_112,
   DESA_TANPA_112_TANPA_BPBD,
   DESA_UJI,
+  buatRiwayatUji,
   dataCuacaTerbaru,
   identitasUji,
   jamDiZona,
@@ -579,6 +580,45 @@ test("Informasi: tab umum bawaan; riwayat punya tautan sumber; Kembali dari arti
     .click();
   await expect(page.getByText("bukan laporan kejadian banjir pada tanggal tertentu", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "Kembali ke Informasi" })).toHaveAttribute("href", "/informasi");
+});
+
+test("riwayat: tanggal & jam di zona lokasi kejadian, bukan zona wilayah pengguna (D-061)", async ({ page }) => {
+  // Kejadian dekat tengah malam: 15:30 UTC = 22:30 WIB (25 Sep) = 00:30 WIT (26 Sep);
+  // 16:30 UTC = 23:30 WIB (25 Sep) = 01:30 WIT (26 Sep).
+  const hapus = await Promise.all([
+    buatRiwayatUji({
+      idWilayah: "82.71",
+      judul: "UJI e2e D-061: kejadian 00.30 WIT di Kota Ternate",
+      isi: "Kejadian uji pukul 00.30 WIT.",
+      tanggal: new Date("2026-09-25T15:30:00Z"),
+    }),
+    buatRiwayatUji({
+      idWilayah: "33.74",
+      judul: "UJI e2e D-061: kejadian 23.30 WIB di Kota Semarang",
+      isi: "Kejadian uji pukul 23.30 WIB.",
+      tanggal: new Date("2026-09-25T16:30:00Z"),
+    }),
+  ]);
+  try {
+    const kartu = (judul: string) =>
+      page.getByRole("tabpanel", { name: /Riwayat kejadian/ }).getByRole("article").filter({ has: page.getByRole("heading", { name: judul }) });
+
+    // Pengguna memilih wilayah WIB (Semarang).
+    await page.goto(`/informasi?tab=riwayat&wilayah=${DESA_UJI}`);
+    await expect(kartu("UJI e2e D-061: kejadian 00.30 WIT di Kota Ternate")).toContainText("26 Sep 2026");
+    const sitaro = kartu("Banjir Bandang Sitaro Januari 2026");
+    await expect(sitaro).toContainText("5 Jan 2026");
+    await sitaro.getByRole("heading").getByRole("link").click();
+    await expect(page.getByText("Senin, 5 Januari 2026")).toBeVisible();
+    await expect(page.getByText("pukul 02.30 WITA", { exact: false })).toBeVisible();
+
+    // Pengguna memilih wilayah WIT (Ternate).
+    await page.goto("/informasi?tab=riwayat&wilayah=82.71.01.1001");
+    await expect(kartu("UJI e2e D-061: kejadian 23.30 WIB di Kota Semarang")).toContainText("25 Sep 2026");
+    await expect(kartu("UJI e2e D-061: kejadian 00.30 WIT di Kota Ternate")).toContainText("26 Sep 2026");
+  } finally {
+    await Promise.all(hapus.map((h) => h()));
+  }
 });
 
 test("tidak ada scroll horizontal (mobile-first)", async ({ page }) => {

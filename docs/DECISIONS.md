@@ -750,3 +750,25 @@ Karena itu dipilih kurasi manual dari rilis www.bnpb.go.id. Daftar berita ditelu
 - E2E, satu wilayah per zona (Kelurahan Bulu Lor, Semarang; Kelurahan Serangan, Denpasar; Kelurahan Jambula, Ternate) di mobile dan desktop:
   - Jam tombol Beranda, kartu Cuaca, dan kartu Risiko sama dengan waktu data di DB yang diformat di zona IANA wilayah itu.
   - Keterangan grafik "pukul (WITA)"; jumlah baris "sudah lewat" di tabel per jam = jam pengamatan lokal + 1.
+
+## D-061 · Tanggal dan jam riwayat kejadian mengikuti zona lokasi kejadian
+
+**Konteks.** Diminta: tanggal dan jam riwayat kejadian ditampilkan dalam zona waktu lokasi kejadian, bukan zona wilayah pengguna (mis. Sitaro tetap "02.30 WITA" walau pengguna memilih wilayah WIB). Pemeriksaan kode menunjukkan perilaku ini **sudah benar sejak D-060**:
+- Tanggal dibaca di zona `idWilayah` milik entri. Wilayah pengguna hanya dipakai untuk mengurutkan daftar.
+- Jam di isi riwayat tertulis tetap: dari rilis BNPB ("02.30 WITA") atau dibuat saat deteksi dalam zona kab/kota (riwayat otomatis).
+- Tanggal seed tanpa jam disimpan 00:00 UTC, sehingga tetap tanggal yang sama di ketiga zona.
+
+Yang belum ada adalah tes untuk kejadian dekat tengah malam.
+
+**Keputusan.** Aturan ini ditegaskan: teks tanggal dipindah ke fungsi murni `teksTanggalInformasi` (`src/lib/tanggal-informasi.ts`), yang hanya menerima wilayah entri, tidak pernah wilayah pengguna. Riwayat otomatis D-038 sudah memakai hari kalender zona kab/kota (D-060). Entri tanpa wilayah memakai WIB.
+
+**Diuji:**
+- Unit:
+  - Ternate 15:30 UTC → "26 Sep 2026" (00:30 WIT; WIB masih 25 Sep).
+  - Denpasar 16:30 UTC → 26 Sep (00:30 WITA).
+  - Semarang 16:59 UTC → 25 Sep (23:59 WIB).
+  - Sitaro "Senin, 5 Januari 2026" di zona mana pun.
+- Integration: deteksi TINGGI di Kelurahan Jambula, Kota Ternate, pukul 23:50 WIT dan 00:10 WIT (keduanya 2 Februari menurut WIB) menghasilkan dua entri: "Minggu, 2 Februari 2020 … (23:50 WIT)" dan "Senin, 3 Februari 2020 … (00:10 WIT)", tanpa "WIB".
+- E2E, dengan entri uji yang dibuat lalu dihapus:
+  - Pengguna memilih wilayah WIB (Semarang): kejadian Ternate 00:30 WIT bertanggal 26 Sep 2026; Sitaro 5 Jan 2026 dengan isi "pukul 02.30 WITA".
+  - Pengguna memilih wilayah WIT (Ternate): kejadian Semarang 23:30 WIB tetap 25 Sep 2026.

@@ -132,3 +132,21 @@ export async function dataCuacaTerbaru(idWilayah: string) {
     await db.$disconnect();
   }
 }
+
+/** Tambah riwayat kejadian uji langsung ke DB; kembalikan fungsi untuk menghapusnya. */
+export async function buatRiwayatUji(data: { idWilayah: string; judul: string; isi: string; tanggal: Date }) {
+  const db = new PrismaClient();
+  try {
+    const { idInformasi } = await db.informasi.create({ data: { ...data, kategori: "RIWAYAT_KEJADIAN" } });
+    return async () => {
+      const hapus = new PrismaClient();
+      try {
+        await hapus.informasi.deleteMany({ where: { idInformasi } });
+      } finally {
+        await hapus.$disconnect();
+      }
+    };
+  } finally {
+    await db.$disconnect();
+  }
+}

@@ -1,6 +1,6 @@
 /**
  * Integration test langkah 9 (riwayat risiko tinggi) terhadap database asli.
- * Riwayat diagregasi per kab/kota per hari WIB (D-038).
+ * Riwayat diagregasi per kab/kota per hari kalender di zona kab/kota itu (D-038, D-060).
  * Jalankan: npm run test:integration
  */
 import type { TingkatRisiko } from "@prisma/client";
@@ -20,6 +20,8 @@ const { AWALAN_JUDUL_RIWAYAT, SUMBER_DETEKSI } = await import("@/server/services
 const KAB_KOTA = "13.71"; // Kota Padang
 const DESA_A = "13.71.01.1001"; // Kelurahan Belakang Pondok, Kec. Padang Selatan
 const DESA_B = "13.71.02.1009"; // Kelurahan Parak Gadang Timur, Kec. Padang Timur
+const KAB_WIT = "82.71"; // Kota Ternate (WIT)
+const DESA_WIT = "82.71.01.1001"; // Kelurahan Jambula
 const cuacaDibuat: string[] = [];
 const waktuUji = new Date("2020-02-02T05:00:00Z"); // tanggal lampau agar tidak bentrok dengan data nyata
 
@@ -54,10 +56,10 @@ async function buatRisiko(level: TingkatRisiko, idWilayah = DESA_A, waktu = wakt
   });
 }
 
-const riwayatUji = () =>
+const riwayatUji = (idWilayah = KAB_KOTA) =>
   db.informasi.findMany({
     where: {
-      idWilayah: KAB_KOTA,
+      idWilayah,
       judul: { startsWith: AWALAN_JUDUL_RIWAYAT },
       tanggal: { gte: new Date("2020-02-01T00:00:00Z"), lt: new Date("2020-02-05T00:00:00Z") },
     },
@@ -65,7 +67,8 @@ const riwayatUji = () =>
   });
 
 afterAll(async () => {
-  await db.informasi.deleteMany({ where: { idInformasi: { in: (await riwayatUji()).map((i) => i.idInformasi) } } });
+  const semua = [...(await riwayatUji()), ...(await riwayatUji(KAB_WIT))];
+  await db.informasi.deleteMany({ where: { idInformasi: { in: semua.map((i) => i.idInformasi) } } });
   await db.dataCuaca.deleteMany({ where: { idCuaca: { in: cuacaDibuat } } });
   await db.$disconnect();
 });
@@ -105,5 +108,23 @@ describe("tindakLanjutRisiko: simpan riwayat risiko tinggi", () => {
     expect(hasil.map((h) => h.riwayat).sort()).toEqual(["dibuat", "diperbarui"]);
     const hariItu = (await riwayatUji()).filter((i) => i.tanggal >= new Date("2020-02-03T17:00:00Z"));
     expect(hariItu).toHaveLength(1);
+  });
+});
+
+describe("riwayat dekat tengah malam memakai zona lokasi kejadian (D-060, D-061)", () => {
+  it("Kota Ternate: 23:50 WIT dan 00:10 WIT = dua hari berbeda, walau keduanya 2 Februari menurut WIB", async () => {
+    // 14:50 UTC = 21:50 WIB = 23:50 WIT (2 Feb); 15:10 UTC = 22:10 WIB (2 Feb) = 00:10 WIT (3 Feb).
+    const sebelum = await buatRisiko("TINGGI", DESA_WIT, new Date("2020-02-02T14:50:00Z"));
+    const sesudah = await buatRisiko("TINGGI", DESA_WIT, new Date("2020-02-02T15:10:00Z"));
+    expect((await tindakLanjutRisiko(sebelum)).riwayat).toBe("dibuat");
+    expect((await tindakLanjutRisiko(sesudah)).riwayat).toBe("dibuat");
+
+    const daftar = await riwayatUji(KAB_WIT);
+    expect(daftar).toHaveLength(2);
+    expect(daftar[0]?.isi).toContain("pada Minggu, 2 Februari 2020.");
+    expect(daftar[0]?.isi).toContain("(23:50 WIT)");
+    expect(daftar[1]?.isi).toContain("pada Senin, 3 Februari 2020.");
+    expect(daftar[1]?.isi).toContain("(00:10 WIT)");
+    for (const d of daftar) expect(d.isi).not.toContain("WIB");
   });
 });

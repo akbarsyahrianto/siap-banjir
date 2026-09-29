@@ -1,6 +1,5 @@
 import type { KategoriInformasi } from "@prisma/client";
-import { formatTanggal, formatTanggalPanjang } from "@/lib/format";
-import { zonaWilayah } from "@/lib/zona-waktu";
+import { teksTanggalInformasi } from "@/lib/tanggal-informasi";
 
 /**
  * Tanggal artikel umum = tanggal terbit; tanggal riwayat = tanggal kejadian, atau tanggal data
@@ -16,13 +15,12 @@ export function TanggalInformasi({
 }: {
   kategori: KategoriInformasi;
   tanggal: Date;
-  /** Tanggal dibaca di zona wilayah entri (riwayat otomatis per hari lokal, D-060). */
+  /** Wilayah entri: tanggal dibaca di zona lokasi kejadian, bukan zona wilayah pengguna (D-061). */
   idWilayah: string | null;
   dataPer?: boolean;
   panjang?: boolean;
 }) {
-  const zona = zonaWilayah(idWilayah);
-  const teks = panjang ? formatTanggalPanjang(tanggal, zona) : formatTanggal(tanggal, zona);
+  const teks = teksTanggalInformasi({ tanggal, idWilayah, panjang });
   return (
     <span>
       {kategori === "UMUM" ? "Terbit " : dataPer ? "Data per " : null}
