@@ -659,3 +659,27 @@ Akar masalah di dalam Next/React tidak ditemukan dalam waktu yang wajar. **Konse
 - **Risiko:** `useRiskState` sebelumnya punya `setInterval` + `visibilitychange` sendiri. Logika itu diganti hook yang sama, sehingga tombol Perbarui mengatur ulang jadwal dan `pageshow`/`focus` ikut ditangani.
 
 **Diuji:** e2e per halaman (Beranda dan Cuaca, proyek mobile dan desktop) dengan `page.clock`. Pada menit ke-29, termasuk tab disembunyikan lalu ditampilkan lagi, tidak ada permintaan API. `fastForward` ke menit ke-30 menjalankan timer, dan data API yang diubah tampil (deskripsi risiko / suhu dan jam "Diperbarui"). Tab disembunyikan, lalu `setSystemTime` memajukan jam dinding 31 menit tanpa menjalankan timer (meniru HP terkunci): tidak ada permintaan sampai tab terlihat lagi, lalu data baru tampil. Sepanjang tes tidak ada permintaan RSC non-prefetch, artinya tidak ada `router.refresh()`. Uji mutasi: jika penangan "kembali ke tab" dikosongkan, kedua tes gagal.
+
+## D-057 · Tombol Perbarui mengambil data Open-Meteo baru bila data ≥ 15 menit, dengan umpan balik hasil cek
+
+**Konteks.** Tombol Perbarui di Beranda ditekan pukul 01:44 dan 01:46, tetapi jamnya tetap 01:33 WIB. Penelusuran di database pengembangan: sel grid `-0.9,131.3` (desa 96.71.05.1004) terakhir diambil dari Open-Meteo pukul 01:33:21 (pengamatan 01:30), dan tidak ada pengambilan sesudahnya. Pembaruan tidak gagal. Server memakai cache DB per sel grid selama **30 menit** (`UMUR_CACHE_MS`), jadi kedua tekanan hanya membaca data 01:33. Jam di tombol adalah waktu data diambil dari Open-Meteo (`waktuAmbilData`). Satu-satunya umpan balik saat itu adalah pengumuman untuk pembaca layar. Tombol Perbarui di Risiko bahkan tanpa umpan balik sama sekali.
+
+**Keputusan.**
+- **Umur cache khusus tombol: 15 menit** (`UMUR_SEGARKAN_MS` di `src/lib/constants.ts`). Open-Meteo memperbarui cuaca terkini per 15 menit, jadi pengambilan lebih sering tidak menghasilkan data baru. `GET /api/risiko?wilayah=…&segarkan=1` → `lihatKondisiWilayah(id, { segarkan })` → `lihatDataCuaca(titik, { umurMaksMs })`. Kunjungan biasa, pembaruan otomatis (D-056), dan cron tetap memakai 30 menit.
+- **Kuota:** batas kunjungan (`BATAS_KUNJUNGAN` 9.000/hari) tetap berlaku. Di atas batas itu tombol mendapat data tersimpan (`hemat-kuota`). Satu sel grid paling banyak 4 panggilan per jam lewat tombol, berapa pun jumlah penggunanya, dan rate limit 60/menit per IP tetap berlaku.
+- `ambilDataWilayah(id, { segarkan: true })` meminta `/api/risiko` lebih dulu, baru `/api/cuaca`, agar satu tekanan hanya memicu satu panggilan Open-Meteo. Tanpa `segarkan`, keduanya tetap paralel.
+- **Umpan balik yang terlihat** (`teksHasilCek`, `src/lib/hasil-cek.ts`), sama di Beranda (di bawah tombol jam) dan Risiko (di bawah baris status), berupa `role="status"`:
+  - Ada data baru: "Data diperbarui pukul 01:48 WIB."
+  - Cache < 15 menit: "Sudah dicek 01:46 · data terbaru dari 01:33 WIB. Data cuaca diambil ulang paling cepat 15 menit sekali, berikutnya 01:48 WIB."
+  - Data cadangan/hemat kuota: "Sudah dicek 01:46 · data terbaru dari 01:33 WIB." tanpa janji jam berikutnya; alasannya sudah dijelaskan `StatusData`.
+  - "Data baru" = `waktuAmbilData` sesudah cek lebih baru daripada sebelumnya. Hasil cek hanya untuk tombol. Pembaruan otomatis cukup mengganti jam, sehingga hook `usePembaruanOtomatis` kini memberi tahu `perbarui` apakah pemanggilnya tombol (`manual`).
+- Pengumuman lama "Data diperbarui. Terakhir diperbarui pukul …" (D-055) diganti teks di atas.
+
+**Catatan di luar cakupan:** semua jam ditampilkan dalam WIB (`Asia/Jakarta`), termasuk untuk wilayah WITA/WIT seperti desa uji di atas (Papua Barat Daya).
+
+**Diuji:** unit `teksHasilCek` (data baru, cache, cadangan/hemat kuota). E2E Beranda dan Risiko, mobile dan desktop:
+1. Data sel grid dimundurkan 20 menit langsung di DB. Kunjungan biasa masih menampilkan jam lama (cache 30 menit).
+2. Tombol ditekan: jam berubah, muncul "Data diperbarui pukul …", dan tepat satu baris `DataCuaca` baru (satu panggilan Open-Meteo).
+3. Ditekan lagi: "Sudah dicek … · data terbaru dari {jam baru} … berikutnya …", jumlah baris tidak bertambah.
+
+Tes D-055 disesuaikan dengan teks baru.

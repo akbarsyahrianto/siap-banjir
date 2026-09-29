@@ -20,6 +20,11 @@ export const queryWilayahSchema = z.object({
   wilayah: kodeWilayahSchema,
 });
 
+/** GET /api/risiko: `segarkan=1` dari tombol Perbarui (D-057). */
+export const queryRisikoSchema = queryWilayahSchema.extend({
+  segarkan: z.literal("1").optional(),
+});
+
 export const queryPenangananSchema = z.object({
   level: tingkatRisikoSchema,
   wilayah: queryWilayahSchema.shape.wilayah.optional(),

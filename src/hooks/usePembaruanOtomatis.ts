@@ -12,11 +12,12 @@ export const INTERVAL_PEMBARUAN_MS = 30 * 60 * 1000;
  *
  * `perbarui` harus mengambil data lewat `ambilDataWilayah()` dan menerapkannya ke state,
  * bukan `router.refresh()` (tidak andal di Next.js 15.5, D-055).
- * Mengembalikan fungsi pembaruan manual (tombol Perbarui) yang ikut mengatur ulang jadwal.
+ * Mengembalikan fungsi pembaruan manual (tombol Perbarui) yang ikut mengatur ulang jadwal;
+ * `perbarui` menerima `manual: true` untuk itu (D-057: hanya tombol yang meminta data Open-Meteo baru).
  */
-export function usePembaruanOtomatis(perbarui: () => Promise<void>) {
+export function usePembaruanOtomatis(perbarui: (opsi: { manual: boolean }) => Promise<void>) {
   const perbaruiTerkini = useRef(perbarui);
-  const jalankanRef = useRef<() => Promise<void>>(async () => {});
+  const jalankanRef = useRef<(manual: boolean) => Promise<void>>(async () => {});
 
   useEffect(() => {
     perbaruiTerkini.current = perbarui;
@@ -36,12 +37,12 @@ export function usePembaruanOtomatis(perbarui: () => Promise<void>) {
       timer = window.setTimeout(saatTimer, Math.max(0, terakhir + INTERVAL_PEMBARUAN_MS - Date.now()));
     };
 
-    const jalankan = async () => {
+    const jalankan = async (manual = false) => {
       if (berjalan) return;
       berjalan = true;
       window.clearTimeout(timer);
       try {
-        await perbaruiTerkini.current();
+        await perbaruiTerkini.current({ manual });
       } finally {
         // Gagal pun dihitung, agar tiap fokus tidak memicu permintaan baru; percobaan berikutnya 30 menit lagi.
         terakhir = Date.now();
@@ -75,5 +76,5 @@ export function usePembaruanOtomatis(perbarui: () => Promise<void>) {
     };
   }, []);
 
-  return useCallback(() => jalankanRef.current(), []);
+  return useCallback(() => jalankanRef.current(true), []);
 }

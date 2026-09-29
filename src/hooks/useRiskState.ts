@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
 import { usePembaruanOtomatis } from "@/hooks/usePembaruanOtomatis";
 import { ambilDataWilayah, ambilJson } from "@/lib/ambil-data-wilayah";
+import { teksHasilCek } from "@/lib/hasil-cek";
 import { konteksAwal, transisi, type KanalPeringatan } from "@/lib/mesin-risiko";
 import { LABEL_SIMULASI } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
@@ -24,19 +25,37 @@ export function useRiskState(awal: {
   const [ktx, kirim] = useReducer(transisi, awal.risiko, konteksAwal);
   const [grafik, setGrafik] = useState(awal.grafik);
   const [penanganan, setPenanganan] = useState(awal.penanganan);
+  // Hasil cek tombol Perbarui (D-057), mis. "Sudah dicek 01:46 · data terbaru dari 01:33 WIB."
+  const [hasilCek, setHasilCek] = useState<string | null>(null);
+  const waktuDataTerkini = ktx.state.data?.waktuAmbilData ?? awal.risiko.waktuAmbilData;
   const { status: statusPush, langganan } = useNotifikasi();
 
   // --- Pemantauan: entry ambil data (API memastikan data Open-Meteo/cache segar) ---
-  const muat = useCallback(async () => {
-    kirim({ type: "MUAT" });
-    try {
-      const { risiko, hujan48Jam } = await ambilDataWilayah(idWilayah);
-      setGrafik(hujan48Jam);
-      kirim({ type: "DATA_DITERIMA", data: risiko });
-    } catch (err) {
-      kirim({ type: "GAGAL_MUAT", pesan: err instanceof Error ? err.message : "Gagal memuat data" });
-    }
-  }, [idWilayah]);
+  // Tombol (manual) meminta data Open-Meteo baru bila data ≥ 15 menit; otomatis memakai cache 30 menit.
+  const muat = useCallback(
+    async ({ manual }: { manual: boolean }) => {
+      kirim({ type: "MUAT" });
+      setHasilCek(null);
+      try {
+        const { risiko, hujan48Jam } = await ambilDataWilayah(idWilayah, { segarkan: manual });
+        setGrafik(hujan48Jam);
+        kirim({ type: "DATA_DITERIMA", data: risiko });
+        if (manual) {
+          setHasilCek(
+            teksHasilCek({
+              dicek: new Date(),
+              waktuDataSebelum: waktuDataTerkini,
+              waktuData: risiko.waktuAmbilData,
+              sumber: risiko.sumberData,
+            }),
+          );
+        }
+      } catch (err) {
+        kirim({ type: "GAGAL_MUAT", pesan: err instanceof Error ? err.message : "Gagal memuat data" });
+      }
+    },
+    [idWilayah, waktuDataTerkini],
+  );
 
   // Refresh berkala tiap 30 menit; juga saat kembali ke tab/aplikasi bila data sudah lama (D-056).
   const muatUlang = usePembaruanOtomatis(muat);
@@ -100,5 +119,5 @@ export function useRiskState(awal: {
     };
   }, [levelData, penanganan.level, idWilayah]);
 
-  return { ktx, kirim, grafik, penanganan, muatUlang, grafikSelesaiRender };
+  return { ktx, kirim, grafik, penanganan, muatUlang, hasilCek, grafikSelesaiRender };
 }

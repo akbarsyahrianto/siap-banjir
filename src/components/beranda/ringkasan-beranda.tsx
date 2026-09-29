@@ -5,6 +5,7 @@ import { StatusData } from "@/components/cuaca/status-data";
 import { usePembaruanOtomatis } from "@/hooks/usePembaruanOtomatis";
 import { ambilDataWilayah, type CuacaTerkini } from "@/lib/ambil-data-wilayah";
 import { formatJam } from "@/lib/format";
+import { teksHasilCek } from "@/lib/hasil-cek";
 import { formatNilaiParameter } from "@/lib/risiko";
 import type { RisikoKlien } from "@/lib/tipe-risiko";
 import { KartuCuacaRingkas, TautanKontakDarurat } from "./kartu-ringkas";
@@ -16,6 +17,7 @@ import { TombolPerbaruiData, type HasilPerbarui } from "./tombol-perbarui-data";
  * Isi Beranda untuk wilayah terpilih. Data awal dirender server; tombol jam pembaruan mengambil ulang
  * lewat `ambilDataWilayah` (sama dengan tombol Perbarui di Risiko) dan menerapkannya ke state ini (D-055).
  * Pembaruan otomatis 30 menit & saat kembali ke tab memakai fungsi yang sama (D-056).
+ * Tombol meminta data Open-Meteo baru bila data ≥ 15 menit dan menampilkan hasil cek (D-057).
  */
 export function RingkasanBeranda({
   awal,
@@ -32,13 +34,20 @@ export function RingkasanBeranda({
 
   const perbaruiSekarang = usePembaruanOtomatis(perbarui);
 
-  async function perbarui() {
+  async function perbarui({ manual }: { manual: boolean }) {
     setMemuat(true);
     setHasil(null);
     try {
-      const baru = await ambilDataWilayah(idWilayah);
+      const baru = await ambilDataWilayah(idWilayah, { segarkan: manual });
       setData({ risiko: baru.risiko, terkini: baru.terkini });
-      setHasil({ status: "selesai" });
+      const teks = teksHasilCek({
+        dicek: new Date(),
+        waktuDataSebelum: risiko.waktuAmbilData,
+        waktuData: baru.risiko.waktuAmbilData,
+        sumber: baru.risiko.sumberData,
+      });
+      // Pembaruan otomatis cukup mengganti jam di tombol; hasil cek hanya untuk tombol.
+      setHasil(manual ? { status: "selesai", teks } : null);
     } catch (err) {
       setHasil({ status: "galat", pesan: err instanceof Error ? err.message : "Gagal memuat data" });
     } finally {

@@ -9,6 +9,7 @@
  */
 import type { DataCuaca, LevelRisiko, TingkatRisiko, Wilayah } from "@prisma/client";
 import { after } from "next/server";
+import { UMUR_SEGARKAN_MS } from "@/lib/constants";
 import { titikDariKunci } from "@/lib/grid";
 import { ISI_PERSIAPAN_CATAT_NOMOR, isiPersiapanCatatNomor } from "@/lib/kontak-darurat";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
@@ -23,7 +24,10 @@ import { lihatDesa, lihatWilayahLengkap, namaInduk, namaTampilan, nomorDaruratWi
 import { daftarHasilParameterSchema } from "@/server/validators/risiko";
 
 /** Langkah 4: data cuaca sel grid (cache 30 menit, pengaman kuota). */
-export async function ambilCuacaSel(kunciGrid: string, opsi: { paksa?: boolean; batasKuota?: number } = {}) {
+export async function ambilCuacaSel(
+  kunciGrid: string,
+  opsi: { paksa?: boolean; batasKuota?: number; umurMaksMs?: number } = {},
+) {
   return lihatDataCuaca(titikDariKunci(kunciGrid), opsi);
 }
 
@@ -57,7 +61,10 @@ export async function tindakLanjutRisiko(risiko: LevelRisiko): Promise<HasilTind
 }
 
 /** Pantau satu desa (langkah 4–5). */
-export async function pantauWilayah(wilayah: Pick<Wilayah, "idWilayah" | "kunciGrid">, opsi: { paksa?: boolean } = {}) {
+export async function pantauWilayah(
+  wilayah: Pick<Wilayah, "idWilayah" | "kunciGrid">,
+  opsi: { paksa?: boolean; umurMaksMs?: number } = {},
+) {
   if (!wilayah.kunciGrid) return { cuaca: null, risiko: null, risikoBaru: null };
   const cuaca = await ambilCuacaSel(wilayah.kunciGrid, opsi);
   if (!cuaca) return { cuaca: null, risiko: null, risikoBaru: null };
@@ -68,12 +75,15 @@ export async function pantauWilayah(wilayah: Pick<Wilayah, "idWilayah" | "kunciG
 /**
  * Data cuaca + level risiko terkini untuk satu desa/kelurahan.
  * null jika kode bukan desa/kelurahan aktif (pengguna harus memilih sampai tingkat desa).
+ * `segarkan` (tombol Perbarui): ambil ulang dari Open-Meteo bila data sel grid ≥ 15 menit (D-057).
  */
-export async function lihatKondisiWilayah(idWilayah: string) {
+export async function lihatKondisiWilayah(idWilayah: string, opsi: { segarkan?: boolean } = {}) {
   const desa = await lihatDesa(idWilayah);
   if (!desa) return null;
 
-  const { cuaca, risiko, risikoBaru } = await pantauWilayah(desa.wilayah);
+  const { cuaca, risiko, risikoBaru } = await pantauWilayah(desa.wilayah, {
+    umurMaksMs: opsi.segarkan ? UMUR_SEGARKAN_MS : undefined,
+  });
 
   // Tindak lanjut dijalankan setelah respons terkirim agar halaman tidak menunggu push service.
   if (risikoBaru && risikoBaru.level !== "RENDAH") {

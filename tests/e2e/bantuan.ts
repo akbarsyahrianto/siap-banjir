@@ -1,4 +1,5 @@
 import type { Page, TestInfo } from "@playwright/test";
+import { PrismaClient } from "@prisma/client";
 
 /** Desa/kelurahan yang disimulasikan berisiko TINGGI oleh global-setup (Kelurahan Bandengan, Kota Pekalongan). */
 export const WILAYAH_SIMULASI = "33.75.03.1009";
@@ -69,4 +70,44 @@ export async function stubPush(page: Page, testInfo: TestInfo) {
     },
     { deviceToken, endpoint },
   );
+}
+
+/** "01:33" (WIB), sama dengan `formatJam` aplikasi. */
+export function jamWib(waktu: Date) {
+  const bagian = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(waktu);
+  const ambil = (tipe: string) => bagian.find((b) => b.type === tipe)?.value ?? "";
+  return `${ambil("hour")}:${ambil("minute")}`;
+}
+
+/**
+ * Mundurkan waktu ambil data cuaca terbaru di sel grid desa ini (tanpa memanggil Open-Meteo),
+ * meniru data yang diambil `menit` menit lalu. `jumlahData()` menghitung baris DataCuaca sel itu
+ * (= jumlah panggilan Open-Meteo, D-035).
+ */
+export async function tuakanDataCuaca(idWilayah: string, menit: number) {
+  const db = new PrismaClient();
+  try {
+    const { kunciGrid } = await db.wilayah.findUniqueOrThrow({ where: { idWilayah }, select: { kunciGrid: true } });
+    if (!kunciGrid) throw new Error(`${idWilayah} tanpa sel grid`);
+    const terakhir = await db.dataCuaca.findFirstOrThrow({ where: { kunciGrid }, orderBy: { waktuAmbil: "desc" } });
+    const waktu = new Date(Date.now() - menit * 60_000);
+    await db.dataCuaca.update({ where: { idCuaca: terakhir.idCuaca }, data: { waktuAmbil: waktu } });
+    return { waktu, jumlahData: () => jumlahDataCuaca(kunciGrid) };
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+async function jumlahDataCuaca(kunciGrid: string) {
+  const db = new PrismaClient();
+  try {
+    return await db.dataCuaca.count({ where: { kunciGrid } });
+  } finally {
+    await db.$disconnect();
+  }
 }

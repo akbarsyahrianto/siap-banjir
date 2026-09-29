@@ -1,5 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
-import { DESA_TANPA_112, DESA_TANPA_112_TANPA_BPBD, DESA_UJI, identitasUji, stubPush, WILAYAH_SIMULASI } from "./bantuan";
+import {
+  DESA_TANPA_112,
+  DESA_TANPA_112_TANPA_BPBD,
+  DESA_UJI,
+  identitasUji,
+  jamWib,
+  stubPush,
+  tuakanDataCuaca,
+  WILAYAH_SIMULASI,
+} from "./bantuan";
 
 test.beforeEach(async ({ context, page }, testInfo) => {
   await context.grantPermissions(["notifications", "geolocation"]);
@@ -212,8 +221,9 @@ test("Beranda: jam pembaruan adalah tombol Perbarui yang menerapkan data baru (D
     "aria-disabled",
     "false",
   );
-  await expect(page.getByRole("status").filter({ hasText: "Data diperbarui" })).toHaveText(
-    "Data diperbarui. Terakhir diperbarui pukul 12:07 WIB.",
+  // D-057: jam data tiruan (12:07) tidak lebih baru dari data sebelumnya → hasil cek, bukan "Data diperbarui".
+  await expect(page.getByRole("status").filter({ hasText: "Sudah dicek" })).toHaveText(
+    /^Sudah dicek \d{2}:\d{2} · data terbaru dari 12:07 WIB\./,
   );
   await page.unroute("**/api/risiko?*");
 
@@ -227,6 +237,56 @@ test("Beranda: jam pembaruan adalah tombol Perbarui yang menerapkan data baru (D
   );
   await expect(page.getByRole("heading", { name: "UJI: deskripsi terbaru dari API." })).toBeVisible();
 });
+
+const HALAMAN_TOMBOL_PERBARUI = [
+  {
+    nama: "Beranda",
+    url: `/?wilayah=${DESA_UJI}`,
+    tombol: (page: Page) => page.getByRole("button", { name: /^Perbarui data\./ }),
+    jamData: (page: Page, jam: string) =>
+      page.getByRole("button", { name: `Perbarui data. Terakhir diperbarui pukul ${jam} WIB` }),
+  },
+  {
+    nama: "Risiko",
+    url: `/risiko?wilayah=${DESA_UJI}`,
+    tombol: (page: Page) => page.getByRole("button", { name: "Perbarui", exact: true }),
+    jamData: (page: Page, jam: string) => page.getByText(new RegExp(`^Diperbarui ${jam} WIB ·`)),
+  },
+];
+
+for (const h of HALAMAN_TOMBOL_PERBARUI) {
+  test(`${h.nama}: tombol Perbarui mengambil data Open-Meteo baru bila data ≥ 15 menit (D-057)`, async ({ page }) => {
+    await page.goto(h.url);
+    await expect(h.tombol(page)).toBeVisible();
+
+    // Data sel grid diambil 20 menit lalu: kunjungan biasa masih memakai cache 30 menit.
+    const { waktu, jumlahData } = await tuakanDataCuaca(DESA_UJI, 20);
+    const jamLama = jamWib(waktu);
+    const jumlahAwal = await jumlahData();
+    await page.reload();
+    await expect(h.jamData(page, jamLama)).toBeVisible();
+
+    // Tombol: data ≥ 15 menit → satu panggilan Open-Meteo, jam berubah.
+    await h.tombol(page).click();
+    const hasil = page.getByRole("status").filter({ hasText: /^Data diperbarui pukul/ });
+    await expect(hasil).toHaveText(/^Data diperbarui pukul \d{2}:\d{2} WIB\.$/);
+    const jamBaru = /(\d{2}:\d{2})/.exec((await hasil.textContent()) ?? "")?.[1] ?? "";
+    expect(jamBaru).not.toBe(jamLama);
+    await expect(h.jamData(page, jamBaru)).toBeVisible();
+    expect(await jumlahData()).toBe(jumlahAwal + 1);
+
+    // Ditekan lagi (< 15 menit): tidak memanggil Open-Meteo, umpan balik menjelaskan kenapa jam tetap.
+    await h.tombol(page).click();
+    await expect(page.getByRole("status").filter({ hasText: "Sudah dicek" })).toHaveText(
+      new RegExp(
+        `^Sudah dicek \\d{2}:\\d{2} · data terbaru dari ${jamBaru} WIB\\. ` +
+          "Data cuaca diambil ulang paling cepat 15 menit sekali, berikutnya \\d{2}:\\d{2} WIB\\.$",
+      ),
+    );
+    await expect(h.jamData(page, jamBaru)).toBeVisible();
+    expect(await jumlahData()).toBe(jumlahAwal + 1);
+  });
+}
 
 /** Tab disembunyikan/ditampilkan lagi (HP dikunci, pindah aplikasi/tab); Chromium headless selalu "visible". */
 async function aturVisibilitas(page: Page, status: "hidden" | "visible") {

@@ -2,7 +2,8 @@
 
 import { LoaderCircle, RefreshCw } from "lucide-react";
 
-export type HasilPerbarui = { status: "selesai" } | { status: "galat"; pesan: string } | null;
+/** `teks`: hasil cek tombol, mis. "Sudah dicek 01:46 · data terbaru dari 01:33 WIB." (D-057). */
+export type HasilPerbarui = { status: "selesai"; teks: string } | { status: "galat"; pesan: string } | null;
 
 /**
  * Jam pembaruan di kartu level Beranda yang sekaligus tombol "Perbarui" (D-055).
@@ -20,12 +21,8 @@ export function TombolPerbaruiData({
   hasil: HasilPerbarui;
   onPerbarui: () => void;
 }) {
-  // Pengumuman pembaca layar; setelah selesai, `jam` sudah jam data yang baru.
-  const pengumuman = memuat
-    ? "Memperbarui data…"
-    : hasil?.status === "selesai"
-      ? `Data diperbarui. Terakhir diperbarui pukul ${jam} WIB.`
-      : "";
+  // Saat memuat hanya untuk pembaca layar (spinner = indikator visual); hasil cek tampil untuk semua.
+  const pengumuman = memuat ? "Memperbarui data…" : hasil?.status === "selesai" ? hasil.teks : "";
 
   return (
     <>
@@ -49,9 +46,12 @@ export function TombolPerbaruiData({
         </span>
         {jam} WIB
       </button>
-      <span role="status" className="sr-only">
+      <p
+        role="status"
+        className={hasil?.status === "selesai" ? "basis-full text-[13px] leading-snug text-[#3e4a5c]" : "sr-only"}
+      >
         {pengumuman}
-      </span>
+      </p>
       {hasil?.status === "galat" ? (
         <p role="alert" className="basis-full text-[14px] text-destructive">
           Gagal memperbarui: {hasil.pesan}. Menampilkan data terakhir.

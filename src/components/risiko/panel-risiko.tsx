@@ -55,7 +55,7 @@ export function PanelRisiko({
   grafik: TitikGrafikJam[];
   penanganan: PenangananKlien;
 }) {
-  const { ktx, kirim, grafik, penanganan, muatUlang, grafikSelesaiRender } = useRiskState({
+  const { ktx, kirim, grafik, penanganan, muatUlang, hasilCek, grafikSelesaiRender } = useRiskState({
     idWilayah: risiko.idWilayah,
     risiko,
     grafik: grafikAwal,
@@ -109,6 +109,10 @@ export function PanelRisiko({
           Gagal memperbarui: {ktx.galat}. Menampilkan data terakhir.
         </p>
       ) : null}
+      {/* Hasil cek tombol Perbarui (D-057); kosong saat memuat agar pengumuman berikutnya terbaca ulang. */}
+      <p role="status" className={hasilCek && !ktx.memuat ? "text-[14px] leading-snug text-[#3e4a5c]" : "sr-only"}>
+        {ktx.memuat ? "" : hasilCek}
+      </p>
 
       <BannerStatus
         state={s}
