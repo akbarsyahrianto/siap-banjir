@@ -683,3 +683,15 @@ Akar masalah di dalam Next/React tidak ditemukan dalam waktu yang wajar. **Konse
 3. Ditekan lagi: "Sudah dicek … · data terbaru dari {jam baru} … berikutnya …", jumlah baris tidak bertambah.
 
 Tes D-055 disesuaikan dengan teks baru.
+
+## D-058 · Build dan e2e otomatis memakai `.next-prod`
+
+**Konteks.** D-040 memindahkan build ke folder lain hanya jika `NEXT_DIST_DIR` diatur manual. Saat `npm run dev` berjalan dan variabel itu lupa diatur, `next build` menimpa `.next` milik server pengembangan. Server pengembangan juga menulis balik ke build produksi, sehingga e2e gagal dengan galat modul webpack (`Cannot read properties of undefined (reading 'call')`) (terjadi 30 September 2026).
+
+**Keputusan.** `next.config.ts` kini berupa fungsi fase. `next dev` (`PHASE_DEVELOPMENT_SERVER`) memakai `.next`; `next build` dan `next start` memakai `.next-prod`. Karena server e2e dijalankan dengan `npm run start`, `npm run build; npm run test:e2e` otomatis memakai `.next-prod` tanpa variabel lingkungan. Aturannya:
+- Di Vercel (`VERCEL` diatur), folder tetap `.next`, sesuai perilaku platform.
+- `NEXT_DIST_DIR` tetap mengalahkan keduanya.
+- `.next-prod/types` ditambahkan ke `tsconfig.json` agar Next.js tidak menulis ulang berkas itu (lihat D-040).
+- Folder `.next-*` sudah diabaikan git dan ESLint.
+
+**Diuji:** `npm run build` saat `npm run dev` berjalan di port 3000. `.next` milik server pengembangan tidak berubah, dan seluruh e2e lolos dari `.next-prod`.

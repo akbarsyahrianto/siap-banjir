@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
 const dev = process.env.NODE_ENV === "development";
 
@@ -31,9 +32,18 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
-const nextConfig: NextConfig = {
-  // Build/e2e bisa diarahkan ke folder lain agar tidak menimpa .next milik `next dev` yang sedang jalan.
-  distDir: process.env.NEXT_DIST_DIR || ".next",
+/**
+ * Folder build (D-040, D-058): `next dev` memakai `.next`; `next build`/`next start` (termasuk server e2e)
+ * memakai `.next-prod`, agar build dan e2e tidak merusak `.next` milik `next dev` yang sedang jalan.
+ * Vercel tetap `.next`. `NEXT_DIST_DIR` mengalahkan keduanya.
+ */
+function folderBuild(phase: string) {
+  if (process.env.NEXT_DIST_DIR) return process.env.NEXT_DIST_DIR;
+  if (phase === PHASE_DEVELOPMENT_SERVER || process.env.VERCEL) return ".next";
+  return ".next-prod";
+}
+
+const configDasar: NextConfig = {
   poweredByHeader: false,
   experimental: {
     // Barrel "radix-ui" menarik semua primitive jika tidak dioptimasi.
@@ -59,4 +69,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default function nextConfig(phase: string): NextConfig {
+  return { ...configDasar, distDir: folderBuild(phase) };
+}

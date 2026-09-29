@@ -202,11 +202,7 @@ Langkah demo lengkap (persiapan Firefox, menyalakan dan mematikan simulasi, meng
 | `npm run test:integration` | `prosesPeringatan()`, riwayat per kab/kota, pencarian & desa terdekat terhadap database asli (push di-mock) | PostgreSQL dari `.env` yang sudah di-seed. **Jangan ke database produksi** |
 | `npm run test:e2e` | Playwright (Pixel 7 + Desktop Chrome): cari desa → lihat risiko → aktifkan notifikasi → atur notifikasi; pilihan bertingkat; GPS; state machine (desa disimulasikan TINGGI); deep link; PWA offline; security headers | `npm run build` lebih dulu, database ter-seed, internet (Open-Meteo) |
 
-Jika `npm run dev` sedang berjalan, build ke folder lain agar `.next` miliknya tidak tertimpa (DECISIONS D-040):
-
-```powershell
-$env:NEXT_DIST_DIR = ".next-e2e"; npm run build; npm run test:e2e; $env:NEXT_DIST_DIR = $null
-```
+`npm run build`, `npm run start`, dan server e2e memakai folder `.next-prod`, sedangkan `npm run dev` memakai `.next`. Jadi build dan e2e aman dijalankan saat `npm run dev` berjalan (DECISIONS D-058). Folder lain tetap bisa dipilih lewat `NEXT_DIST_DIR`. Deploy Vercel tetap memakai `.next`.
 
 Pertama kali: `npx playwright install chromium`. E2E menjalankan server produksi di port 3100 dan mensimulasikan risiko TINGGI di Kelurahan Bandengan, Kota Pekalongan (`33.75.03.1009`) selama test (dipulihkan otomatis). Chromium headless tidak bisa berlangganan push sungguhan, jadi `PushManager`/`Notification` di-stub; request ke server tetap asli.
 
