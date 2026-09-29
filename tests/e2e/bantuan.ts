@@ -74,8 +74,13 @@ export async function stubPush(page: Page, testInfo: TestInfo) {
 
 /** "01:33" (WIB), sama dengan `formatJam` aplikasi. */
 export function jamWib(waktu: Date) {
+  return jamDiZona(waktu, "Asia/Jakarta");
+}
+
+/** "01:33" di zona IANA `zona` (mis. "Asia/Jayapura"). */
+export function jamDiZona(waktu: Date, zona: string) {
   const bagian = new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Jakarta",
+    timeZone: zona,
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
@@ -107,6 +112,22 @@ async function jumlahDataCuaca(kunciGrid: string) {
   const db = new PrismaClient();
   try {
     return await db.dataCuaca.count({ where: { kunciGrid } });
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+/** Data cuaca terbaru sel grid desa ini: waktu ambil (jam di tombol/kartu) dan waktu pengamatan (jam "sekarang"). */
+export async function dataCuacaTerbaru(idWilayah: string) {
+  const db = new PrismaClient();
+  try {
+    const { kunciGrid } = await db.wilayah.findUniqueOrThrow({ where: { idWilayah }, select: { kunciGrid: true } });
+    if (!kunciGrid) throw new Error(`${idWilayah} tanpa sel grid`);
+    return await db.dataCuaca.findFirstOrThrow({
+      where: { kunciGrid },
+      orderBy: { waktuAmbil: "desc" },
+      select: { waktuAmbil: true, waktuPengamatan: true },
+    });
   } finally {
     await db.$disconnect();
   }

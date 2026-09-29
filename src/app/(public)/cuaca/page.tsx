@@ -9,6 +9,7 @@ import { BelumPilihWilayah, DataCuacaTidakTersedia } from "@/components/wilayah/
 import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { ringkasanHarian, seriPerJamPerHari } from "@/server/services/seri-cuaca";
 import { muatPemilih } from "@/server/wilayah-terpilih";
+import { zonaWilayah } from "@/lib/zona-waktu";
 
 export const metadata: Metadata = { title: "Prakiraan Cuaca" };
 
@@ -55,6 +56,7 @@ async function Prakiraan({ idWilayah }: { idWilayah: string }) {
   const { wilayah, cuaca } = kondisi;
   const { suhu, kelembapan, curahHujan, kecepatanAngin, kondisiCuaca, waktuAmbil } = cuaca.dataCuaca;
   const waktu = waktuAmbil.toISOString();
+  const zona = zonaWilayah(idWilayah);
 
   // key: data server baru (navigasi) menggantikan state klien; pembaruan berkala lewat state klien (D-056).
   return (
@@ -66,8 +68,8 @@ async function Prakiraan({ idWilayah }: { idWilayah: string }) {
         waktuAmbil: waktu,
         sumber: cuaca.sumber,
         koordinatPerkiraan: wilayah.koordinatPerkiraan,
-        harian: ringkasanHarian(cuaca.raw),
-        perJamPerHari: seriPerJamPerHari(cuaca.raw),
+        harian: ringkasanHarian(cuaca.raw, zona),
+        perJamPerHari: seriPerJamPerHari(cuaca.raw, zona),
       }}
     />
   );

@@ -40,7 +40,13 @@ export default async function InformasiDetailPage({ params }: Props) {
       </p>
       <h1 className="text-[28px] leading-[1.2] font-extrabold tracking-[-0.02em] text-pretty">{info.judul}</h1>
       <p className="flex flex-wrap items-center gap-x-3 text-[14px] font-semibold text-muted-foreground">
-        <TanggalInformasi kategori={info.kategori} tanggal={info.tanggal} dataPer={info.tanggalDataPer} panjang />
+        <TanggalInformasi
+          kategori={info.kategori}
+          tanggal={info.tanggal}
+          idWilayah={info.idWilayah}
+          dataPer={info.tanggalDataPer}
+          panjang
+        />
         {info.wilayah ? (
           <span className="flex items-center gap-1">
             <MapPin className="size-4" aria-hidden="true" />

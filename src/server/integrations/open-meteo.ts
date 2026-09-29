@@ -59,7 +59,8 @@ export function buatUrlOpenMeteo(latitude: number, longitude: number, baseUrl = 
     hourly: "precipitation,precipitation_probability,temperature_2m",
     daily: "precipitation_sum,precipitation_probability_max",
     past_days: "2",
-    forecast_days: "3",
+    // 4 hari (bukan 3) agar hari ke-3 di zona WITA/WIT tetap lengkap 24 jam (D-060); tetap 1,0 call.
+    forecast_days: "4",
     timezone: "Asia/Jakarta",
   }).toString();
   return url;

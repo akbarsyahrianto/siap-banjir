@@ -12,6 +12,7 @@ import { LABEL_STATE, type TabPenanganan } from "@/lib/mesin-risiko";
 import { LABEL_LEVEL, URUTAN_LEVEL } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
 import { cn } from "@/lib/utils";
+import { zonaWilayah } from "@/lib/zona-waktu";
 import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
 import { BannerStatus } from "./banner-status";
 import { DaftarParameter } from "./daftar-parameter";
@@ -122,7 +123,9 @@ export function PanelRisiko({
       />
 
       <KartuLevelRisiko data={data} />
-      {dataLama && <StatusData sumber={data.sumberData} waktuAmbil={new Date(data.waktuAmbilData)} />}
+      {dataLama && (
+        <StatusData sumber={data.sumberData} waktuAmbil={new Date(data.waktuAmbilData)} zona={zonaWilayah(data.idWilayah)} />
+      )}
 
       <ArtiLevel />
 
@@ -139,6 +142,7 @@ export function PanelRisiko({
             Curah hujan 48 jam
           </h2>
           <GrafikHujan48Jam
+            zona={zonaWilayah(data.idWilayah)}
             data={grafik}
             onSelesaiRender={s.nama === "bahaya" && s.jalurGrafik === "menyiapkan-grafik" ? grafikSelesaiRender : undefined}
           />

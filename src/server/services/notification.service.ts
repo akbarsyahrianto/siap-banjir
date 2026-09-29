@@ -4,7 +4,9 @@
  */
 import type { LanggananNotifikasi, LevelRisiko, TingkatRisiko } from "@prisma/client";
 import { db } from "@/server/db";
+import { formatJamZona } from "@/lib/format";
 import { LABEL_SIMULASI, URUTAN_LEVEL } from "@/lib/risiko";
+import { zonaWilayah } from "@/lib/zona-waktu";
 import { kirimPush, type PayloadPush } from "@/server/integrations/web-push";
 import {
   bacaPushSubscription,
@@ -26,16 +28,19 @@ export function perluKirim(levelBaru: TingkatRisiko, levelTerkirim: TingkatRisik
   return levelTerkirim.every((l) => URUTAN_LEVEL[levelBaru] > URUTAN_LEVEL[l]);
 }
 
-/** buatNotifikasi(levelRisiko): judul, pesan, dan URL deep link. */
+/**
+ * buatNotifikasi(levelRisiko): judul, pesan, dan URL deep link.
+ * Pesan diawali jam penilaian risiko dalam zona wilayah, mis. "Pukul 14:05 WITA:" (D-060).
+ */
 export function buatNotifikasi(
-  risiko: Pick<LevelRisiko, "idWilayah" | "level" | "deskripsi" | "simulasi">,
+  risiko: Pick<LevelRisiko, "idWilayah" | "level" | "deskripsi" | "simulasi" | "waktu">,
   namaWilayah: string,
 ): PayloadPush {
   const tinggi = risiko.level === "TINGGI";
   const judul = tinggi ? `⚠️ Risiko banjir TINGGI di ${namaWilayah}` : `Waspada: risiko banjir SEDANG di ${namaWilayah}`;
   const saran = tinggi ? "Siap mengungsi dan ikuti arahan petugas." : "Periksa persiapan dini Anda.";
   // Label sudah ada di judul; di isi diganti kalimat penjelas.
-  const deskripsi = risiko.deskripsi.replace(`${LABEL_SIMULASI} `, "");
+  const deskripsi = `Pukul ${formatJamZona(risiko.waktu, zonaWilayah(risiko.idWilayah))}: ${risiko.deskripsi.replace(`${LABEL_SIMULASI} `, "")}`;
   return {
     judul: risiko.simulasi ? `${LABEL_SIMULASI} ${judul}` : judul,
     pesan: risiko.simulasi

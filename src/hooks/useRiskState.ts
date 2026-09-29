@@ -6,6 +6,7 @@ import { useNotifikasi } from "@/components/notifikasi/notifikasi-provider";
 import { usePembaruanOtomatis } from "@/hooks/usePembaruanOtomatis";
 import { ambilDataWilayah, ambilJson } from "@/lib/ambil-data-wilayah";
 import { teksHasilCek } from "@/lib/hasil-cek";
+import { zonaWilayah } from "@/lib/zona-waktu";
 import { konteksAwal, transisi, type KanalPeringatan } from "@/lib/mesin-risiko";
 import { LABEL_SIMULASI } from "@/lib/risiko";
 import type { PenangananKlien, RisikoKlien } from "@/lib/tipe-risiko";
@@ -47,6 +48,7 @@ export function useRiskState(awal: {
               waktuDataSebelum: waktuDataTerkini,
               waktuData: risiko.waktuAmbilData,
               sumber: risiko.sumberData,
+              zona: zonaWilayah(idWilayah),
             }),
           );
         }

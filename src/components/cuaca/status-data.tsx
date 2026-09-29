@@ -1,10 +1,11 @@
 import { CloudOff } from "lucide-react";
-import { formatJam } from "@/lib/format";
+import { formatJamZona } from "@/lib/format";
 import type { SumberData } from "@/lib/tipe-risiko";
+import type { ZonaWaktu } from "@/lib/zona-waktu";
 
 /** Peringatan data lama: jika API gagal atau kuota menipis, beri tahu bahwa ini data terakhir yang tersimpan. */
-export function StatusData({ sumber, waktuAmbil }: { sumber: SumberData; waktuAmbil: Date }) {
-  const jam = formatJam(waktuAmbil);
+export function StatusData({ sumber, waktuAmbil, zona }: { sumber: SumberData; waktuAmbil: Date; zona: ZonaWaktu }) {
+  const jam = formatJamZona(waktuAmbil, zona);
   if (sumber === "cadangan" || sumber === "hemat-kuota") {
     return (
       <p
@@ -15,7 +16,7 @@ export function StatusData({ sumber, waktuAmbil }: { sumber: SumberData; waktuAm
         {sumber === "cadangan"
           ? "Open-Meteo sedang tidak dapat dihubungi."
           : "Batas harian permintaan data cuaca hampir tercapai."}{" "}
-        Data terakhir diperbarui pukul {jam} WIB.
+        Data terakhir diperbarui pukul {jam}.
       </p>
     );
   }

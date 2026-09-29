@@ -1,7 +1,8 @@
 import type { TingkatRisiko } from "@prisma/client";
 import { teksCatatanLokasi } from "@/components/cuaca/catatan-lokasi";
-import { formatJam } from "@/lib/format";
+import { formatJamZona } from "@/lib/format";
 import type { RisikoKlien } from "@/lib/tipe-risiko";
+import { zonaWilayah } from "@/lib/zona-waktu";
 import { cn } from "@/lib/utils";
 import { GAYA_LEVEL } from "./gaya-level";
 
@@ -61,7 +62,7 @@ export function KartuLevelRisiko({ data }: { data: RisikoKlien }) {
       <p className="text-[15px] leading-normal text-pretty text-[#1f2937]">{gaya.pesan}</p>
       <BilahSkor skor={data.skorRisiko} level={data.level} />
       <p className="text-[13px] leading-normal text-[#2d3748]">
-        Diperbarui {formatJam(new Date(data.waktuAmbilData))} WIB · {teksCatatanLokasi(data.koordinatPerkiraan)}
+        Diperbarui {formatJamZona(new Date(data.waktuAmbilData), zonaWilayah(data.idWilayah))} · {teksCatatanLokasi(data.koordinatPerkiraan)}
       </p>
     </section>
   );

@@ -3,7 +3,9 @@ import {
   DESA_TANPA_112,
   DESA_TANPA_112_TANPA_BPBD,
   DESA_UJI,
+  dataCuacaTerbaru,
   identitasUji,
+  jamDiZona,
   jamWib,
   stubPush,
   tuakanDataCuaca,
@@ -286,6 +288,39 @@ for (const h of HALAMAN_TOMBOL_PERBARUI) {
     );
     await expect(h.jamData(page, jamBaru)).toBeVisible();
     expect(await jumlahData()).toBe(jumlahAwal + 1);
+  });
+}
+
+// D-060: satu wilayah per zona waktu. Jam dibandingkan dengan data di DB yang diformat di zona itu.
+const ZONA_UJI = [
+  { zona: "WIB", iana: "Asia/Jakarta", desa: DESA_UJI }, // Kelurahan Bulu Lor, Kota Semarang
+  { zona: "WITA", iana: "Asia/Makassar", desa: "51.71.01.1001" }, // Kelurahan Serangan, Kota Denpasar
+  { zona: "WIT", iana: "Asia/Jayapura", desa: "82.71.01.1001" }, // Kelurahan Jambula, Kota Ternate
+];
+
+for (const z of ZONA_UJI) {
+  test(`zona ${z.zona}: jam Beranda, Cuaca (termasuk grafik per jam), dan Risiko dalam ${z.zona} (D-060)`, async ({ page }) => {
+    const jamData = async () => jamDiZona((await dataCuacaTerbaru(z.desa)).waktuAmbil, z.iana);
+
+    await page.goto(`/?wilayah=${z.desa}`);
+    await expect(page.getByRole("button", { name: `Perbarui data. Terakhir diperbarui pukul ${await jamData()} ${z.zona}` })).toBeVisible();
+
+    await page.goto(`/cuaca?wilayah=${z.desa}`);
+    const konten = page.locator("#konten");
+    await expect(konten.getByRole("region", { name: "Cuaca terkini" }).getByText(`Diperbarui ${await jamData()} ${z.zona} ·`, { exact: false })).toBeVisible();
+    const perJam = konten.getByRole("region", { name: "Prakiraan per jam" });
+    await expect(perJam.getByText(`Angka di bawah grafik = pukul (${z.zona}).`, { exact: false })).toBeVisible();
+    // Hari ini: jam 00:00 sampai jam pengamatan terkini (di zona wilayah) bertanda "sudah lewat".
+    const { waktuPengamatan } = await dataCuacaTerbaru(z.desa);
+    const jamSekarang = Number(jamDiZona(waktuPengamatan, z.iana).slice(0, 2));
+    await perJam.getByText("Lihat tabel per jam").click();
+    const baris = perJam.getByRole("table").getByRole("row");
+    await expect(baris).toHaveCount(25);
+    await expect(baris.filter({ hasText: "sudah lewat" })).toHaveCount(jamSekarang + 1);
+    await expect(baris.nth(jamSekarang + 1)).toContainText(`${String(jamSekarang).padStart(2, "0")}:00 (sudah lewat)`);
+
+    await page.goto(`/risiko?wilayah=${z.desa}`);
+    await expect(page.locator("#konten").getByText(`Diperbarui ${await jamData()} ${z.zona} ·`, { exact: false })).toBeVisible();
   });
 }
 

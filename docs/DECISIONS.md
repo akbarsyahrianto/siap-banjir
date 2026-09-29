@@ -716,3 +716,37 @@ Karena itu dipilih kurasi manual dari rilis www.bnpb.go.id. Daftar berita ditelu
 - `npm run cek:sumber` juga memeriksa tautan sumber tanggal.
 
 **Diuji:** `npm run cek:sumber` (31 tautan, semua HTTP 200, 30 September 2026). Unit seed memeriksa: host `.go.id` untuk kedua sumber; nama dan tautan sumber tanggal selalu berpasangan; sumber tanggal dan "Data per" tidak dipakai bersamaan. E2E Informasi memeriksa kartu Pantura ("Data per 19 Jan 2026") serta kartu Sumatra Utara (24 Nov 2025, sumber utama, dan tautan "Tanggal kejadian").
+
+## D-060 · Jam dan tanggal mengikuti zona waktu wilayah (WIB/WITA/WIT)
+
+**Konteks.** Semua jam ditampilkan dalam WIB (`Asia/Jakarta`), termasuk untuk wilayah WITA dan WIT. Contohnya, pengguna di Papua Barat Daya melihat "01:33 WIB" untuk data yang diambil pukul 03:33 waktu setempat. Grafik per jam di Cuaca juga dikelompokkan per hari WIB, dan riwayat otomatis per kab/kota memakai hari kalender WIB.
+
+**Keputusan.**
+- **Zona per provinsi** (`src/lib/zona-waktu.ts`, `zonaWilayah(kode)`), dari dua digit pertama kode Kemendagri:
+  - WITA: 51–53, 63–65, 71–76.
+  - WIT: 81, 82, 91–96.
+  - Selain itu WIB, termasuk tanpa wilayah.
+- `formatJam`, `formatTanggal`, dan `formatTanggalPanjang` kini **wajib** menerima zona, sehingga typecheck menangkap setiap tempat yang lupa. `formatJamZona` menghasilkan "14:05 WITA". Tidak ada lagi teks "WIB" yang ditulis mati di komponen.
+- **Yang mengikuti zona wilayah:**
+  - Jam pembaruan di Beranda (tombol, termasuk nama aksesibelnya) dan hasil cek D-057.
+  - Kartu level Risiko dan grafik hujan 48 jam.
+  - Kartu cuaca terkini, peringatan data lama (`StatusData`), dan grafik/tabel per jam di Cuaca.
+  - Tanggal di Informasi (dibaca di zona wilayah entri).
+  - Riwayat otomatis per kab/kota: jam desa, tanggal, dan **batas hari kalender** sekarang lokal (menggantikan "hari kalender WIB" di D-038).
+  - Notifikasi push.
+- **Notifikasi:** sebelumnya tidak memuat jam. Isinya kini diawali jam penilaian risiko, mis. "Pukul 14:05 WITA: Risiko SEDANG karena …".
+- **Data Open-Meteo tetap diminta dalam `Asia/Jakarta`**, karena cache dipakai bersama per sel grid dan satu sel bisa berada di perbatasan zona. `seri-cuaca` mengonversi waktu per jam ke zona wilayah; "sekarang", "hari ini", dan pengelompokan per hari memakai tanggal lokal. `/api/cuaca` mengirim seri dalam zona wilayah beserta `zonaWaktu`.
+  - Ringkasan harian untuk WITA/WIT dihitung dari data per jam hari lokal (jumlah hujan, peluang maksimum), karena `daily` Open-Meteo mengikuti hari WIB. WIB tetap memakai `daily`.
+  - Hanya hari lokal yang lengkap 24 jam yang ditampilkan, maksimal 3 hari.
+  - `forecast_days` dinaikkan dari 3 ke 4 agar hari ke-3 di WIT tetap lengkap setelah pukul 22.00 WIB. Tetap 1,0 panggilan API (D-035): kurang dari 2 minggu, 10 variabel.
+- **Tidak berubah:** perhitungan parameter risiko. `hujan_3hari` tetap memakai `daily` per hari WIB; jendela 24 jam tidak bergantung zona. Tanggal tanpa jam (tanggal pemeriksaan kontak, peluncuran 112) juga tidak berubah.
+
+**Diuji:**
+- Unit:
+  - Pemetaan provinsi untuk ketiga zona pada kode tingkat apa pun.
+  - Format jam dan tanggal; malam WIB bisa berarti tanggal berikutnya di WIT.
+  - `seri-cuaca` WIT/WITA: pergeseran jam, "sekarang", ringkasan dari data per jam, dan hari tidak lengkap dibuang.
+  - Hasil cek D-057 dalam WIT; batas hari dan teks riwayat otomatis per zona; notifikasi WIB/WITA/WIT.
+- E2E, satu wilayah per zona (Kelurahan Bulu Lor, Semarang; Kelurahan Serangan, Denpasar; Kelurahan Jambula, Ternate) di mobile dan desktop:
+  - Jam tombol Beranda, kartu Cuaca, dan kartu Risiko sama dengan waktu data di DB yang diformat di zona IANA wilayah itu.
+  - Keterangan grafik "pukul (WITA)"; jumlah baris "sudah lewat" di tabel per jam = jam pengamatan lokal + 1.

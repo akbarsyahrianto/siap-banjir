@@ -5,6 +5,7 @@ import { lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { ringkasanHarian, seriHujan48Jam, seriPerJamPerHari, seriPrakiraanPerJam } from "@/server/services/seri-cuaca";
 import { namaTampilan } from "@/server/services/wilayah.service";
 import { queryWilayahSchema } from "@/server/validators/risiko";
+import { zonaWilayah } from "@/lib/zona-waktu";
 
 /** GET /api/cuaca?wilayah={id}: cuaca terkini + prakiraan (Lihat Data Cuaca «include» Ambil Data Cuaca). */
 export async function GET(req: NextRequest) {
@@ -20,6 +21,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { dataCuaca, raw, sumber } = kondisi.cuaca;
+  // Jam & tanggal seri dalam zona wilayah (WIB/WITA/WIT, D-060).
+  const zona = zonaWilayah(kondisi.wilayah.idWilayah);
   return NextResponse.json({
     data: {
       idWilayah: kondisi.wilayah.idWilayah,
@@ -37,10 +40,11 @@ export async function GET(req: NextRequest) {
         kecepatanAngin: dataCuaca.kecepatanAngin,
         kondisiCuaca: dataCuaca.kondisiCuaca,
       },
-      hujan48Jam: seriHujan48Jam(raw),
-      perJam: seriPrakiraanPerJam(raw),
-      harian: ringkasanHarian(raw),
-      perJamPerHari: seriPerJamPerHari(raw),
+      zonaWaktu: zona.singkatan,
+      hujan48Jam: seriHujan48Jam(raw, zona),
+      perJam: seriPrakiraanPerJam(raw, zona),
+      harian: ringkasanHarian(raw, zona),
+      perJamPerHari: seriPerJamPerHari(raw, zona),
       atribusi: "Data cuaca: Open-Meteo.com (CC BY 4.0)",
     },
   });

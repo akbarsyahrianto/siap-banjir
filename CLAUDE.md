@@ -46,3 +46,4 @@ npm run build; npm run test:e2e   # e2e memakai build produksi di port 3100
 - Level risiko tidak boleh dibedakan dengan warna saja: selalu ada teks dan ikon.
 - Target sentuh ≥ 44 px, fokus keyboard outline biru 3 px, animasi mati saat `prefers-reduced-motion`.
 - Konten keselamatan (nomor darurat, rekomendasi) hanya dari sumber resmi, dengan sumbernya ditampilkan.
+- Jam dan tanggal selalu dalam zona wilayah terpilih (WIB/WITA/WIT, `zonaWilayah()`, D-060); jangan menulis "WIB" secara tetap.

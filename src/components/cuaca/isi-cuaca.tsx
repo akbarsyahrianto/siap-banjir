@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePembaruanOtomatis } from "@/hooks/usePembaruanOtomatis";
 import { ambilDataWilayah, type DataHalamanCuaca } from "@/lib/ambil-data-wilayah";
+import { zonaWilayah } from "@/lib/zona-waktu";
 import { GrafikPrakiraanJam } from "./grafik-prakiraan-jam";
 import { KartuCuaca } from "./kartu-cuaca";
 import { PrakiraanHarian } from "./prakiraan-harian";
@@ -25,18 +26,20 @@ export function IsiCuaca({ idWilayah, awal }: { idWilayah: string; awal: DataHal
   });
 
   const waktuAmbil = new Date(data.waktuAmbil);
+  // Jam & tanggal prakiraan dari server sudah dalam zona wilayah (D-060).
+  const zona = zonaWilayah(idWilayah);
   const dataLama = data.sumber === "cadangan" || data.sumber === "hemat-kuota";
 
   return (
     <>
-      <KartuCuaca dataCuaca={data.terkini} waktuAmbil={waktuAmbil} koordinatPerkiraan={data.koordinatPerkiraan} />
-      {dataLama && <StatusData sumber={data.sumber} waktuAmbil={waktuAmbil} />}
+      <KartuCuaca dataCuaca={data.terkini} waktuAmbil={waktuAmbil} zona={zona} koordinatPerkiraan={data.koordinatPerkiraan} />
+      {dataLama && <StatusData sumber={data.sumber} waktuAmbil={waktuAmbil} zona={zona} />}
       <PrakiraanHarian harian={data.harian} />
       <section aria-labelledby="judul-jam" className="flex flex-col gap-3 rounded-[20px] border bg-card p-4 text-card-foreground">
         <h2 id="judul-jam" className="text-[18px] font-extrabold">
           Prakiraan per jam
         </h2>
-        <GrafikPrakiraanJam hari={data.perJamPerHari} />
+        <GrafikPrakiraanJam hari={data.perJamPerHari} zona={zona} />
       </section>
     </>
   );

@@ -45,9 +45,29 @@ describe("memenuhiLevelMinimum", () => {
 });
 
 describe("buatNotifikasi", () => {
+  it("pesan memuat jam penilaian dalam zona wilayah: WIB, WITA, WIT (D-060)", () => {
+    const waktu = new Date("2026-09-25T06:05:00Z");
+    const dasar = { level: "SEDANG" as const, deskripsi: "Risiko SEDANG karena curah hujan 24 jam terakhir 30 mm.", simulasi: false, waktu };
+    expect(buatNotifikasi({ ...dasar, idWilayah: "33.74.02.1002" }, "Kelurahan Bulu Lor, Kota Semarang").pesan).toMatch(
+      /^Pukul 13:05 WIB: Risiko SEDANG/,
+    );
+    expect(buatNotifikasi({ ...dasar, idWilayah: "51.71.01.1001" }, "Kelurahan Serangan, Kota Denpasar").pesan).toMatch(
+      /^Pukul 14:05 WITA: Risiko SEDANG/,
+    );
+    expect(buatNotifikasi({ ...dasar, idWilayah: "82.71.01.1001" }, "Kelurahan Jambula, Kota Ternate").pesan).toMatch(
+      /^Pukul 15:05 WIT: Risiko SEDANG/,
+    );
+  });
+
   it("berisi deep link ke /risiko?wilayah={id} bagian Detail Penanganan", () => {
     const p = buatNotifikasi(
-      { idWilayah: "33.74.02.1002", level: "TINGGI", deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm.", simulasi: false },
+      {
+        idWilayah: "33.74.02.1002",
+        level: "TINGGI",
+        deskripsi: "Risiko TINGGI karena curah hujan 24 jam terakhir 72 mm.",
+        simulasi: false,
+        waktu: new Date("2026-09-25T06:05:00Z"),
+      },
       "Kelurahan Bulu Lor, Kota Semarang",
     );
     expect(p.url).toBe("/risiko?wilayah=33.74.02.1002#penanganan");
@@ -64,12 +84,13 @@ describe("buatNotifikasi", () => {
         level: "TINGGI",
         deskripsi: "[SIMULASI] Risiko TINGGI karena curah hujan 24 jam terakhir 60 mm.",
         simulasi: true,
+        waktu: new Date("2026-09-25T06:05:00Z"),
       },
       "Desa Sariharjo, Kabupaten Sleman",
     );
     expect(p.judul).toBe("[SIMULASI] ⚠️ Risiko banjir TINGGI di Desa Sariharjo, Kabupaten Sleman");
     expect(p.pesan).toBe(
-      "Risiko TINGGI karena curah hujan 24 jam terakhir 60 mm. Ini simulasi uji, bukan kondisi cuaca sebenarnya.",
+      "Pukul 13:05 WIB: Risiko TINGGI karena curah hujan 24 jam terakhir 60 mm. Ini simulasi uji, bukan kondisi cuaca sebenarnya.",
     );
     expect(p.tag).toBe("simulasi-risiko-34.04.12.2001");
   });

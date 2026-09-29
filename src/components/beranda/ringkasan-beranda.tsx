@@ -4,8 +4,9 @@ import { useState } from "react";
 import { StatusData } from "@/components/cuaca/status-data";
 import { usePembaruanOtomatis } from "@/hooks/usePembaruanOtomatis";
 import { ambilDataWilayah, type CuacaTerkini } from "@/lib/ambil-data-wilayah";
-import { formatJam } from "@/lib/format";
+import { formatJamZona } from "@/lib/format";
 import { teksHasilCek } from "@/lib/hasil-cek";
+import { zonaWilayah } from "@/lib/zona-waktu";
 import { formatNilaiParameter } from "@/lib/risiko";
 import type { RisikoKlien } from "@/lib/tipe-risiko";
 import { KartuCuacaRingkas, TautanKontakDarurat } from "./kartu-ringkas";
@@ -31,6 +32,7 @@ export function RingkasanBeranda({
   const [hasil, setHasil] = useState<HasilPerbarui>(null);
   const { risiko, terkini } = data;
   const idWilayah = risiko.idWilayah;
+  const zona = zonaWilayah(idWilayah);
 
   const perbaruiSekarang = usePembaruanOtomatis(perbarui);
 
@@ -45,6 +47,7 @@ export function RingkasanBeranda({
         waktuDataSebelum: risiko.waktuAmbilData,
         waktuData: baru.risiko.waktuAmbilData,
         sumber: baru.risiko.sumberData,
+        zona,
       });
       // Pembaruan otomatis cukup mengganti jam di tombol; hasil cek hanya untuk tombol.
       setHasil(manual ? { status: "selesai", teks } : null);
@@ -67,10 +70,10 @@ export function RingkasanBeranda({
         simulasi={risiko.simulasi}
         idWilayah={idWilayah}
         tombolPerbarui={
-          <TombolPerbaruiData jam={formatJam(waktuData)} memuat={memuat} hasil={hasil} onPerbarui={() => void perbaruiSekarang()} />
+          <TombolPerbaruiData jam={formatJamZona(waktuData, zona)} memuat={memuat} hasil={hasil} onPerbarui={() => void perbaruiSekarang()} />
         }
       />
-      {dataLama && <StatusData sumber={risiko.sumberData} waktuAmbil={waktuData} />}
+      {dataLama && <StatusData sumber={risiko.sumberData} waktuAmbil={waktuData} zona={zona} />}
       <div className="grid grid-cols-2 gap-3">
         <KartuCuacaRingkas
           suhu={terkini.suhu}

@@ -17,6 +17,7 @@ import {
 import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
 import { formatAngka, formatTanggalLokal } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { ZonaWaktu } from "@/lib/zona-waktu";
 import type { SeriHarian, TitikGrafikJam } from "@/server/services/seri-cuaca";
 
 /** Warna mengikuti board: biru utama, garis bantu #E4E9F0, teks sekunder #3E4A5C. */
@@ -34,13 +35,14 @@ const TICK = { fontSize: 11, fill: WARNA.teks, fontWeight: 600 };
 const labelHari = (i: number, tanggal: string) => NAMA_HARI[i] ?? formatTanggalLokal(tanggal);
 const nilai = (n: number | null, satuan: string) => (n == null ? "–" : `${formatAngka(n)}${satuan}`);
 
-function IsiTooltip({ active, payload }: TooltipContentProps<ValueType, NameType>) {
+function IsiTooltip({ active, payload, zona }: TooltipContentProps<ValueType, NameType> & { zona: ZonaWaktu }) {
   const t = payload?.[0]?.payload as TitikGrafikJam | undefined;
   if (!active || !t) return null;
   return (
     <div className="rounded-xl border bg-card px-3 py-2 text-[13px] leading-snug text-card-foreground shadow-md">
       <p className="font-extrabold">
-        Pukul {t.jam} WIB{t.lalu ? " (sudah lewat)" : ""}
+        Pukul {t.jam} {zona.singkatan}
+        {t.lalu ? " (sudah lewat)" : ""}
       </p>
       <p>
         Hujan: <b>{nilai(t.hujan, " mm")}</b>
@@ -58,8 +60,9 @@ function IsiTooltip({ active, payload }: TooltipContentProps<ValueType, NameType
 /**
  * Prakiraan per jam untuk satu hari (D-052): batang = curah hujan (mm), garis = suhu (°C) dan
  * peluang hujan (%). Pilihan hari berupa tab; nilai tiap jam muncul saat batang disentuh/diarahkan.
+ * Jam dan tanggal `hari` sudah dalam zona wilayah (D-060); `zona` untuk labelnya.
  */
-export function GrafikPrakiraanJam({ hari }: { hari: SeriHarian[] }) {
+export function GrafikPrakiraanJam({ hari, zona }: { hari: SeriHarian[]; zona: ZonaWaktu }) {
   const [aktif, setAktif] = useState(0);
   const tabRef = useRef<(HTMLButtonElement | null)[]>([]);
   const seri = hari[aktif];
@@ -148,7 +151,7 @@ export function GrafikPrakiraanJam({ hari }: { hari: SeriHarian[] }) {
                 axisLine={false}
                 width={28}
               />
-              <Tooltip content={IsiTooltip} cursor={{ fill: "rgba(23,66,201,0.08)" }} />
+              <Tooltip content={(p) => <IsiTooltip {...p} zona={zona} />} cursor={{ fill: "rgba(23,66,201,0.08)" }} />
               {sekarang ? (
                 <ReferenceLine
                   yAxisId="mm"
@@ -207,7 +210,7 @@ export function GrafikPrakiraanJam({ hari }: { hari: SeriHarian[] }) {
           </li>
         </ul>
         <p className="text-[13px] leading-normal text-[#3e4a5c]">
-          Angka di bawah grafik = pukul (WIB). Sentuh batang untuk melihat nilai per jam.
+          Angka di bawah grafik = pukul ({zona.singkatan}). Sentuh batang untuk melihat nilai per jam.
           {adaLalu ? " Batang pudar = jam yang sudah lewat." : ""}
         </p>
 

@@ -2,7 +2,7 @@
 
 import { LoaderCircle, RefreshCw } from "lucide-react";
 
-/** `teks`: hasil cek tombol, mis. "Sudah dicek 01:46 · data terbaru dari 01:33 WIB." (D-057). */
+/** `teks`: hasil cek tombol, mis. "Sudah dicek 01:46 · data terbaru dari 01:33 WIT." (D-057, D-060). */
 export type HasilPerbarui = { status: "selesai"; teks: string } | { status: "galat"; pesan: string } | null;
 
 /**
@@ -15,7 +15,7 @@ export function TombolPerbaruiData({
   hasil,
   onPerbarui,
 }: {
-  /** "19:00" */
+  /** "19:00 WITA" (jam + zona wilayah, D-060) */
   jam: string;
   memuat: boolean;
   hasil: HasilPerbarui;
@@ -44,7 +44,7 @@ export function TombolPerbaruiData({
         <span className="sr-only">
           {memuat ? "Memperbarui data. Terakhir diperbarui pukul" : "Perbarui data. Terakhir diperbarui pukul"}
         </span>
-        {jam} WIB
+        {jam}
       </button>
       <p
         role="status"

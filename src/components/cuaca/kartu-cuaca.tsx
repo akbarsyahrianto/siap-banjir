@@ -1,17 +1,20 @@
 import type { CuacaTerkini } from "@/lib/ambil-data-wilayah";
 import { OPEN_METEO_ATTRIBUTION } from "@/lib/constants";
-import { formatAngka, formatJam } from "@/lib/format";
+import { formatAngka, formatJamZona } from "@/lib/format";
 import { infoKondisiCuaca } from "@/lib/weather-code";
+import type { ZonaWaktu } from "@/lib/zona-waktu";
 import { teksCatatanLokasi } from "./catatan-lokasi";
 
 /** Cuaca terkini di halaman Cuaca (board Cuaca): suhu, kondisi, tiga ubin detail, waktu data & atribusi. */
 export function KartuCuaca({
   dataCuaca,
   waktuAmbil,
+  zona,
   koordinatPerkiraan,
 }: {
   dataCuaca: CuacaTerkini;
   waktuAmbil: Date;
+  zona: ZonaWaktu;
   koordinatPerkiraan: boolean;
 }) {
   const kondisi = infoKondisiCuaca(dataCuaca.kondisiCuaca);
@@ -45,7 +48,7 @@ export function KartuCuaca({
         ))}
       </dl>
       <p className="text-[13px] leading-normal text-[#3e4a5c]">
-        Diperbarui {formatJam(waktuAmbil)} WIB · {teksCatatanLokasi(koordinatPerkiraan)}{" "}
+        Diperbarui {formatJamZona(waktuAmbil, zona)} · {teksCatatanLokasi(koordinatPerkiraan)}{" "}
         <a href={OPEN_METEO_ATTRIBUTION.url} className="text-primary hover:text-primary-hover">
           Open-Meteo.com
         </a>{" "}

@@ -2,15 +2,16 @@
  * Sequence diagram langkah 9: simpan kejadian risiko TINGGI sebagai riwayat
  * (Informasi kategori RIWAYAT_KEJADIAN).
  *
- * Satu entri per kab/kota per hari kalender WIB; desa/kelurahan yang terdeteksi TINGGI di
+ * Satu entri per kab/kota per hari kalender di zona waktu kab/kota itu (WIB/WITA/WIT, D-060); desa/kelurahan yang terdeteksi TINGGI di
  * hari itu ditambahkan sebagai baris daftar (DECISIONS D-038). Penulisan diserialkan dengan
  * advisory lock PostgreSQL agar proses paralel (cron) tidak membuat entri ganda.
  */
 import type { LevelRisiko } from "@prisma/client";
 import { db } from "@/server/db";
-import { formatJam, formatTanggalPanjang } from "@/lib/format";
+import { formatJamZona, formatTanggalPanjang } from "@/lib/format";
 import { jenisWilayah, kodeKabKota, leluhurKode } from "@/lib/kode-wilayah";
 import { SUMBER_DETEKSI } from "@/lib/sumber-informasi";
+import { rentangHariLokal, zonaWilayah, type ZonaWaktu } from "@/lib/zona-waktu";
 import { informasiInputSchema } from "@/server/validators/konten";
 
 export const AWALAN_JUDUL_RIWAYAT = "Risiko banjir TINGGI terdeteksi di";
@@ -20,22 +21,14 @@ const CATATAN =
 
 export { SUMBER_DETEKSI };
 
-const WIB_MS = 7 * 60 * 60 * 1000;
-
-/** Rentang [awal, akhir) satu hari kalender WIB yang memuat `waktu`. */
-export function rentangHariWib(waktu: Date) {
-  const awal = new Date(Math.floor((waktu.getTime() + WIB_MS) / 86_400_000) * 86_400_000 - WIB_MS);
-  return { awal, akhir: new Date(awal.getTime() + 86_400_000) };
-}
-
 /** "- Kelurahan Sukarasa, Kec. Tangerang (13:05 WIB): Risiko TINGGI karena …" */
-export function barisDesa(labelDesa: string, waktu: Date, deskripsi: string) {
-  return `- ${labelDesa} (${formatJam(waktu)} WIB): ${deskripsi}`;
+export function barisDesa(labelDesa: string, waktu: Date, deskripsi: string, zona: ZonaWaktu) {
+  return `- ${labelDesa} (${formatJamZona(waktu, zona)}): ${deskripsi}`;
 }
 
-export function susunIsiRiwayat(namaKabKota: string, waktu: Date, baris: string[]) {
+export function susunIsiRiwayat(namaKabKota: string, waktu: Date, baris: string[], zona: ZonaWaktu) {
   return [
-    `Siap Banjir mendeteksi risiko banjir TINGGI di ${namaKabKota} pada ${formatTanggalPanjang(waktu)}.`,
+    `Siap Banjir mendeteksi risiko banjir TINGGI di ${namaKabKota} pada ${formatTanggalPanjang(waktu, zona)}.`,
     `${JUDUL_DAFTAR}\n${baris.join("\n")}`,
     CATATAN,
   ].join("\n\n");
@@ -72,8 +65,9 @@ export async function simpanRiwayatRisikoTinggi(risiko: LevelRisiko): Promise<Ha
   const labelDesa = desa
     ? `${jenisWilayah(risiko.idWilayah)} ${desa}${kec ? `, Kec. ${kec}` : ""}`
     : (kec ? `Kec. ${kec}` : namaKab);
-  const baris = barisDesa(labelDesa, risiko.waktu, risiko.deskripsi);
-  const { awal, akhir } = rentangHariWib(risiko.waktu);
+  const zona = zonaWilayah(kodeKab);
+  const baris = barisDesa(labelDesa, risiko.waktu, risiko.deskripsi, zona);
+  const { awal, akhir } = rentangHariLokal(risiko.waktu, zona);
 
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`riwayat:${kodeKab}:${awal.toISOString()}`}))`;
@@ -98,7 +92,7 @@ export async function simpanRiwayatRisikoTinggi(risiko: LevelRisiko): Promise<Ha
       idWilayah: kodeKab,
       kategori: "RIWAYAT_KEJADIAN",
       judul: `${AWALAN_JUDUL_RIWAYAT} ${namaKab}`,
-      isi: susunIsiRiwayat(namaKab, risiko.waktu, [baris]),
+      isi: susunIsiRiwayat(namaKab, risiko.waktu, [baris], zona),
       tanggal: risiko.waktu,
       sumberNama: SUMBER_DETEKSI.nama,
       sumberUrl: SUMBER_DETEKSI.url,

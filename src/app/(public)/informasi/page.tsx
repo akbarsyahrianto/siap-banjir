@@ -46,7 +46,7 @@ function DaftarInformasi({ items, kosong }: { items: ItemInformasi[]; kosong: st
               </Link>
             </h2>
             <p className="text-[12.5px] font-semibold text-muted-foreground">
-              <TanggalInformasi kategori={i.kategori} tanggal={i.tanggal} dataPer={i.tanggalDataPer} />
+              <TanggalInformasi kategori={i.kategori} tanggal={i.tanggal} idWilayah={i.idWilayah} dataPer={i.tanggalDataPer} />
               {i.wilayah ? ` · ${i.wilayah.namaWilayah}` : null}
             </p>
             <p className="line-clamp-2 text-[14px] leading-normal text-[#1f2937]">{cuplikan(i.isi)}</p>

@@ -2,16 +2,19 @@
 
 import { useEffect } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { ZonaWaktu } from "@/lib/zona-waktu";
 import type { TitikGrafikJam } from "@/server/services/seri-cuaca";
 
 const formatSumbuX = (waktu: string) => (waktu.endsWith("T00:00") ? waktu.slice(8, 10) + "/" + waktu.slice(5, 7) : waktu.slice(11, 16));
 
-/** Curah hujan per jam: 24 jam lalu (pengamatan) + 24 jam ke depan (prakiraan). */
+/** Curah hujan per jam: 24 jam lalu (pengamatan) + 24 jam ke depan (prakiraan). Waktu `data` dalam zona wilayah (D-060). */
 export function GrafikHujan48Jam({
   data,
+  zona,
   onSelesaiRender,
 }: {
   data: TitikGrafikJam[];
+  zona: ZonaWaktu;
   /** Dipanggil setelah grafik tergambar di layar (state machine: SelesaiRender). */
   onSelesaiRender?: () => void;
 }) {
@@ -37,7 +40,7 @@ export function GrafikHujan48Jam({
             <XAxis dataKey="waktu" tickFormatter={formatSumbuX} interval={5} tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} allowDecimals={false} unit=" mm" width={60} />
             <Tooltip
-              labelFormatter={(w) => `${String(w).slice(8, 10)}/${String(w).slice(5, 7)} ${String(w).slice(11, 16)} WIB`}
+              labelFormatter={(w) => `${String(w).slice(8, 10)}/${String(w).slice(5, 7)} ${String(w).slice(11, 16)} ${zona.singkatan}`}
               formatter={(v) => [`${v ?? "-"} mm`, "Curah hujan"]}
             />
             {sekarang ? (
