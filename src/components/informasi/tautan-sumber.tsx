@@ -19,10 +19,11 @@ export function TautanSumber({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2 hover:no-underline"
+        className="font-medium text-primary underline underline-offset-2 hover:no-underline"
       >
+        {/* Inline (bukan inline-flex) agar nama sumber yang panjang mengalir setelah "Sumber:". */}
         {nama ?? new URL(url).hostname}
-        <ExternalLink className="size-3.5" aria-hidden="true" />
+        <ExternalLink className="ml-1 inline size-3.5 align-[-2px]" aria-hidden="true" />
         <span className="sr-only">(membuka tab baru)</span>
       </a>
     </p>

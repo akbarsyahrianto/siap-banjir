@@ -23,18 +23,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function InformasiDetailPage({ params }: Props) {
   const info = await ambil((await params).id);
   if (!info) notFound();
+  const riwayat = info.kategori === "RIWAYAT_KEJADIAN";
 
   return (
-    <article className="mx-auto max-w-prose space-y-4">
-      <Link href="/informasi" className="inline-flex items-center gap-1 text-primary hover:underline">
-        <ArrowLeft className="size-4" aria-hidden="true" />
+    <article className="mx-auto flex max-w-xl flex-col gap-3">
+      {/* Kembali ke tab asal artikel (D-053). */}
+      <Link
+        href={riwayat ? "/informasi?tab=riwayat" : "/informasi"}
+        className="inline-flex min-h-11 items-center gap-1.5 self-start text-[15px] font-bold text-primary hover:text-primary-hover"
+      >
+        <ArrowLeft className="size-5" strokeWidth={2.2} aria-hidden="true" />
         Kembali ke Informasi
       </Link>
-      <p className="text-sm font-semibold uppercase tracking-wide text-primary">
-        {info.kategori === "RIWAYAT_KEJADIAN" ? "Riwayat kejadian" : "Informasi umum"}
+      <p className="text-[13px] font-bold tracking-wide text-primary uppercase">
+        {riwayat ? "Riwayat kejadian" : "Informasi umum"}
       </p>
-      <h1 className="text-3xl font-bold leading-tight">{info.judul}</h1>
-      <p className="flex flex-wrap gap-x-3 text-muted-foreground">
+      <h1 className="text-[28px] leading-[1.2] font-extrabold tracking-[-0.02em] text-pretty">{info.judul}</h1>
+      <p className="flex flex-wrap items-center gap-x-3 text-[14px] font-semibold text-muted-foreground">
         <TanggalInformasi kategori={info.kategori} tanggal={info.tanggal} panjang />
         {info.wilayah ? (
           <span className="flex items-center gap-1">
@@ -43,7 +48,7 @@ export default async function InformasiDetailPage({ params }: Props) {
           </span>
         ) : null}
       </p>
-      <div className="space-y-4 text-lg leading-relaxed">
+      <div className="flex flex-col gap-4 rounded-[20px] border bg-card p-4 text-[16px] leading-relaxed text-card-foreground">
         {info.isi.split("\n\n").map((paragraf, i) =>
           paragraf.includes("\n- ") || paragraf.startsWith("- ") ? (
             <ParagrafDaftar key={i} teks={paragraf} />
@@ -52,7 +57,7 @@ export default async function InformasiDetailPage({ params }: Props) {
           ),
         )}
       </div>
-      <TautanSumber nama={info.sumberNama} url={info.sumberUrl} className="border-t pt-4 text-base" />
+      <TautanSumber nama={info.sumberNama} url={info.sumberUrl} className="text-[14px] text-[#3e4a5c]" />
     </article>
   );
 }

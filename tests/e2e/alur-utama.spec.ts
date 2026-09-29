@@ -306,18 +306,41 @@ test.describe("Nomor Darurat (D-050)", () => {
   });
 });
 
-test("Informasi: riwayat kejadian punya tautan sumber; artikel umum bertanggal terbit", async ({ page }) => {
+test("Informasi: tab umum bawaan; riwayat punya tautan sumber; Kembali dari artikel ke tab asal", async ({ page }) => {
   await page.goto("/informasi");
-  const riwayat = page.getByRole("region", { name: "Riwayat kejadian banjir" });
+  const tabUmum = page.getByRole("tab", { name: /^Informasi umum \(\d+\)$/ });
+  const tabRiwayat = page.getByRole("tab", { name: /^Riwayat kejadian \(\d+\)$/ });
+  await expect(tabUmum).toHaveAttribute("aria-selected", "true");
+
+  const umum = page.getByRole("tabpanel", { name: /Informasi umum/ });
+  await expect(umum.getByText(/^Terbit /).first()).toBeVisible();
+  await expect(page.getByRole("tabpanel", { name: /Riwayat kejadian/ })).toBeHidden();
+
+  // Tab riwayat lewat keyboard; pilihan tersimpan di URL.
+  await tabUmum.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(tabRiwayat).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/\/informasi\?tab=riwayat$/);
+  const riwayat = page.getByRole("tabpanel", { name: /Riwayat kejadian/ });
   const sumber = riwayat.getByRole("link", { name: /BNPB, 3 Januari 2020/ });
   await expect(sumber).toHaveAttribute("href", /^https:\/\/www\.bnpb\.go\.id\/berita\//);
   await expect(sumber).toHaveAttribute("target", "_blank");
   await expect(sumber).toHaveAttribute("rel", "noopener noreferrer");
 
-  const umum = page.getByRole("region", { name: "Informasi umum" });
-  await expect(umum.getByText(/^Terbit /).first()).toBeVisible();
-  await umum.getByRole("link", { name: "Mengenal Risiko Banjir Luapan Citarum di Cekungan Bandung" }).click();
+  // Artikel riwayat → "Kembali ke Informasi" membuka tab Riwayat lagi.
+  await riwayat.getByRole("heading").first().getByRole("link").click();
+  await expect(page).toHaveURL(/\/informasi\/[a-z0-9]+$/);
+  await page.getByRole("link", { name: "Kembali ke Informasi" }).click();
+  await expect(page.getByRole("tab", { name: /^Riwayat kejadian/ })).toHaveAttribute("aria-selected", "true");
+
+  await page.getByRole("tab", { name: /^Informasi umum/ }).click();
+  await expect(page).toHaveURL(/\/informasi$/);
+  await page
+    .getByRole("tabpanel", { name: /Informasi umum/ })
+    .getByRole("link", { name: "Mengenal Risiko Banjir Luapan Citarum di Cekungan Bandung" })
+    .click();
   await expect(page.getByText("bukan laporan kejadian banjir pada tanggal tertentu", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Kembali ke Informasi" })).toHaveAttribute("href", "/informasi");
 });
 
 test("tidak ada scroll horizontal (mobile-first)", async ({ page }) => {

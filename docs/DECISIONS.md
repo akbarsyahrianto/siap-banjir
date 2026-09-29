@@ -585,3 +585,18 @@ Urutannya juga tidak deterministik. Dialog Radix bersifat modal dan hanya member
 - Data tetap dari Open-Meteo (`ringkasanHarian`, `seriPerJamPerHari`); angka contoh di board tidak dipakai.
 
 **Diuji:** unit `seriPerJamPerHari` (mulai hari ini, 24 jam per tanggal, jam lewat bertanda). E2E: tes baru halaman Cuaca (header + Ubah wilayah, cuaca terkini + atribusi, tiga kartu harian, tab Hari ini bawaan dengan 24 batang dan 8 label jam, panah kanan → Besok, tooltip saat diarahkan, tabel 24 baris, tanpa pemilih); "Gunakan lokasi saya" di `/cuaca` kini memastikan pemilih hilang setelah wilayah terpilih; pemeriksaan pesan GPS yang bertahan dan tes pilih bertingkat pindah ke `/pengaturan`.
+
+## D-053 · Desain ulang: halaman Informasi
+
+**Sumber desain.** Board "Informasi" di kanvas desain ulang. Kanvas tidak diubah. Artikel contoh di board tidak dipakai; isi tetap dari tabel `Informasi` (seed + riwayat risiko tinggi otomatis, D-038).
+
+**Keputusan.**
+- **Header** memakai `KepalaHalaman` (D-052), tanpa baris wilayah karena board tidak memuatnya. Urutan "artikel milik wilayah terpilih lebih dulu" tetap berlaku.
+- **Dua tab** "Informasi umum (n)" dan "Riwayat kejadian (n)", dengan jumlah artikel asli dan tab umum sebagai bawaan. Di board, tab berupa tombol `aria-pressed`. Di sini dipakai `role="tab"` dengan panah kiri/kanan, sama seperti tab di Risiko dan Cuaca. Kedua panel dirender server (panel nonaktif diberi `hidden`), jadi isi tetap ada tanpa JavaScript dan ikut tersimpan untuk offline.
+- **Tab aktif ditulis ke `?tab=riwayat`** (lewat `history.replaceState`, tanpa render ulang server). Board tidak mengaturnya. Tanpa ini, tombol Kembali dari artikel riwayat selalu membuka tab umum. Tautan "Kembali ke Informasi" di halaman artikel juga mengarah ke tab asal artikel.
+- **Kartu artikel** mengikuti board: judul (seluruh kartu bisa diklik), "Terbit {tanggal} · {wilayah}" untuk artikel umum atau "{tanggal kejadian} · {wilayah}" untuk riwayat, cuplikan dua baris, dan "Sumber: …". Board hanya menampilkan sumber di riwayat. Di sini sumber juga tampil di artikel umum yang punya sumber (mis. Buku Saku BNPB, D-044/D-051), karena konten keselamatan wajib menampilkan sumbernya.
+- **Cuplikan** meratakan butir daftar "- …" menjadi kalimat berkoma, seperti contoh board ("Simpan nomor berikut di ponsel Anda: 112: …, 115: …"). Sebelumnya tanda "-" mentah ikut tampil.
+- `TautanSumber` kini inline (bukan `inline-flex`), supaya nama sumber yang panjang mengalir setelah "Sumber:" dan ikon tautan luar tetap menempel di akhir. Perubahan ini ikut berlaku di halaman Nomor Darurat.
+- **Halaman artikel** (`/informasi/[id]`) tidak punya board. Tipografinya disamakan dengan halaman lain (judul 28 px extrabold, isi dalam kartu putih, tautan Kembali setinggi 44 px), dan isinya tidak berubah.
+
+**Diuji:** e2e Informasi: tab umum bawaan dengan jumlah, panel riwayat tersembunyi, panah kanan → Riwayat dan URL `?tab=riwayat`, tautan sumber BNPB (tab baru, `noopener noreferrer`), artikel riwayat → "Kembali ke Informasi" membuka tab Riwayat, artikel umum → Kembali ke `/informasi`. Tes offline dan tanpa scroll horizontal tetap mencakup `/informasi`.

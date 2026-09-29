@@ -29,7 +29,7 @@ Sumber desain: kanvas **"Siap Banjir — Desain Ulang"** — https://claude.ai/a
 - **Satu halaman satu commit**, tiap commit disertai entri DECISIONS dan penyesuaian e2e.
 - Board berisi teks contoh. Data asli (deskripsi mesin risiko, rekomendasi BNPB, kontak resmi) tetap dipakai; jangan menyalin angka/teks contoh dari board.
 
-Status: Beranda + shell global (D-046), Risiko (D-047, D-048), Nomor Darurat `/kontak` (D-050, D-051), dan Cuaca (D-052) selesai. Berikutnya: Informasi, Pengaturan.
+Status: Beranda + shell global (D-046), Risiko (D-047, D-048), Nomor Darurat `/kontak` (D-050, D-051), Cuaca (D-052), dan Informasi (D-053) selesai. Berikutnya: Pengaturan.
 
 ## Perintah
 
