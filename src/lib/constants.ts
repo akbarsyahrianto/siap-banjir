@@ -10,6 +10,13 @@ export const DISCLAIMER =
  */
 export const UMUR_SEGARKAN_MS = 15 * 60 * 1000;
 
+/**
+ * Wilayah hanya dipilih dan diubah di Beranda (D-063). Tautan "Ubah" dari halaman lain
+ * membuka Beranda dengan pemilih wilayah langsung terbuka.
+ */
+export const PARAM_UBAH_WILAYAH = "ubah";
+export const URL_UBAH_WILAYAH = `/?${PARAM_UBAH_WILAYAH}=wilayah`;
+
 export const OPEN_METEO_ATTRIBUTION = {
   label: "Data cuaca: Open-Meteo.com",
   url: "https://open-meteo.com/",

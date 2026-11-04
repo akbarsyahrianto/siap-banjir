@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
+import { URL_UBAH_WILAYAH } from "@/lib/constants";
 
-/** Judul halaman + subjudul + baris wilayah dengan tautan "Ubah" ke Pengaturan (board Risiko & Cuaca). */
+/** Judul halaman + subjudul + baris wilayah dengan tautan "Ubah" ke pemilih wilayah di Beranda (board Risiko & Cuaca, D-063). */
 export function KepalaHalaman({
   judul,
   subjudul,
@@ -22,7 +23,7 @@ export function KepalaHalaman({
           <MapPin className="size-5 shrink-0 text-primary" strokeWidth={2} aria-hidden="true" />
           <span className="text-[15px] font-bold">{namaWilayah}</span>
           <Link
-            href="/pengaturan"
+            href={URL_UBAH_WILAYAH}
             className="ml-auto inline-flex min-h-11 shrink-0 items-center text-[14px] font-bold text-primary hover:text-primary-hover"
           >
             Ubah<span className="sr-only"> wilayah</span>

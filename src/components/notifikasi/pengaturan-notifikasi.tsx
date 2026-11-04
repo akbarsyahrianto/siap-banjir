@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState } from "react";
 import type { TingkatRisiko } from "@prisma/client";
 import { LoaderCircle, Send } from "lucide-react";
@@ -78,7 +79,15 @@ export function PengaturanNotifikasi({ wilayah }: { wilayah: { idWilayah: string
           <span id={`${id}-status`} className="text-[14px] leading-[1.45] text-[#3e4a5c]" aria-live="polite">
             {KETERANGAN_STATUS[status]}
           </span>
-          {!wilayah && bisaDiubah ? <span className="text-[14px] font-bold">Pilih wilayah terlebih dahulu.</span> : null}
+          {!wilayah && bisaDiubah ? (
+            <span className="text-[14px] font-bold">
+              Pilih wilayah di{" "}
+              <Link href="/" className="text-primary underline underline-offset-2 hover:no-underline">
+                Beranda
+              </Link>{" "}
+              terlebih dahulu.
+            </span>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {sibuk === "sakelar" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}

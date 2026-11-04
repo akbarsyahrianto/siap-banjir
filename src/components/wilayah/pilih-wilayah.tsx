@@ -168,19 +168,24 @@ function CariWilayah({ onPilih }: { onPilih: (hasil: HasilPencarian) => void }) 
   );
 }
 
+/** Cara pengguna memilih desa/kelurahan. */
+export type CaraPilih = "cari" | "bertingkat" | "gps";
+
 /**
  * aturLokasi(wilayah): pilih desa/kelurahan lewat pencarian, pilihan bertingkat
  * (Provinsi → Kab/Kota → Kecamatan → Desa/Kelurahan), atau lokasi GPS.
+ * Hanya dipakai di Beranda (D-063).
  */
 export function PilihWilayah({
   data,
-  namaTerpilih,
   tungguKonten = false,
+  onTerpilih,
 }: {
   data: DataPemilih;
-  namaTerpilih: string | null;
   /** Halaman menampilkan isi wilayah (dengan TandaKontenWilayah): tawarkan izin setelah isi tampil. */
   tungguKonten?: boolean;
+  /** Dipanggil setelah desa/kelurahan dipilih, dengan cara memilihnya. */
+  onTerpilih?: (cara: CaraPilih) => void;
 }) {
   const { pilihWilayah: simpanPilihan } = useWilayah();
   const { setelahPilihWilayah } = useNotifikasi();
@@ -202,9 +207,10 @@ export function PilihWilayah({
   const permintaan = useRef(0);
 
   // aturLokasi(wilayah) → simpan preferensi → popup izin notifikasi / sinkron langganan.
-  function pilihDesa(idWilayah: string, namaWilayah: string) {
+  function pilihDesa(idWilayah: string, namaWilayah: string, cara: CaraPilih) {
     simpanPilihan(idWilayah);
     setelahPilihWilayah({ idWilayah, namaWilayah }, { tungguKonten });
+    onTerpilih?.(cara);
   }
 
   async function ubah(tingkat: Tingkat, kode: string) {
@@ -218,7 +224,12 @@ export function PilihWilayah({
     if (tingkat === "desa") {
       const desa = daftar.desa.find((d) => d.idWilayah === kode);
       const kab = daftar.kabkota.find((k) => k.idWilayah === baru.kabkota);
-      if (desa) pilihDesa(desa.idWilayah, `${jenisWilayah(desa.idWilayah)} ${desa.namaWilayah}${kab ? `, ${kab.namaWilayah}` : ""}`);
+      if (desa)
+        pilihDesa(
+          desa.idWilayah,
+          `${jenisWilayah(desa.idWilayah)} ${desa.namaWilayah}${kab ? `, ${kab.namaWilayah}` : ""}`,
+          "bertingkat",
+        );
       return;
     }
     if (!berikut) return;
@@ -256,7 +267,7 @@ export function PilihWilayah({
             tipe: "info",
             teks: `Desa/kelurahan terdekat: ${hasil.namaWilayah} (±${hasil.jarakKm.toLocaleString("id-ID")} km dari titik pusatnya). Bukan wilayah Anda? Pilih dari daftar.`,
           });
-          pilihDesa(hasil.idWilayah, hasil.namaWilayah);
+          pilihDesa(hasil.idWilayah, hasil.namaWilayah, "gps");
         } catch (err) {
           setPesan({ tipe: "galat", teks: err instanceof Error ? err.message : "Lokasi tidak dapat diproses." });
         } finally {
@@ -279,14 +290,9 @@ export function PilihWilayah({
 
   return (
     <div className="flex flex-col gap-3.5">
-      {namaTerpilih ? (
-        <p className="flex flex-col gap-0.5 rounded-[14px] bg-[#e8eefd] px-3.5 py-3">
-          <span className="text-[12px] font-semibold text-[#3e4a5c]">Wilayah yang dipantau</span>
-          <span className="text-[16px] font-extrabold">{namaTerpilih}</span>
-        </p>
-      ) : null}
-
-      <CariWilayah onPilih={(h) => pilihDesa(h.idWilayah, `${h.jenis} ${h.namaWilayah}, ${h.namaLengkap.split(", ").at(-2) ?? ""}`)} />
+      <CariWilayah
+        onPilih={(h) => pilihDesa(h.idWilayah, `${h.jenis} ${h.namaWilayah}, ${h.namaLengkap.split(", ").at(-2) ?? ""}`, "cari")}
+      />
 
       <button
         type="button"

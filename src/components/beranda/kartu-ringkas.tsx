@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { TingkatRisiko } from "@prisma/client";
-import { ChevronRight, MapPin, Phone } from "lucide-react";
+import { ChevronRight, Phone } from "lucide-react";
 import { formatAngka } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { infoKondisiCuaca } from "@/lib/weather-code";
@@ -14,25 +14,6 @@ const WARNA_HUJAN: Record<TingkatRisiko, string> = {
   SEDANG: "text-risk-sedang-teks",
   TINGGI: "text-risk-tinggi-teks",
 };
-
-/** Wilayah yang sedang dipantau; ganti wilayah di Pengaturan. */
-export function WilayahDipantau({ nama }: { nama: string }) {
-  return (
-    <Link
-      href="/pengaturan"
-      className="flex min-h-14 items-center gap-2.5 rounded-2xl border bg-card px-3.5 py-2 text-card-foreground"
-    >
-      <MapPin className="size-[22px] shrink-0 text-primary" strokeWidth={2} aria-hidden="true" />
-      <span className="flex min-w-0 flex-col gap-px">
-        <span className="text-[12px] font-semibold text-muted-foreground">Wilayah yang dipantau</span>
-        <span className="text-[15px] font-bold">{nama}</span>
-      </span>
-      <span className="ml-auto text-[14px] font-bold text-primary">
-        Ubah<span className="sr-only"> wilayah</span>
-      </span>
-    </Link>
-  );
-}
 
 /** Ringkasan cuaca: suhu, kondisi, dan hujan 24 jam terakhir (nilai yang dipakai mesin risiko). */
 export function KartuCuacaRingkas({

@@ -17,9 +17,9 @@ Next.js 15 (App Router, server components) · React 19 · TypeScript · Tailwind
 | `docs/prompt-claude-code-siapbanjir.md` | Prompt awal proyek: ringkasan UML dan kebutuhan per fase |
 | `docs/DEMO.md` | Panduan demo simulasi risiko TINGGI (`npm run simulasi`) |
 
-Keputusan yang paling sering relevan: D-024 (state machine risiko sebagai reducer, `src/lib/mesin-risiko.ts`), D-033 (kode wilayah Kemendagri), D-041 (simulasi), D-042/D-043/D-051 (layanan 112, nomor BPBD & nomor nasional hanya dari sumber resmi), D-044 (Detail Mitigasi dari Buku Saku BNPB dengan halaman sumber), D-046 dan seterusnya (desain ulang).
+Keputusan yang paling sering relevan: D-024 (state machine risiko sebagai reducer, `src/lib/mesin-risiko.ts`), D-033 (kode wilayah Kemendagri), D-041 (simulasi), D-042/D-043/D-051 (layanan 112, nomor BPBD & nomor nasional hanya dari sumber resmi), D-044 (Detail Mitigasi dari Buku Saku BNPB dengan halaman sumber), D-046 dan seterusnya (desain ulang), D-063 (wilayah hanya dipilih/diubah di Beranda; Pengaturan tanpa kartu Wilayah).
 
-## Desain ulang (branch `redesign`)
+## Desain ulang (sudah digabung ke `main`)
 
 Sumber desain: kanvas **"Siap Banjir — Desain Ulang"** — https://claude.ai/artifact/At4ycApW4YRThqyVtNV9LC
 

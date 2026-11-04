@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { WilayahDipantau } from "@/components/beranda/kartu-ringkas";
 import { RingkasanBeranda } from "@/components/beranda/ringkasan-beranda";
+import { WilayahDipantau } from "@/components/beranda/wilayah-dipantau";
 import { PilihWilayah } from "@/components/wilayah/pilih-wilayah";
 import { SkeletonRingkasan } from "@/components/wilayah/skeleton";
 import { TandaKontenWilayah } from "@/components/wilayah/tanda-konten-wilayah";
@@ -9,14 +9,15 @@ import { APP_NAME } from "@/lib/constants";
 import { keRisikoKlien, lihatKondisiWilayah } from "@/server/services/pemantauan.service";
 import { muatPemilih } from "@/server/wilayah-terpilih";
 
-type Props = { searchParams: Promise<{ wilayah?: string | string[] }> };
+type Props = { searchParams: Promise<{ wilayah?: string | string[]; ubah?: string | string[] }> };
 
 /**
  * Beranda (desain ulang, D-046): wilayah dipantau → level risiko dengan ilustrasi air →
  * cuaca & peringatan dini → kontak darurat. Tanpa wilayah: pemilih wilayah langsung di sini.
+ * Beranda satu-satunya tempat memilih dan mengubah wilayah (D-063); `?ubah=wilayah` membuka pemilihnya.
  */
 export default async function BerandaPage({ searchParams }: Props) {
-  const { wilayah } = await searchParams;
+  const { wilayah, ubah } = await searchParams;
   // lihatInformasi(wilayah): pemilih wilayah + info cuaca awal (langkah 1 sequence diagram).
   const { pemilih, desa, namaTerpilih } = await muatPemilih(wilayah);
   const terpilih = desa?.wilayah.idWilayah ?? null;
@@ -27,7 +28,7 @@ export default async function BerandaPage({ searchParams }: Props) {
 
       {terpilih && namaTerpilih ? (
         <>
-          <WilayahDipantau nama={namaTerpilih} />
+          <WilayahDipantau nama={namaTerpilih} pemilih={pemilih} terbukaAwal={ubah === "wilayah"} />
           <Suspense key={terpilih} fallback={<SkeletonRingkasan />}>
             <RingkasanWilayah idWilayah={terpilih} namaWilayah={namaTerpilih} />
             <TandaKontenWilayah idWilayah={terpilih} />
@@ -37,7 +38,7 @@ export default async function BerandaPage({ searchParams }: Props) {
         <>
           <BelumPilihWilayah />
           <section aria-label="Pilih wilayah" className="rounded-[20px] border bg-card p-4">
-            <PilihWilayah data={pemilih} namaTerpilih={namaTerpilih} tungguKonten />
+            <PilihWilayah data={pemilih} tungguKonten />
           </section>
         </>
       )}

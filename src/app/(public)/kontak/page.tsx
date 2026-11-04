@@ -35,8 +35,8 @@ export default async function KontakPage({ searchParams }: Props) {
         ) : (
           <p className="text-[14px] leading-normal text-[#3e4a5c]">
             Wilayah belum dipilih, jadi yang tampil nomor nasional.{" "}
-            <Link href="/pengaturan" className="font-bold text-primary underline underline-offset-2 hover:no-underline">
-              Pilih wilayah
+            <Link href="/" className="font-bold text-primary underline underline-offset-2 hover:no-underline">
+              Pilih wilayah di Beranda
             </Link>{" "}
             untuk melihat BPBD setempat dan status layanan 112.
           </p>

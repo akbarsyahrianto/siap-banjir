@@ -793,3 +793,29 @@ Yang belum ada adalah tes untuk kejadian dekat tengah malam.
   - Sama dengan jam data → teks singkat persis.
   - Dua menit kemudian → teks lengkap persis.
   - Tidak ada panggilan Open-Meteo tambahan.
+
+## D-063 · Wilayah hanya dipilih dan diubah di Beranda
+
+**Konteks.** Tombol "Ubah" di kartu "Wilayah yang dipantau" Beranda memindahkan pengguna ke Pengaturan, padahal yang ingin diubah adalah wilayah yang sedang dilihat di Beranda. Permintaan: hapus perubahan wilayah dari Pengaturan, sehingga wilayah hanya diubah di Beranda. Ini menyimpang dari board "Pengaturan" (kartu Wilayah, D-054); kanvas tidak diubah.
+
+**Keputusan.**
+- **Beranda** satu-satunya tempat memilih dan mengubah wilayah:
+  - Tanpa wilayah: pemilih tampil langsung seperti sebelumnya.
+  - Dengan wilayah: kartu "Wilayah yang dipantau" (`WilayahDipantau`, kini komponen klien) menjadi tombol `aria-expanded` yang membuka `PilihWilayah` tepat di bawahnya, di wilayah `region` "Ubah wilayah". Teks tombol "Ubah" berganti "Tutup" saat terbuka; ada juga tombol "Selesai".
+  - Memilih lewat **pencarian** atau **bertingkat** langsung menutup pemilih dan mengembalikan fokus ke kartu wilayah.
+  - Memilih lewat **GPS** membiarkan pemilih terbuka, karena hasilnya hanya desa/kelurahan terdekat dari titik pusat: pesan "Desa/kelurahan terdekat … Bukan wilayah Anda? Pilih dari daftar." tetap terbaca dan bisa langsung dikoreksi (perilaku pesan GPS D-052 tetap).
+  - `?ubah=wilayah` membuka pemilih saat halaman dimuat (`URL_UBAH_WILAYAH`). Menutup tanpa memilih menghapus parameter itu dengan `history.replaceState`, tanpa render ulang server; memilih wilayah sudah mengganti URL ke `?wilayah=…` lewat `useWilayah`.
+  - Dialog izin notifikasi tetap menunggu isi wilayah tampil (`tungguKonten`, D-049).
+- **Pengaturan** tidak lagi berisi kartu Wilayah. Kartu Notifikasi menampilkan "Untuk wilayah: …" (hanya baca) dengan tautan "Ubah di Beranda". Tanpa wilayah: "Pilih wilayah di Beranda terlebih dahulu." Subjudul menjadi "Atur notifikasi peringatan banjir di perangkat ini."
+- **Risiko dan Cuaca**: tautan "Ubah" di `KepalaHalaman` menuju `/?ubah=wilayah`. Tanpa wilayah, keduanya tidak lagi menampilkan pemilih; `BelumPilihWilayah keBeranda` menampilkan tombol "Pilih wilayah di Beranda".
+- **Nomor Darurat** tanpa wilayah: tautan "Pilih wilayah di Beranda" menuju `/`.
+- Kotak biru "Wilayah yang dipantau" di dalam `PilihWilayah` (hanya dipakai Pengaturan) dan prop `namaTerpilih` dihapus. `PilihWilayah` mendapat `onTerpilih(cara)` dengan `cara` = `cari` | `bertingkat` | `gps`.
+- Halaman tanpa pemilih memakai `muatWilayahTerpilih()` (tanpa data pilihan bertingkat), jadi Risiko, Cuaca, dan Pengaturan tidak lagi memuat daftar provinsi/kab/kota/kecamatan/desa.
+- Kartu "Peringatan dini" di Beranda tetap menuju Pengaturan, karena notifikasi tetap diatur di sana.
+
+**Diuji (e2e):**
+- Alur utama: kartu wilayah Beranda berupa tombol tertutup; "Ubah wilayah" di Risiko dan Cuaca menuju `/?ubah=wilayah`; Pengaturan menampilkan wilayah notifikasi dan tautan "Ubah di Beranda", tanpa kolom pencarian dan tombol GPS.
+- GPS dari Beranda tanpa wilayah; dialog izin muncul setelah level risiko tampil.
+- `?ubah=wilayah` membuka pemilih; ditutup tanpa memilih → parameter hilang, wilayah tetap; GPS → pemilih tetap terbuka dengan pesan terdekat dan Kab/Kota tersinkron; "Selesai" menutup dan memfokuskan kartu.
+- Pilih bertingkat di Beranda; membuka Ubah → Kecamatan terisi; pilih lewat pencarian → pemilih tertutup, kartu berganti wilayah dan terfokus.
+- Tanpa wilayah: Risiko dan Cuaca menampilkan tombol ke Beranda tanpa pemilih; Pengaturan tanpa kartu Wilayah dengan tautan ke Beranda; Nomor Darurat menautkan "Pilih wilayah di Beranda".

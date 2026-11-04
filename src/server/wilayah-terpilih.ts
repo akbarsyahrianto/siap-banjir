@@ -17,12 +17,21 @@ export async function idWilayahTerpilih(query: string | string[] | undefined): P
 }
 
 /**
- * Data untuk halaman dengan pemilih wilayah. `desa` terisi hanya jika kode terpilih adalah
- * desa/kelurahan aktif; kode tingkat lebih tinggi (mis. dari tautan) hanya mengisi pemilih.
+ * Wilayah terpilih untuk halaman tanpa pemilih wilayah (Risiko, Cuaca, Pengaturan; D-063).
+ * `desa` terisi hanya jika kode terpilih adalah desa/kelurahan aktif.
  */
-export async function muatPemilih(query: string | string[] | undefined) {
+export async function muatWilayahTerpilih(query: string | string[] | undefined) {
   const id = await idWilayahTerpilih(query);
   const desa = id ? await lihatDesa(id) : null;
+  return { id, desa, namaTerpilih: desa ? namaTampilan(desa.leluhur) : null };
+}
+
+/**
+ * Data untuk Beranda, satu-satunya halaman dengan pemilih wilayah (D-063). `desa` terisi hanya jika
+ * kode terpilih adalah desa/kelurahan aktif; kode tingkat lebih tinggi (mis. dari tautan) hanya mengisi pemilih.
+ */
+export async function muatPemilih(query: string | string[] | undefined) {
+  const { id, desa, namaTerpilih } = await muatWilayahTerpilih(query);
   const pemilih = await dataPemilih(desa ? desa.wilayah.idWilayah : id);
-  return { pemilih, desa, namaTerpilih: desa ? namaTampilan(desa.leluhur) : null };
+  return { pemilih, desa, namaTerpilih };
 }
